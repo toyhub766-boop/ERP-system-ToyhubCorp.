@@ -4,19 +4,20 @@ import jwt from "jsonwebtoken";
 
 import { Request, Response } from "express";
 
-export const login = async (
-  req: Request,
-  res: Response
-) => {
+export const login = async (req: Request, res: Response) => {
   try {
-    const {
-      employeeId,
-      password,
-    } = req.body;
+    const { employeeId, password } = req.body;
 
     const user = await User.findOne({
       employeeId,
     });
+
+    console.log("LOGIN REQUEST:", {
+      employeeId,
+      password,
+    });
+
+    console.log("DATABASE USER:", user);
 
     if (!user) {
       return res.status(401).json({
@@ -24,11 +25,15 @@ export const login = async (
       });
     }
 
-    const isMatch =
-      await bcrypt.compare(
-        password,
-        user.password
-      );
+    const isMatch = user.password.startsWith("$2")
+      ? await bcrypt.compare(password, user.password)
+      : password === user.password;
+
+    console.log("PASSWORD RESULT:", {
+      entered: password,
+      stored: user?.password,
+      isMatch,
+    });
 
     if (!isMatch) {
       return res.status(401).json({
@@ -44,7 +49,7 @@ export const login = async (
       process.env.JWT_SECRET as string,
       {
         expiresIn: "1d",
-      }
+      },
     );
 
     res.status(200).json({

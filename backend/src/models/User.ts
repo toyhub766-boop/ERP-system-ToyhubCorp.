@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
         "INVENTORY",
         "PRODUCTION",
         "ACCOUNTANT",
+        "ATTENDANCE/HR",
         "CRM",
       ],
       required: true,

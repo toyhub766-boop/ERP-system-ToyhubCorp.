@@ -1,0 +1,59 @@
+import mongoose from "mongoose";
+
+const productSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    sku: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+    },
+
+    warehouse: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Warehouse",
+      required: true,
+    },
+
+    unit: {
+      type: String,
+      default: "PCS",
+    },
+
+    minimumStock: {
+      type: Number,
+      default: 0,
+    },
+
+    currentStock: {
+      type: Number,
+      default: 0,
+    },
+
+    status: {
+      type: String,
+      enum: ["Healthy", "Low Stock", "Critical"],
+  default: "Healthy",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model(
+  "Product",
+  productSchema
+);

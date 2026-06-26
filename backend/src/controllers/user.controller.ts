@@ -2,12 +2,9 @@ import User from "../models/User";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 
-export const getUsers = async (
-  req: Request,
-  res: Response
-) => {
+export const getUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select("-password");
 
     res.status(200).json(users);
   } catch (error) {
@@ -17,17 +14,9 @@ export const getUsers = async (
   }
 };
 
-export const createUser = async (
-  req: Request,
-  res: Response
-) => {
+export const createUser = async (req: Request, res: Response) => {
   try {
-    const {
-      employeeId,
-      name,
-      password,
-      role,
-    } = req.body;
+    const { employeeId, name, password, role } = req.body;
 
     const existingUser = await User.findOne({
       employeeId,
@@ -35,13 +24,11 @@ export const createUser = async (
 
     if (existingUser) {
       return res.status(400).json({
-        message:
-          "Employee ID already exists",
+        message: "Employee ID already exists",
       });
     }
 
-    const hashedPassword =
-      await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       employeeId,
@@ -50,7 +37,9 @@ export const createUser = async (
       role,
     });
 
-    res.status(201).json(user);
+    const createdUser = await User.findById(user._id).select("-password");
+
+    res.status(201).json(createdUser);
   } catch (error) {
     res.status(500).json({
       message: "Failed to create user",
@@ -58,18 +47,11 @@ export const createUser = async (
   }
 };
 
-export const updateUser = async (
-  req: Request,
-  res: Response
-) => {
+export const updateUser = async (req: Request, res: Response) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-      }
-    );
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
 
     res.status(200).json(user);
   } catch (error) {
@@ -79,14 +61,9 @@ export const updateUser = async (
   }
 };
 
-export const deleteUser = async (
-  req: Request,
-  res: Response
-) => {
+export const deleteUser = async (req: Request, res: Response) => {
   try {
-    await User.findByIdAndDelete(
-      req.params.id
-    );
+    await User.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       message: "User deleted",

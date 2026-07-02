@@ -8,6 +8,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  getProductById,
 } from "../controllers/product.controller";
 
 const router = Router();
@@ -23,6 +24,12 @@ router.post(
   authMiddleware,
   roleMiddleware(["FOUNDER", "INVENTORY"]),
   createProduct
+);
+
+router.get(
+  "/:id",
+  authMiddleware,
+  getProductById
 );
 
 router.put(

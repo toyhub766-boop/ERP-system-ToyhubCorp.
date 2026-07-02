@@ -204,3 +204,28 @@ export const getTransactions =
       });
     }
   };
+
+
+export const getTransactionsByProduct = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const transactions =
+      await InventoryTransaction.find({
+        product: req.params.id,
+      })
+        .populate("performedBy", "name employeeId")
+        .sort({ createdAt: -1 })
+        .limit(5);
+
+    res.json(transactions);
+  } catch (error) {
+  console.error(error);
+
+  res.status(500).json({
+    message: "Failed to fetch transactions",
+    error,
+  });
+}
+};

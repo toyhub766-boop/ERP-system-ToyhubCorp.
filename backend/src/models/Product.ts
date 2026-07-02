@@ -8,6 +8,13 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
+    type: {
+      type: String,
+      enum: ["FINISHED", "RAW"],
+      default: "RAW",
+      required:  true,
+    },
+
     sku: {
       type: String,
       required: true,
@@ -45,15 +52,12 @@ const productSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Healthy", "Low Stock", "Critical"],
-  default: "Healthy",
+      default: "Healthy",
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export default mongoose.model(
-  "Product",
-  productSchema
-);
+export default mongoose.model("Product", productSchema);

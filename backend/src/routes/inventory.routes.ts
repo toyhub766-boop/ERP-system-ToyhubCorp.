@@ -7,6 +7,7 @@ import {
   stockIn,
   stockOut,
   getTransactions,
+  getTransactionsByProduct,
 } from "../controllers/inventory.controller";
 
 const router = Router();
@@ -39,6 +40,16 @@ router.get(
     "INVENTORY",
   ]),
   getTransactions
+);
+
+router.get(
+  "/transactions/product/:id",
+  authMiddleware,
+  roleMiddleware([
+    "FOUNDER",
+    "INVENTORY",
+  ]),
+  getTransactionsByProduct
 );
 
 export default router;

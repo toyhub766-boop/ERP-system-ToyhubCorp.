@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Category from "../models/Category";
+import Product from "../models/Product";
 
 export const getCategories = async (
   req: Request,
@@ -62,14 +63,25 @@ export const deleteCategory = async (
   res: Response
 ) => {
   try {
-    await Category.findByIdAndDelete(
-      req.params.id
-    );
+    const productExists = await Product.exists({
+      category: req.params.id,
+    });
+
+    if (productExists) {
+      return res.status(400).json({
+        message:
+          "Cannot delete category because it is assigned to one or more products.",
+      });
+    }
+
+    await Category.findByIdAndDelete(req.params.id);
 
     res.json({
       message: "Category deleted",
     });
-  } catch {
+  } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       message: "Failed to delete category",
     });

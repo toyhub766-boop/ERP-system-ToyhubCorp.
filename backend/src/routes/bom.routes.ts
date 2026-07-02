@@ -4,39 +4,46 @@ import authMiddleware from "../middlewares/auth.middleware";
 import roleMiddleware from "../middlewares/role.middleware";
 
 import {
-  getCategories,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-} from "../controllers/category.controller";
+  getBOMs,
+  getBOMById,
+  createBOM,
+  updateBOM,
+  deleteBOM,
+} from "../controllers/bom.controller";
 
 const router = Router();
 
 router.get(
   "/",
   authMiddleware,
-  getCategories
+  getBOMs
+);
+
+router.get(
+  "/:id",
+  authMiddleware,
+  getBOMById
 );
 
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware(["FOUNDER", "INVENTORY",]),
-  createCategory
+  roleMiddleware(["FOUNDER"]),
+  createBOM
 );
 
 router.put(
   "/:id",
   authMiddleware,
   roleMiddleware(["FOUNDER"]),
-  updateCategory
+  updateBOM
 );
 
 router.delete(
   "/:id",
   authMiddleware,
   roleMiddleware(["FOUNDER"]),
-  deleteCategory
+  deleteBOM
 );
 
 export default router;

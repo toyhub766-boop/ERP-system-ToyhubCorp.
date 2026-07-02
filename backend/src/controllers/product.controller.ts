@@ -51,13 +51,16 @@ export const createProduct = async (
     });
 
     res.status(201).json(product);
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+  console.error("CREATE PRODUCT ERROR:");
+  console.error(error);
+  console.error(error?.message);
+  console.error(error?.errors);
 
-    res.status(500).json({
-      message: "Failed to create product",
-    });
-  }
+  return res.status(500).json({
+    message: error?.message || "Failed to create product",
+  });
+}
 };
 
 export const updateProduct = async (
@@ -107,6 +110,31 @@ export const deleteProduct = async (
   } catch {
     res.status(500).json({
       message: "Failed to delete product",
+    });
+  }
+};
+
+export const getProductById = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate("category", "name")
+      .populate("warehouse", "name");
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found",
+      });
+    }
+
+    res.json(product);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch product",
     });
   }
 };

@@ -41,7 +41,17 @@ export const createBOM = async (
   res: Response
 ) => {
   try {
-    const bom = await BOM.create(req.body);
+    const existingBOM = await BOM.findOne({
+  finishedProduct: req.body.finishedProduct,
+});
+
+if (existingBOM) {
+  return res.status(400).json({
+    message: "A BOM already exists for this finished product.",
+  });
+}
+
+const bom = await BOM.create(req.body);
 
     const populatedBom = await BOM.findById(bom._id)
       .populate("finishedProduct")

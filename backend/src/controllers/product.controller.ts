@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Product from "../models/Product";
+import InventoryTransaction from "../models/InventoryTransaction";
 
 const getStockStatus = (
   currentStock: number,
@@ -100,6 +101,18 @@ export const deleteProduct = async (
   res: Response
 ) => {
   try {
+    const transactionExists =
+      await InventoryTransaction.exists({
+        product: req.params.id,
+      });
+
+    if (transactionExists) {
+      return res.status(400).json({
+        message:
+          "Cannot delete product. Inventory transactions exist.",
+      });
+    }
+
     await Product.findByIdAndDelete(
       req.params.id
     );

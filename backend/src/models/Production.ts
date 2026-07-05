@@ -84,6 +84,21 @@ const ProductionSchema = new Schema(
       default: "",
     },
 
+    actualQuantity: {
+      type: Number,
+      default: null,
+    },
+
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+
+    remarks: {
+      type: String,
+      default: "",
+    },
+
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -92,10 +107,7 @@ const ProductionSchema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export default mongoose.model<IProduction>(
-  "Production",
-  ProductionSchema
-);
+export default mongoose.model<IProduction>("Production", ProductionSchema);

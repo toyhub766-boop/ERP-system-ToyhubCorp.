@@ -2,22 +2,15 @@ import { Response } from "express";
 
 import { AuthRequest } from "../middlewares/auth.middleware";
 
+import MaterialConsumption from "../models/MaterialConsumption";
+
 import Production from "../models/Production";
 import BOM from "../models/BOM";
 import { calculateMaterialAvailability } from "../utils/production.utils";
 
-export const createProduction = async (
-    req: AuthRequest,
-  res: Response
-) => {
+export const createProduction = async (req: AuthRequest, res: Response) => {
   try {
-    const {
-      bom,
-      quantity,
-      team,
-      targetDate,
-      notes,
-    } = req.body;
+    const { bom, quantity, team, targetDate, notes } = req.body;
 
     const existingBOM = await BOM.findById(bom);
 
@@ -27,90 +20,67 @@ export const createProduction = async (
       });
     }
 
-    const count =
-      (await Production.countDocuments()) + 1;
+    const count = (await Production.countDocuments()) + 1;
 
     const orderNumber = `PROD-${new Date().getFullYear()}-${String(
-      count
+      count,
     ).padStart(3, "0")}`;
 
-    const production =
-      await Production.create({
-        orderNumber,
+    const production = await Production.create({
+      orderNumber,
 
-        bom,
+      bom,
 
-        finishedProduct:
-          existingBOM.finishedProduct,
+      finishedProduct: existingBOM.finishedProduct,
 
-        quantity,
+      quantity,
 
-        team,
+      team,
 
-        targetDate,
+      targetDate,
 
-        notes,
+      notes,
 
-        createdBy: req.user?.userId,
-      });
+      createdBy: req.user?.userId,
+    });
 
-    const populated =
-      await Production.findById(
-        production._id
-      )
-        .populate("bom")
-        .populate("finishedProduct");
+    const populated = await Production.findById(production._id)
+      .populate("bom")
+      .populate("finishedProduct");
 
     res.status(201).json(populated);
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
-      message:
-        "Failed to create production order",
+      message: "Failed to create production order",
     });
   }
 };
 
-export const getProductions = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getProductions = async (req: AuthRequest, res: Response) => {
   try {
-    const productions =
-      await Production.find()
-        .populate("bom")
-        .populate(
-          "finishedProduct",
-          "name sku"
-        )
-        .populate(
-          "createdBy",
-          "name"
-        )
-        .sort({
-          createdAt: -1,
-        });
+    const productions = await Production.find()
+      .populate("bom")
+      .populate("finishedProduct", "name sku")
+      .populate("createdBy", "name")
+      .sort({
+        createdAt: -1,
+      });
 
     res.json(productions);
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
-      message:
-        "Failed to fetch production orders",
+      message: "Failed to fetch production orders",
     });
   }
 };
 
-export const getProductionById = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getProductionById = async (req: AuthRequest, res: Response) => {
   try {
-    const production = await Production.findById(
-      req.params.id
-    )
+    const production = await Production.findById(req.params.id)
       .populate("bom")
       .populate("finishedProduct", "name sku")
       .populate("createdBy", "name");
@@ -131,10 +101,7 @@ export const getProductionById = async (
   }
 };
 
-export const updateProduction = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const updateProduction = async (req: AuthRequest, res: Response) => {
   try {
     const {
       bom,
@@ -143,10 +110,12 @@ export const updateProduction = async (
       status,
       targetDate,
       notes,
+      actualQuantity,
+      completedAt,
+      remarks,
     } = req.body;
 
-    const existingBOM =
-      await BOM.findById(bom);
+    const existingBOM = await BOM.findById(bom);
 
     if (!existingBOM) {
       return res.status(404).json({
@@ -154,32 +123,36 @@ export const updateProduction = async (
       });
     }
 
-    const production =
-      await Production.findByIdAndUpdate(
-        req.params.id,
-        {
-          bom,
+    const production = await Production.findByIdAndUpdate(
+      req.params.id,
+      {
+        bom,
 
-          finishedProduct:
-            existingBOM.finishedProduct,
+        finishedProduct: existingBOM.finishedProduct,
 
-          quantity,
+        quantity,
 
-          team,
+        team,
 
-          status,
+        status,
 
-          targetDate,
+        targetDate,
 
-          notes,
-        },
-        {
-          new: true,
-        }
-      )
-        .populate("bom")
-        .populate("finishedProduct")
-        .populate("createdBy", "name");
+        notes,
+
+        actualQuantity,
+
+        completedAt,
+
+        remarks,
+      },
+      {
+        new: true,
+      },
+    )
+      .populate("bom")
+      .populate("finishedProduct")
+      .populate("createdBy", "name");
 
     if (!production) {
       return res.status(404).json({
@@ -187,27 +160,42 @@ export const updateProduction = async (
       });
     }
 
-    res.json(production);
+    if (status === "Completed") {
 
-  } catch (error) {
-    console.error(error);
+  const bomData = await BOM.findById(bom)
+  .populate("materials.product");
+  if (bomData) {
 
-    res.status(500).json({
-      message:
-        "Failed to update production order",
+    await MaterialConsumption.deleteMany({
+      production: production._id,
     });
+
+    const consumption = bomData.materials.map((item: any) => ({
+      production: production._id,
+      material: item.product._id,
+      requiredQuantity: item.quantity * production.quantity,
+    }));
+
+    await MaterialConsumption.insertMany(consumption);
+
   }
+
+}
+
+    res.json(production);
+  } catch (error: any) {
+  console.error(error);
+
+  res.status(500).json({
+    message: error.message,
+    error,
+  });
+}
 };
 
-export const deleteProduction = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const deleteProduction = async (req: AuthRequest, res: Response) => {
   try {
-    const production =
-      await Production.findByIdAndDelete(
-        req.params.id
-      );
+    const production = await Production.findByIdAndDelete(req.params.id);
 
     if (!production) {
       return res.status(404).json({
@@ -216,29 +204,20 @@ export const deleteProduction = async (
     }
 
     res.json({
-      message:
-        "Production order deleted",
+      message: "Production order deleted",
     });
-
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
-      message:
-        "Failed to delete production order",
+      message: "Failed to delete production order",
     });
   }
 };
 
-export const calculateProduction = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const calculateProduction = async (req: AuthRequest, res: Response) => {
   try {
-    const {
-      bom,
-      quantity,
-    } = req.body;
+    const { bom, quantity } = req.body;
 
     if (!bom || !quantity) {
       return res.status(400).json({
@@ -246,20 +225,14 @@ export const calculateProduction = async (
       });
     }
 
-    const result =
-      await calculateMaterialAvailability(
-        bom,
-        Number(quantity)
-      );
+    const result = await calculateMaterialAvailability(bom, Number(quantity));
 
     res.json(result);
-
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
-      message:
-        "Failed to calculate production.",
+      message: "Failed to calculate production.",
     });
   }
 };

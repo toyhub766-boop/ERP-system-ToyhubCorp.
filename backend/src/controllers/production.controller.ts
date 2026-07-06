@@ -193,6 +193,29 @@ export const updateProduction = async (req: AuthRequest, res: Response) => {
 }
 };
 
+export const getMaterialConsumption = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+
+    const records = await MaterialConsumption.find({
+      production: req.params.id,
+    }).populate("material", "name unit");
+
+    res.json(records);
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch material consumption",
+    });
+
+  }
+};
+
 export const deleteProduction = async (req: AuthRequest, res: Response) => {
   try {
     const production = await Production.findByIdAndDelete(req.params.id);

@@ -9,6 +9,7 @@ import {
   getProductions,
   getProductionById,
   updateProduction,
+  getMaterialConsumption,
   deleteProduction,
   calculateProduction,
 } from "../controllers/production.controller";
@@ -45,6 +46,12 @@ router.put(
   authMiddleware,
   roleMiddleware(["FOUNDER"]),
   updateProduction
+);
+
+router.get(
+  "/:id/material-consumption",
+  authMiddleware,
+  getMaterialConsumption
 );
 
 router.delete(

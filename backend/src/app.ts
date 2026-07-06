@@ -20,6 +20,8 @@ import productionRoutes from "./routes/production.routes";
 
 import dispatchRoutes from "./routes/dispatch.routes";
 
+import customerRoutes from "./routes/customer.routes";
+
 const app = express();
 
 app.use(cors());
@@ -48,4 +50,5 @@ app.use("/api/production", productionRoutes);
 
 app.use("/api/dispatch", dispatchRoutes);
 
+app.use("/api/customers", customerRoutes);
 export default app;

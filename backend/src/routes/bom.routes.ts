@@ -28,21 +28,24 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware(["FOUNDER"]),
+  roleMiddleware(["FOUNDER",
+  "PRODUCTION",]),
   createBOM
 );
 
 router.put(
   "/:id",
   authMiddleware,
-  roleMiddleware(["FOUNDER"]),
+  roleMiddleware(["FOUNDER",
+  "PRODUCTION",]),
   updateBOM
 );
 
 router.delete(
   "/:id",
   authMiddleware,
-  roleMiddleware(["FOUNDER"]),
+  roleMiddleware(["FOUNDER",
+  "PRODUCTION",]),
   deleteBOM
 );
 

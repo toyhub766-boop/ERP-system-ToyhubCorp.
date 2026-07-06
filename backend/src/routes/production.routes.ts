@@ -25,7 +25,8 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware(["FOUNDER"]),
+  roleMiddleware(["FOUNDER",
+  "PRODUCTION",]),
   createProduction
 );
 
@@ -44,7 +45,8 @@ router.get(
 router.put(
   "/:id",
   authMiddleware,
-  roleMiddleware(["FOUNDER"]),
+  roleMiddleware(["FOUNDER",
+  "PRODUCTION",]),
   updateProduction
 );
 
@@ -57,7 +59,8 @@ router.get(
 router.delete(
   "/:id",
   authMiddleware,
-  roleMiddleware(["FOUNDER"]),
+  roleMiddleware(["FOUNDER",
+  "PRODUCTION",]),
   deleteProduction
 );
 

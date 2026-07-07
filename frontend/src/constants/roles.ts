@@ -1,0 +1,7 @@
+export enum UserRole {
+  FOUNDER = "FOUNDER",
+  INVENTORY = "INVENTORY",
+  PRODUCTION = "PRODUCTION",
+  ACCOUNTANT = "ACCOUNTANT",
+  CRM = "CRM",
+}

@@ -47,6 +47,27 @@ export const getOrderById = async (
   }
 };
 
+export const getOrdersByCustomer = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const orders = await Order.find({
+      customer: req.params.customerId,
+    }).sort({
+      createdAt: -1,
+    });
+
+    res.json(orders);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch customer orders",
+    });
+  }
+};
+
 // CREATE
 export const createOrder = async (
   req: Request,

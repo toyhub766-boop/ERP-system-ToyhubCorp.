@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getOrders,
   getOrderById,
+  getOrdersByCustomer,
   createOrder,
   updateOrder,
   deleteOrder,
@@ -14,6 +15,11 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get("/", getOrders);
+
+router.get(
+  "/customer/:customerId",
+  getOrdersByCustomer
+);
 
 router.get("/:id", getOrderById);
 

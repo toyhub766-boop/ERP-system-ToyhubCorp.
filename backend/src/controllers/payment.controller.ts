@@ -57,6 +57,33 @@ export const getPaymentById = async (
   }
 };
 
+export const getPaymentsByCustomer = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const payments = await Payment.find()
+      .populate({
+        path: "order",
+        match: {
+          customer: req.params.customerId,
+        },
+      });
+
+    const filtered = payments.filter(
+      (payment) => payment.order
+    );
+
+    res.json(filtered);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch customer payments",
+    });
+  }
+};
+
 // CREATE
 export const createPayment = async (
   req: Request,

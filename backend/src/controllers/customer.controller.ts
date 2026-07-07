@@ -56,9 +56,12 @@ export const createCustomer = async (
 ) => {
   try {
 
-    const customer = await Customer.create(
-      req.body
-    );
+    const count = await Customer.countDocuments();
+
+const customer = await Customer.create({
+  ...req.body,
+  customerCode: `CUST-${String(count + 1).padStart(3, "0")}`,
+});
 
     res.status(201).json(customer);
 
@@ -77,15 +80,14 @@ export const updateCustomer = async (
   res: Response
 ) => {
   try {
-
-    const customer =
-      await Customer.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        {
-          new: true,
-        }
-      );
+    const customer = await Customer.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!customer) {
       return res.status(404).json({
@@ -94,10 +96,7 @@ export const updateCustomer = async (
     }
 
     res.json(customer);
-
   } catch (error) {
-    console.error(error);
-
     res.status(500).json({
       message: "Failed to update customer",
     });

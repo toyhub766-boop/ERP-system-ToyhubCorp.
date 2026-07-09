@@ -26,6 +26,12 @@ import orderRoutes from "./routes/order.routes";
 
 import paymentRoutes from "./routes/payment.routes";
 
+import accountRoutes from "./routes/account.routes";
+
+import attendanceRoutes from "./routes/attendance.routes";
+
+import labourRoutes from "./routes/labour.routes";
+
 const app = express();
 
 app.use(cors());
@@ -59,5 +65,11 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 
 app.use("/api/payments", paymentRoutes);
+
+app.use("/api/accounts", accountRoutes);
+
+app.use("/api/attendance", attendanceRoutes);
+
+app.use("/api/labour", labourRoutes);
 
 export default app;

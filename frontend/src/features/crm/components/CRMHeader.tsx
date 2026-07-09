@@ -1,9 +1,11 @@
 interface Props {
   onAddCustomer: () => void;
+  isStaff?: boolean;
 }
 
 const CRMHeader = ({
   onAddCustomer,
+  isStaff = false,
 }: Props) => {
   return (
     <div className="flex items-start justify-between">
@@ -11,7 +13,7 @@ const CRMHeader = ({
       <div>
 
         <p className="text-sm text-slate-500">
-          Admin &gt; CRM
+          {isStaff ? "CRM Staff" : "Admin > CRM"}
         </p>
 
         <h1 className="text-3xl font-bold mt-2">
@@ -24,20 +26,20 @@ const CRMHeader = ({
 
       </div>
 
-     <button
-  onClick={onAddCustomer}
-  className="
-    bg-[#172B6B]
-    hover:bg-[#223a88]
-    text-white
-    px-6
-    py-3
-    rounded-xl
-    font-medium
-  "
->
-  + Add Customer
-</button>
+      <button
+        onClick={onAddCustomer}
+        className="
+          bg-[#172B6B]
+          hover:bg-[#223a88]
+          text-white
+          px-6
+          py-3
+          rounded-xl
+          font-medium
+        "
+      >
+        + Add Customer
+      </button>
 
     </div>
   );

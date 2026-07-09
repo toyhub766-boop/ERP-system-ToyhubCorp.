@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import AdminLayout from "../../../app/layouts/AdminLayout";
 
 import InventoryHeader from "../components/InventoryHeader";
 import InventorySearch from "../components/InventorySearch";
@@ -92,6 +93,8 @@ const InventoryPage = () => {
   });
 
   return (
+
+    <AdminLayout>
     <div className="space-y-6">
       <InventoryHeader
         totalProducts={filteredProducts.length}
@@ -151,6 +154,7 @@ const InventoryPage = () => {
         />
       </div>
     </div>
+    </AdminLayout>
   );
 };
 

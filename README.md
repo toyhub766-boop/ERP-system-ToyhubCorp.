@@ -152,13 +152,14 @@ npm run dev
 |---------|--------|
 | Authentication | ✅ Completed |
 | User Management | ✅ Completed |
-| Inventory | 🚧 In Progress |
-| BOM | ⏳ Planned |
-| Production | ⏳ Planned |
-| Dispatch | ⏳ Planned |
-| CRM | ⏳ Planned |
-| Attendance | ⏳ Planned |
-| Reports | ⏳ Planned |
+| Inventory | ✅ Completed |
+| BOM | ✅ Completed |
+| Production | ✅ Completed |
+| Dispatch | ✅ Completed |
+| CRM | ✅ Completed |
+| Accounts | ✅ Completed |
+| Attendance | ✅ Completed |
+| Reports | ✅ Completed |
 
 ---
 
@@ -172,7 +173,7 @@ This project prioritizes:
 - CRUD-first workflow
 - Modular structure
 
-UI polishing and advanced enhancements will be completed after all core modules are functional.
+UI polishing and advanced enhancements is being completed since all core modules are functional.
 
 ---
 

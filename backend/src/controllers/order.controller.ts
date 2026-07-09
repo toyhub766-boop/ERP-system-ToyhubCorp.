@@ -74,9 +74,23 @@ export const createOrder = async (
   res: Response
 ) => {
   try {
-    const order = await Order.create(
-      req.body
-    );
+    const lastOrder = await Order.findOne()
+      .sort({ createdAt: -1 });
+
+    let nextNumber = 1;
+
+    if (lastOrder?.orderNumber) {
+      const current = parseInt(
+        lastOrder.orderNumber.replace("ORD-", "")
+      );
+
+      nextNumber = current + 1;
+    }
+
+    const order = await Order.create({
+      ...req.body,
+      orderNumber: `ORD-${String(nextNumber).padStart(4, "0")}`,
+    });
 
     res.status(201).json(order);
   } catch (error) {

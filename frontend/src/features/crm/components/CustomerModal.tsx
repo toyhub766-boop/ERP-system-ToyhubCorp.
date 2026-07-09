@@ -10,8 +10,12 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
 }
-
-const AddCustomerModal = ({ open, onClose, onSuccess }: Props) => {
+const CustomerModal = ({
+  open,
+  customer,
+  onClose,
+  onSuccess,
+}: Props) => {
   const [form, setForm] = useState({
   companyName: customer?.companyName || "",
   contactPerson: customer?.contactPerson || "",
@@ -161,4 +165,4 @@ if (customer?._id) {
   );
 };
 
-export default AddCustomerModal;
+export default CustomerModal;

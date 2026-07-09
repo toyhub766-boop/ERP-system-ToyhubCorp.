@@ -46,6 +46,14 @@ import ProductionDashboardPage from "../../features/productionStaff/pages/Dashbo
 
 import CRMPage from "../../features/crm/pages/CRMPage";
 
+import CRMStaffPage from "../../features/crm/pages/CRMStaffPage";
+
+import AccountsPage from "../../features/accounts/pages/AccountsPage";
+
+import AccountantPage from "../../features/accountant/pages/AccountantPage";
+
+import AttendancePage from "../../features/attendance/pages/attendancePage";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -97,6 +105,15 @@ const AppRoutes = () => {
         />
 
         <Route
+          path="/admin/inventory"
+          element={
+            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+              <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/inventory/:id"
           element={
             <ProtectedRoute allowedRoles={["FOUNDER"]}>
@@ -137,6 +154,24 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute allowedRoles={["FOUNDER"]}>
               <CRMPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/accounts"
+          element={
+            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+              <AccountsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/attendance"
+          element={
+            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+              <AttendancePage />
             </ProtectedRoute>
           }
         />
@@ -222,7 +257,24 @@ const AppRoutes = () => {
           <Route path="dispatch" element={<ProductionStaffDispatchPage />} />
         </Route>
 
-        
+        <Route
+          path="/crm-staff"
+          element={
+            <ProtectedRoute allowedRoles={["CRM"]}>
+              <CRMStaffPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/accountant"
+          element={
+            <ProtectedRoute allowedRoles={["ACCOUNTANT"]}>
+              <AccountantPage />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );

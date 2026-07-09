@@ -1,11 +1,19 @@
 interface Props {
   customer: any;
   orders: any[];
+  onEdit: (customer: any) => void;
+  onDelete: (customer: any) => void;
+  onCreateOrder: (customer: any) => void;
+  onRecordPayment: (customer: any) => void;
 }
 
 const CustomerProfile = ({
   customer,
   orders,
+  onEdit,
+  onDelete,
+  onCreateOrder,
+  onRecordPayment,
 }: Props) => {
   if (!customer) {
     return (
@@ -56,6 +64,27 @@ const CustomerProfile = ({
         <p className="text-slate-500">
           {customer.companyName}
         </p>
+
+      <button
+  onClick={() => onEdit(customer)}
+  className="mt-4 px-4 py-2 bg-[#172B6B] text-white rounded-lg text-sm"
+>
+  Edit Customer
+</button>
+
+<button
+  onClick={() => onDelete(customer)}
+  className="mt-4 ml-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
+>
+  Delete
+</button>
+
+<button
+  onClick={() => onCreateOrder(customer)}
+  className="mt-2 ml-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm"
+>
+  New Order
+</button>
 
       </div>
 

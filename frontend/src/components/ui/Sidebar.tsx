@@ -11,6 +11,7 @@ import {
   FiLogOut,
   FiLayers,
   FiMenu,
+  FiDollarSign,
 } from "react-icons/fi";
 
 import logo from "../../assets/images/logo.png";
@@ -58,6 +59,13 @@ const menuItems = [
     icon: <FiUsers />,
     path: "/admin/crm",
   },
+
+  {
+  label: "Accounts",
+  icon:  <FiDollarSign />,
+  path: "/admin/accounts",
+},
+
   {
     label: "Attendance",
     icon: <FiUsers />,

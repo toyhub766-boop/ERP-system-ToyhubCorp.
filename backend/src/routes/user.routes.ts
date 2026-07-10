@@ -5,6 +5,7 @@ import roleMiddleware from "../middlewares/role.middleware";
 import {
   getUsers,
   createUser,
+  getAttendanceUsers,
   updateUser,
   deleteUser,
 } from "../controllers/user.controller";
@@ -15,6 +16,12 @@ router.get("/", authMiddleware, getUsers);
 
 router.post("/", authMiddleware,
   roleMiddleware(["FOUNDER"]), createUser);
+
+router.get(
+  "/attendance-users",
+  authMiddleware,
+  getAttendanceUsers
+);
 
 router.put("/:id", authMiddleware,
   roleMiddleware(["FOUNDER"]), updateUser);

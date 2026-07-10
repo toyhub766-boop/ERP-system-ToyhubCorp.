@@ -40,6 +40,32 @@ export const createAttendance = async (
   res: Response
 ) => {
   try {
+    const {
+  attendanceType,
+  employee,
+  labour,
+  date,
+  checkIn,
+  checkOut,
+} = req.body;
+
+if (attendanceType === "EMPLOYEE" && !employee) {
+  return res.status(400).json({
+    message: "Employee is required.",
+  });
+}
+
+if (attendanceType === "LABOUR" && !labour) {
+  return res.status(400).json({
+    message: "Labour is required.",
+  });
+}
+
+if (!date || !checkIn || !checkOut) {
+  return res.status(400).json({
+    message: "Date, check-in and check-out are required.",
+  });
+}
     const attendance = await Attendance.create(req.body);
 
     res.status(201).json(attendance);

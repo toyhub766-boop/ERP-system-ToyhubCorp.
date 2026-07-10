@@ -47,6 +47,25 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
+export const getAttendanceUsers = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const users = await User.find({})
+      .select("name role employeeId")
+      .sort({ name: 1 });
+
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch users.",
+    });
+  }
+};
+
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const user = await User.findByIdAndUpdate(req.params.id, req.body, {

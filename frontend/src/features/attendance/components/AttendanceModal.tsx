@@ -97,7 +97,7 @@ const AttendanceModal = ({
 
   const fetchEmployees = async () => {
     try {
-      const { data } = await api.get("/users/employees");
+      const { data } = await api.get("/users/attendance-users");
 
       setEmployees(data);
     } catch (err) {
@@ -121,6 +121,37 @@ const AttendanceModal = ({
   }, []);
   
 const handleSubmit = async () => {
+  if (form.attendanceType === "EMPLOYEE" && !form.employee) {
+  return alert("Please select an employee.");
+}
+
+if (form.attendanceType === "LABOUR" && !form.labour) {
+  return alert("Please select a labour.");
+}
+
+if (!form.date) {
+  return alert("Please select a date.");
+}
+
+if (!form.checkIn) {
+  return alert("Please enter check-in time.");
+}
+
+if (!form.checkOut) {
+  return alert("Please enter check-out time.");
+}
+
+if (form.tasksAssigned < 0) {
+  return alert("Tasks assigned cannot be negative.");
+}
+
+if (form.tasksCompleted < 0) {
+  return alert("Tasks completed cannot be negative.");
+}
+
+if (form.tasksCompleted > form.tasksAssigned) {
+  return alert("Completed tasks cannot exceed assigned tasks.");
+}
   try {
     const payload = {
       ...form,

@@ -52,6 +52,8 @@ console.log(data.user);
   navigate("/crm-staff");
 } else if (data.user.role === "ACCOUNTANT") {
   navigate("/accountant");
+} else if (data.user.role === "ATTENDANCE/HR") {
+  navigate("/admin/hr");
 } else {
   navigate("/login");
 }

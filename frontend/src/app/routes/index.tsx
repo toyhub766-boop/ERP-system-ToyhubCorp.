@@ -54,6 +54,10 @@ import AccountantPage from "../../features/accountant/pages/AccountantPage";
 
 import AttendancePage from "../../features/attendance/pages/attendancePage";
 
+import TaskPage from "../../features/tasks/pages/TaskPage";
+
+import AttendanceHRPage from "../../features/hr/pages/HRPage";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -176,6 +180,29 @@ const AppRoutes = () => {
           }
         />
 
+        <Route
+  path="/admin/hr"
+  element={
+    <ProtectedRoute
+      allowedRoles={[
+        "ATTENDANCE/HR",
+        "FOUNDER",
+      ]}
+    >
+      <AttendanceHRPage />
+    </ProtectedRoute>
+  }
+/>
+
+        <Route
+          path="/admin/tasks"
+          element={
+            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+              <TaskPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Staff */}
         <Route
           path="/staff/dashboard"
@@ -274,6 +301,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
 
       </Routes>
     </BrowserRouter>

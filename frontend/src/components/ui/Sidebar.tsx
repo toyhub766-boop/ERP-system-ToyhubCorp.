@@ -71,6 +71,7 @@ const menuItems = [
     icon: <FiUsers />,
     path: "/admin/attendance",
   },
+  
   {
     label: "Reports",
     icon: <FiBarChart2 />,

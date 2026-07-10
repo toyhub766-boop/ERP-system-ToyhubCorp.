@@ -363,7 +363,7 @@ const UsersPage = () => {
                 <option value="CRM">CRM</option>
               
 
-              <option value="ATTENDANCE">ATTENDANCE/HR</option>
+              <option value="ATTENDANCE/HR">ATTENDANCE/HR</option>
               </select>
 
               <input

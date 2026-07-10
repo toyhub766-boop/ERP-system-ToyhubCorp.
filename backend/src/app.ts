@@ -32,6 +32,8 @@ import attendanceRoutes from "./routes/attendance.routes";
 
 import labourRoutes from "./routes/labour.routes";
 
+import taskRoutes from "./routes/task.routes";
+
 const app = express();
 
 app.use(cors());
@@ -71,5 +73,7 @@ app.use("/api/accounts", accountRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
 app.use("/api/labour", labourRoutes);
+
+app.use("/api/tasks", taskRoutes);
 
 export default app;

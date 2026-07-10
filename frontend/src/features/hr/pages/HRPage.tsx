@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import AdminLayout from "../../../app/layouts/AdminLayout";
 
 import {
   getAttendance,
   deleteAttendance,
-} from "../services/attendance.service";
+} from "../../attendance/services/attendance.service";
 
 import {
   getLabours,
   deleteLabour,
 } from "../../labour/services/labour.service";
 
-import AttendanceModal from "../components/AttendanceModal";
+import AttendanceModal from "../../attendance/components/AttendanceModal";
 import LabourModal from "../../labour/components/LabourModal";
+
+import { useNavigate } from "react-router-dom";
 
 import {
   FiEdit2,
@@ -32,10 +33,12 @@ import TaskModal from "../../tasks/components/TaskModal";
 import { exportAttendanceExcel } from "../../../utils/exportAttendanceExcel";
 import { exportAttendancePdf } from "../../../utils/exportAttendancePdf";
 
-const AttendancePage = () => {
+const AttendanceHRPage = () => {
   const [tab, setTab] = useState<"EMPLOYEE" | "LABOUR">(
     "EMPLOYEE"
   );
+
+  const navigate = useNavigate();
 
   const [attendance, setAttendance] = useState<any[]>([]);
   const [labours, setLabours] = useState<any[]>([]);
@@ -139,8 +142,7 @@ const AttendancePage = () => {
   }, [tasks, taskSearch]);
 
   return (
-    <AdminLayout>
-      <div className="p-6 space-y-6 bg-white rounded-xl shadow overflow-hidden">
+  <div className="p-6 space-y-6 bg-white rounded-xl shadow overflow-hidden">
 
         <div className="flex justify-between items-center">
 
@@ -180,6 +182,12 @@ const AttendancePage = () => {
 
           </div>
 
+<button
+  onClick={() => navigate("/admin/dashboard")}
+  className="border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-100"
+>
+  ← Dashboard
+</button>
           <button
             onClick={() =>
               tab === "EMPLOYEE"
@@ -194,6 +202,8 @@ const AttendancePage = () => {
               ? "Add Attendance"
               : "Add Labour"}
           </button>
+
+          
 
         </div>
 
@@ -406,7 +416,7 @@ const AttendancePage = () => {
 
 
           ) : (
-            <table className="w-full">
+              <table className="w-full">
               <thead>
                 <tr className="border-b bg-slate-50">
                   <th className="text-left py-3 px-3">Name</th>
@@ -731,8 +741,7 @@ const AttendancePage = () => {
 
       </div>
 
-    </AdminLayout>
   );
 };
 
-export default AttendancePage;
+export default AttendanceHRPage;

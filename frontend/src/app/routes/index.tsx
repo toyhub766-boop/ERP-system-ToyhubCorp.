@@ -58,6 +58,8 @@ import TaskPage from "../../features/tasks/pages/TaskPage";
 
 import AttendanceHRPage from "../../features/hr/pages/HRPage";
 
+import ReportsPage from "../../features/reports/pages/ReportsPage";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -202,6 +204,11 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route
+  path="/admin/reports"
+  element={<ReportsPage />}
+/>
 
         {/* Staff */}
         <Route

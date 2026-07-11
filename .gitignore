@@ -27,3 +27,12 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# Generated APKs
+*.apk

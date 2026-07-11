@@ -336,8 +336,6 @@ const StaffInventoryPage = () => {
       <AddProductModal
         open={showProductModal}
         onClose={() => setShowProductModal(false)}
-        categories={categories}
-        warehouses={warehouses}
         onSuccess={fetchProducts}
       />
 

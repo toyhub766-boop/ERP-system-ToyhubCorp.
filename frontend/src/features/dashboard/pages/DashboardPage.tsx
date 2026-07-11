@@ -23,21 +23,6 @@ import {
   getProduction,
 } from "../services/dashboard.service";
 
-const DashboardCard = ({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) => (
-  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <h3 className="font-semibold text-lg text-slate-800 mb-5">
-      {title}
-    </h3>
-
-    {children}
-  </div>
-);
 
 const DashboardPage = () => {
   const [products, setProducts] = useState<any[]>([]);

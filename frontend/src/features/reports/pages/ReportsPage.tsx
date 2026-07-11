@@ -23,12 +23,12 @@ import { exportAttendanceExcel } from "../../../utils/exportAttendanceExcel";
 const ReportsPage = () => {
     const [products, setProducts] = useState<any[]>([]);
 const [attendance, setAttendance] = useState<any[]>([]);
-const [production, setProduction] = useState<any[]>([]);
-const [dispatch, setDispatch] = useState<any[]>([]);
-const [accounts, setAccounts] = useState<any[]>([]);
-const [customers, setCustomers] = useState<any[]>([]);
-const [orders, setOrders] = useState<any[]>([]);
-const [payments, setPayments] = useState<any[]>([]);
+const [, setProduction] = useState<any[]>([]);
+const [, setDispatch] = useState<any[]>([]);
+const [, setAccounts] = useState<any[]>([]);
+const [, setCustomers] = useState<any[]>([]);
+const [, setOrders] = useState<any[]>([]);
+const [, setPayments] = useState<any[]>([]);
 
 useEffect(() => {
   const loadReports = async () => {

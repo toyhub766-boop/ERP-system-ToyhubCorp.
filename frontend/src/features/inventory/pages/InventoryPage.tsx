@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../../app/layouts/AdminLayout";
 
@@ -23,7 +23,7 @@ const InventoryPage = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [ , setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
 
@@ -59,7 +59,7 @@ const InventoryPage = () => {
       setCategories(categoriesData);
       setWarehouses(warehousesData);
     } finally {
-      setLoading(false);
+   setLoading(false);
     }
   };
 

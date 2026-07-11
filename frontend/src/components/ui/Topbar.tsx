@@ -1,4 +1,4 @@
-import { FiBell, FiSearch } from "react-icons/fi";
+import { FiBell} from "react-icons/fi";
 
 const Topbar = () => {
   const user = JSON.parse(

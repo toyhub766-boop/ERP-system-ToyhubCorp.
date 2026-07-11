@@ -13,7 +13,6 @@ const CustomerProfile = ({
   onEdit,
   onDelete,
   onCreateOrder,
-  onRecordPayment,
 }: Props) => {
   if (!customer) {
     return (

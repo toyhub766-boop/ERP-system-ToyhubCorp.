@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import AdminLayout from "../../../app/layouts/AdminLayout";
+import PageContainer from "../../../components/ui/PageContainer";
+import SectionCard from "../../../components/ui/SectionCard";
+import PageHeader from "../../../components/ui/PageHeader";
+import StatCard from "../../../components/ui/StatCard";
 
 import { getProductById } from "../services/product.service";
 
@@ -50,206 +54,227 @@ if (!product) {
 
 return (
   <AdminLayout>
-<div className="max-w-5xl mx-auto space-y-6">
+    <PageContainer className="space-y-10">
 
-  <div className="flex items-center gap-4">
+      <PageHeader
+        title="Product Details"
+        subtitle="View inventory information and transaction history."
+        action={
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50"
+          >
+            <ArrowLeft size={18} />
+            Back
+          </button>
+        }
+      />
 
-    <button
-      onClick={() => navigate(-1)}
-      className="p-2 rounded-xl hover:bg-slate-100"
-    >
-      <ArrowLeft size={22}/>
-    </button>
+      {/* Hero */}
 
-    <div>
-      <h1 className="text-3xl font-bold">
-        Product Details
-      </h1>
+      <SectionCard>
 
-      <p className="text-slate-500">
-        Inventory Information
-      </p>
-    </div>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
-  </div>
+          <div className="flex items-center gap-5">
 
-  <div className="bg-white rounded-3xl shadow border p-8 space-y-8">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 text-4xl">
+              📦
+            </div>
 
-    <div className="flex justify-between items-start">
+            <div>
 
-  <div>
+              <h2 className="text-3xl font-bold">
+                {product.name}
+              </h2>
 
-    <h2 className="text-3xl font-bold">
-      {product.name}
-    </h2>
+              <p className="mt-2 text-slate-500">
+                SKU {product.sku}
+              </p>
 
-    <p className="text-slate-500 mt-1">
-      SKU: {product.sku}
-    </p>
+              <div className="mt-3 flex flex-wrap gap-2">
 
-  </div>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                  {product.category.name}
+                </span>
 
-  <span
-    className={`px-4 py-2 rounded-full text-sm font-semibold ${
-      product.status === "Healthy"
-        ? "bg-green-100 text-green-700"
-        : product.status === "Low Stock"
-        ? "bg-yellow-100 text-yellow-700"
-        : "bg-red-100 text-red-700"
-    }`}
-  >
-    {product.status}
-  </span>
+                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                  {product.type === "FINISHED"
+                    ? "Finished Product"
+                    : "Raw Material"}
+                </span>
 
-</div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  {product.warehouse.name}
+                </span>
 
-<div className="grid grid-cols-2 gap-6">
+              </div>
 
-  <div className="border rounded-2xl p-5">
-    <p className="text-sm text-slate-500">
-      Category
-    </p>
+            </div>
 
-    <p className="text-lg font-semibold mt-2">
-      {product.category.name}
-    </p>
-  </div>
+          </div>
 
-  <div className="border rounded-2xl p-5">
-  <p className="text-sm text-slate-500">
-    Product Type
-  </p>
+          <span
+            className={`rounded-full px-5 py-2 text-sm font-semibold ${
+              product.status === "Healthy"
+                ? "bg-green-100 text-green-700"
+                : product.status === "Low Stock"
+                ? "bg-yellow-100 text-yellow-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {product.status}
+          </span>
 
-  <p className="text-lg font-semibold mt-2">
-    {product.type === "FINISHED"
-      ? "Finished Product"
-      : "Raw Material"}
-  </p>
-</div>
+        </div>
 
-  <div className="border rounded-2xl p-5">
-    <p className="text-sm text-slate-500">
-      Warehouse
-    </p>
+      </SectionCard>
 
-    <p className="text-lg font-semibold mt-2">
-      {product.warehouse.name}
-    </p>
-  </div>
+      {/* Stock Summary */}
 
-  <div className="border rounded-2xl p-5">
-    <p className="text-sm text-slate-500">
-      Unit
-    </p>
+      <section className="space-y-4">
 
-    <p className="text-lg font-semibold mt-2">
-      {product.unit}
-    </p>
-  </div>
+        <h2 className="text-lg font-semibold">
+          Stock Summary
+        </h2>
 
-  <div className="border rounded-2xl p-5">
-    <p className="text-sm text-slate-500">
-      Current Stock
-    </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
 
-    <p className="text-3xl font-bold text-[#17357A] mt-2">
-      {product.currentStock}
-    </p>
-  </div>
+          <StatCard
+            title="Current Stock"
+            value={product.currentStock}
+          />
 
-  <div className="border rounded-2xl p-5">
-    <p className="text-sm text-slate-500">
-      Minimum Stock
-    </p>
+          <StatCard
+            title="Minimum Stock"
+            value={product.minimumStock}
+          />
 
-    <p className="text-2xl font-semibold mt-2">
-      {product.minimumStock}
-    </p>
-  </div>
+          <StatCard
+            title="Warehouse"
+            value={product.warehouse.name}
+          />
 
-  <div className="border rounded-2xl p-5">
-    <p className="text-sm text-slate-500">
-      Status
-    </p>
+          <StatCard
+            title="Unit"
+            value={product.unit}
+          />
 
-    <p className="text-lg font-semibold mt-2">
-      {product.status}
-    </p>
-  </div>
+        </div>
 
-</div>
-  </div>
+      </section>
 
-  <div className="space-y-4">
+      {/* Product Information */}
 
-<h2 className="text-xl font-bold">
-Recent Transactions
-</h2>
+      <SectionCard>
 
-<div className="space-y-3">
+        <h2 className="mb-6 text-lg font-semibold">
+          Product Information
+        </h2>
 
-{transactions.map((transaction) => (
+        <div className="grid gap-6 md:grid-cols-3">
 
-<div
-key={transaction._id}
-className="border rounded-xl p-4 flex justify-between"
->
+          <div>
 
-<div>
+            <p className="text-xs uppercase text-slate-500">
+              Category
+            </p>
 
-  <p className="font-semibold">
-    {transaction.reason}
-  </p>
+            <p className="mt-2 font-semibold">
+              {product.category.name}
+            </p>
 
-  <p className="text-slate-500">
-    Type: {transaction.type === "IN" ? "Stock In" : "Stock Out"}
-  </p>
+          </div>
 
-  <p className="text-slate-500">
-    Qty: {transaction.quantity}
-  </p>
+          <div>
 
-  <p className="text-slate-500">
-    By: {transaction.performedBy?.name}
-  </p>
+            <p className="text-xs uppercase text-slate-500">
+              Product Type
+            </p>
 
-</div>
+            <p className="mt-2 font-semibold">
+              {product.type === "FINISHED"
+                ? "Finished Product"
+                : "Raw Material"}
+            </p>
 
-<div className="text-right">
+          </div>
 
-  <span
-    className={`px-3 py-1 rounded-full text-xs font-semibold ${
-      transaction.type === "IN"
-        ? "bg-green-100 text-green-700"
-        : "bg-red-100 text-red-700"
-    }`}
-  >
-    {transaction.type}
-  </span>
+          <div>
 
-  <p className="text-sm mt-3">
-    {new Date(transaction.createdAt).toLocaleDateString()}
-  </p>
+            <p className="text-xs uppercase text-slate-500">
+              Status
+            </p>
 
-  <p className="text-xs text-slate-500">
-    {new Date(transaction.createdAt).toLocaleTimeString()}
-  </p>
+            <p className="mt-2 font-semibold">
+              {product.status}
+            </p>
 
-</div>
+          </div>
 
-</div>
+        </div>
 
-))}
+      </SectionCard>
 
-</div>
+      {/* Transactions */}
 
-</div>
-  </div>
+      <SectionCard>
 
-  
-</AdminLayout>
+        <h2 className="mb-6 text-lg font-semibold">
+          Recent Transactions
+        </h2>
+
+        <div className="divide-y divide-slate-100">
+
+          {transactions.map((transaction) => (
+
+            <div
+              key={transaction._id}
+              className="flex items-center justify-between py-5"
+            >
+
+              <div>
+
+                <p className="font-semibold">
+                  {transaction.reason}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  {transaction.performedBy?.name}
+                </p>
+
+              </div>
+
+              <div className="text-right">
+
+                <p
+                  className={`font-semibold ${
+                    transaction.type === "IN"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {transaction.type === "IN" ? "+" : "-"}
+                  {transaction.quantity}
+                </p>
+
+                <p className="text-xs text-slate-500">
+                  {new Date(transaction.createdAt).toLocaleDateString()}
+                </p>
+
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </SectionCard>
+
+    </PageContainer>
+  </AdminLayout>
 );
-
 };
 
 export default InventoryDetailsPage;

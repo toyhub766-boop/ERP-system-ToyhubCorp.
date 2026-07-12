@@ -13,6 +13,11 @@ import type { Product } from "../../staff/types/inventory.types";
 
 import BottomNavigation from "../components/BottomNavigation";
 
+import PageContainer from "../../../components/ui/PageContainer";
+import PageHeader from "../../../components/ui/PageHeader";
+import SectionCard from "../../../components/ui/SectionCard";
+import StatCard from "../../../components/ui/StatCard";
+
 const StockInPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -106,205 +111,248 @@ const [batch, setBatch] =
       </div>
     );
 
-  return (
-    <div className="min-h-screen bg-slate-100">
+return (
+  <div className="min-h-screen bg-slate-100">
 
-      {/* Header */}
+    <PageContainer>
 
-      <div className="bg-[#17357A] text-white px-4 py-4 flex items-center gap-3">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
 
-        <button
-          onClick={() =>
-            navigate(-1)
+        <PageHeader
+          title="Stock In"
+          subtitle="Receive inventory into warehouse."
+          action={
+            <button
+              onClick={() => navigate(-1)}
+              className="
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                px-4
+                py-2.5
+                text-sm
+                font-medium
+                hover:bg-slate-50
+              "
+            >
+              ← Back
+            </button>
           }
-          className="text-xl"
-        >
-          ←
-        </button>
-
-        <h1 className="font-semibold text-lg">
-          Stock IN
-        </h1>
-
-      </div>
-
-      <div className="p-4 space-y-5">
+        />
 
         {/* Product */}
 
-        <div>
+        <SectionCard>
 
-          <label className="block text-sm font-medium mb-2">
-            Product
-          </label>
+          <div className="flex items-center gap-4">
 
-          <input
-            disabled
-            value={`${product.name} (${product.sku})`}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-          />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-3xl">
+              📦
+            </div>
 
-        </div>
+            <div className="flex-1">
 
-        {/* Current Stock */}
+              <h2 className="text-xl font-bold">
+                {product.name}
+              </h2>
 
-        <div>
+              <p className="mt-1 text-sm text-slate-500">
+                SKU : {product.sku}
+              </p>
 
-          <label className="block text-sm font-medium mb-2">
-            Current Stock
-          </label>
+              <p className="text-sm text-slate-500">
+                {product.warehouse?.name}
+              </p>
 
-          <div className="rounded-xl bg-slate-100 border border-slate-200 px-4 py-4">
-
-            <span className="text-3xl font-bold text-[#17357A]">
-              {product.currentStock}
-            </span>
-
-            <span className="ml-2 text-slate-500">
-              {product.unit}
-            </span>
+            </div>
 
           </div>
+
+        </SectionCard>
+
+        {/* Stock */}
+
+        <div className="grid grid-cols-2 gap-5">
+
+          <StatCard
+            title="Current Stock"
+            value={`${product.currentStock}`}
+          />
+
+          <StatCard
+            title="After Update"
+            value={
+              quantity
+                ? `${product.currentStock + Number(quantity)}`
+                : `${product.currentStock}`
+            }
+          />
 
         </div>
 
         {/* Quantity */}
 
-        <div>
+        <SectionCard>
 
-          <label className="block text-sm font-medium mb-2">
+          <h3 className="mb-5 text-lg font-semibold">
             Add Quantity
-          </label>
+          </h3>
 
           <input
             type="number"
             min="1"
             value={quantity}
-            onChange={(e) =>
-              setQuantity(
-                e.target.value
-              )
-            }
-            placeholder="0"
-            className="w-full rounded-xl border border-slate-300 px-4 py-3"
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder="Enter quantity"
+            className="
+              w-full
+              rounded-2xl
+              border
+              border-slate-200
+              px-5
+              py-4
+              text-lg
+              outline-none
+              transition
+              focus:border-[#17357A]
+            "
           />
 
-        </div>
-
-        {/* Warehouse */}
-
-        <div>
-
-          <label className="block text-sm font-medium mb-2">
-            Warehouse
-          </label>
-
-          <input
-            disabled
-            value={
-              product.warehouse
-                ?.name
-            }
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
-          />
-
-        </div>
-
-        {/* Notes */}
+        </SectionCard>
 
         {/* Reason */}
 
-<div>
-  <label className="block text-sm font-medium mb-2">
-    Reason
-  </label>
+        <SectionCard>
 
-  <div className="flex flex-wrap gap-2">
+          <h3 className="mb-5 text-lg font-semibold">
+            Reason
+          </h3>
 
-    {[
-      "Purchase",
-      "Production",
-      "Customer Return",
-      "Stock Adjustment",
-      "Transfer In",
-      "Other",
-    ].map((item) => (
-      <button
-        key={item}
-        type="button"
-        onClick={() => setReason(item)}
-        className={`px-4 py-2 rounded-full border text-sm transition ${
-          reason === item
-            ? "bg-[#17357A] text-white border-[#17357A]"
-            : "bg-white text-slate-700 border-slate-300"
-        }`}
-      >
-        {item}
-      </button>
-    ))}
+          <div className="flex flex-wrap gap-3">
 
-  </div>
-</div>
+            {[
+              "Purchase",
+              "Production",
+              "Customer Return",
+              "Stock Adjustment",
+              "Transfer In",
+              "Other",
+            ].map((item) => (
 
-{/* Batch */}
+              <button
+                key={item}
+                type="button"
+                onClick={() => setReason(item)}
+                className={`
+                  rounded-full
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-medium
+                  transition
+                  ${
+                    reason === item
+                      ? "bg-[#17357A] text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }
+                `}
+              >
+                {item}
+              </button>
 
-<div>
-  <label className="block text-sm font-medium mb-2">
-    Batch / Marka
-    <span className="text-slate-400 text-xs ml-1">
-      (Optional)
-    </span>
-  </label>
+            ))}
 
-  <input
-    type="text"
-    value={batch}
-    onChange={(e) =>
-      setBatch(e.target.value)
-    }
-    placeholder="e.g. BATCH-2406-A"
-    className="w-full rounded-xl border border-slate-300 px-4 py-3"
-  />
-</div>
+          </div>
 
-{/* Notes */}
+        </SectionCard>
 
-<div>
-  <label className="block text-sm font-medium mb-2">
-    Notes
-    <span className="text-slate-400 text-xs ml-1">
-      (Optional)
-    </span>
-  </label>
+        {/* Additional */}
 
-  <textarea
-    rows={4}
-    value={notes}
-    onChange={(e) =>
-      setNotes(e.target.value)
-    }
-    placeholder="Additional notes..."
-    className="w-full rounded-xl border border-slate-300 px-4 py-3 resize-none"
-  />
-</div>
+        <SectionCard>
 
-        {/* Button */}
+          <div className="grid gap-5">
+
+            <div>
+
+              <label className="mb-2 block text-sm font-medium">
+                Batch / Marka
+              </label>
+
+              <input
+                value={batch}
+                onChange={(e) => setBatch(e.target.value)}
+                placeholder="Optional"
+                className="
+                  w-full
+                  rounded-2xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-3
+                  outline-none
+                  focus:border-[#17357A]
+                "
+              />
+
+            </div>
+
+            <div>
+
+              <label className="mb-2 block text-sm font-medium">
+                Notes
+              </label>
+
+              <textarea
+                rows={5}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Additional notes..."
+                className="
+                  w-full
+                  resize-none
+                  rounded-2xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-3
+                  outline-none
+                  focus:border-[#17357A]
+                "
+              />
+
+            </div>
+
+          </div>
+
+        </SectionCard>
 
         <button
-          onClick={
-            handleSubmit
-          }
-          className="w-full bg-[#17357A] hover:bg-[#24479d] text-white rounded-2xl py-4 text-lg font-semibold"
+          onClick={handleSubmit}
+          className="
+            w-full
+            rounded-2xl
+            bg-[#17357A]
+            py-4
+            text-lg
+            font-semibold
+            text-white
+            transition
+            hover:bg-[#21479f]
+            active:scale-[0.99]
+          "
         >
-          ✓ Confirm Stock IN
+          Confirm Stock In
         </button>
 
       </div>
 
-      <BottomNavigation />
+    </PageContainer>
 
-    </div>
-  );
+    <BottomNavigation />
+
+  </div>
+);
 };
 
 export default StockInPage;

@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import { useEffect } from "react";
 import AdminLayout from "../../../app/layouts/AdminLayout";
+import PageContainer from "../../../components/ui/PageContainer";
+import PageHeader from "../../../components/ui/PageHeader";
+import SectionCard from "../../../components/ui/SectionCard";
+import StatCard from "../../../components/ui/StatCard";
+
+import InventorySearch from "../../inventory/components/InventorySearch";
 
 import {
   getUsers,
@@ -82,364 +88,417 @@ const UsersPage = () => {
   };
 
   return (
-    <AdminLayout>
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
+  <AdminLayout>
+    <PageContainer className="space-y-6">
 
-          <p className="text-slate-500 mt-2">
-            Manage employee accounts, permissions and roles.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowModal(true)}
-          className="
-    bg-orange-500
-    hover:bg-orange-600
-    text-white
-    px-5
-    py-3
-    rounded-xl
-    font-medium
-    shadow-sm
-  "
-        >
-          + Add User
-        </button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <div className="bg-white border rounded-2xl p-5">
-          <p className="text-slate-500 text-sm">Total Employees</p>
-
-          <h2 className="text-3xl font-bold mt-2">{users.length}</h2>
-        </div>
-
-        <div className="bg-white border rounded-2xl p-5">
-          <p className="text-slate-500 text-sm">Active Users</p>
-
-          <h2 className="text-3xl font-bold mt-2 text-green-600">
-            {users.length}
-          </h2>
-        </div>
-
-        <div className="bg-white border rounded-2xl p-5">
-          <p className="text-slate-500 text-sm">Departments</p>
-
-          <h2 className="text-3xl font-bold mt-2">5</h2>
-        </div>
-      </div>
-
-      {/* Table Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        {/* Search */}
-        <div className="p-5 border-b">
-          <input
-            type="text"
-            placeholder="Search employee..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+      <PageHeader
+        title="User Management"
+        subtitle="Manage employee accounts, permissions and system access."
+        action={
+          <button
+            onClick={() => {
+              setEditingUser(null);
+              setShowModal(true);
+            }}
             className="
-              w-full
-              md:w-80
-              px-4
-              py-3
               rounded-xl
-              border
-              border-slate-300
-              outline-none
-              focus:border-orange-500
+              bg-[#17357A]
+              px-5
+              py-3
+              text-sm
+              font-semibold
+              text-white
+              shadow-sm
+              transition
+              hover:bg-[#24479D]
             "
-          />
+          >
+            + Add User
+          </button>
+        }
+      />
+
+      {/* Stats */}
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+
+        <StatCard
+          title="Total Employees"
+          value={users.length}
+        />
+
+       <StatCard
+  title="Active Users"
+  value={users.length}
+/>
+        <StatCard
+          title="Departments"
+          value={
+            new Set(users.map((u) => u.role)).size
+          }
+        />
+
+        <StatCard
+          title="Founders"
+          value={
+            users.filter(
+              (u) => u.role === "FOUNDER"
+            ).length
+          }
+        />
+
+      </div>
+
+      {/* Search */}
+
+      <SectionCard>
+
+        <InventorySearch
+          value={search}
+          onChange={setSearch}
+        />
+
+      </SectionCard>
+
+      {/* Users Table */}
+
+      <SectionCard className="overflow-hidden">
+
+        <div className="flex items-center justify-between mb-6">
+
+          <div>
+
+            <h2 className="text-lg font-semibold text-slate-900">
+              Employee Directory
+            </h2>
+
+            <p className="text-sm text-slate-500 mt-1">
+              View and manage registered employees.
+            </p>
+
+          </div>
+
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
+
+          <table className="min-w-full">
+
+            <thead className="bg-slate-50 border-y border-slate-200">
+
               <tr>
-                <th className="text-left px-6 py-4 text-sm font-semibold">
-                  Employee ID
+
+                <th className="px-6 py-4 text-left text-xs uppercase tracking-wider font-semibold text-slate-500">
+                  Employee
                 </th>
 
-                <th className="text-left px-6 py-4 text-sm font-semibold">
-                  Name
-                </th>
-
-                <th className="text-left px-6 py-4 text-sm font-semibold">
+                <th className="px-6 py-4 text-left text-xs uppercase tracking-wider font-semibold text-slate-500">
                   Role
                 </th>
 
-                <th className="text-left px-6 py-4 text-sm font-semibold">
+                <th className="px-6 py-4 text-left text-xs uppercase tracking-wider font-semibold text-slate-500">
                   Status
                 </th>
 
-                <th className="text-right px-6 py-4 text-sm font-semibold">
+                <th className="px-6 py-4 text-right text-xs uppercase tracking-wider font-semibold text-slate-500">
                   Actions
                 </th>
+
               </tr>
+
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {filteredUsers.map((user) => (
-                <tr
-                  key={user.employeeId}
-                  className="border-t hover:bg-slate-50"
-                >
-                  <td className="px-6 py-5 font-medium">{user.employeeId}</td>
 
-                  <td className="px-6 py-5">{user.name}</td>
+  <tr
+    key={user._id}
+    className="transition hover:bg-slate-50"
+  >
 
-                  <td className="px-6 py-5">
-                    <span
-                      className={`
-                        px-3
-                        py-1
-                        rounded-full
-                        text-xs
-                        font-medium
-                        ${getRoleColor(user.role)}
-                      `}
-                    >
-                      {user.role}
-                    </span>
-                  </td>
+    <td className="px-6 py-5">
 
-                  <td className="px-6 py-5">
-                    <span className="px-3 py-1 rounded-full text-xs bg-green-100 text-green-700">
-                      Active
-                    </span>
-                  </td>
+      <div className="flex items-center gap-4">
 
-                  <td className="px-6 py-5">
-                    <div className="flex justify-end gap-3">
-                      <button
-                        onClick={() => {
-                          setEditingUser(user);
-
-                          setNewUser({
-                            employeeId: user.employeeId,
-                            name: user.name,
-                            role: user.role,
-                            password: user.password || "",
-                          });
-
-                          setShowModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={async() => {
-                          const confirmDelete = window.confirm(
-                            `Delete ${user.name}?`,
-                          );
-
-                          if (confirmDelete) {
-                            try {
-                              await deleteUser(user._id);
-
-                              await fetchUsers();
-                            } catch (error) {
-                              console.error(error);
-                            }
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="h-11 w-11 rounded-full bg-[#17357A] flex items-center justify-center text-white font-semibold">
+          {user.name.charAt(0).toUpperCase()}
         </div>
+
+        <div>
+
+          <h3 className="font-semibold text-slate-900">
+            {user.name}
+          </h3>
+
+          <p className="text-sm text-slate-500">
+            {user.employeeId}
+          </p>
+
+        </div>
+
       </div>
-      {showModal && (
-        <div
+
+    </td>
+
+    <td className="px-6 py-5">
+
+      <span
+        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRoleColor(user.role)}`}
+      >
+        {user.role}
+      </span>
+
+    </td>
+
+    <td className="px-6 py-5">
+
+      <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+        Active
+      </span>
+
+    </td>
+
+    <td className="px-6 py-5">
+
+      <div className="flex justify-end gap-2">
+
+        <button
+          onClick={() => {
+            setEditingUser(user);
+
+            setNewUser({
+              employeeId: user.employeeId,
+              name: user.name,
+              role: user.role,
+              password: "",
+            });
+
+            setShowModal(true);
+          }}
           className="
-      fixed
-      inset-0
-      bg-black/40
-      flex
-      items-center
-      justify-center
-      z-50
-      p-4
-    "
+            rounded-lg
+            border
+            border-slate-200
+            px-4
+            py-2
+            text-sm
+            font-medium
+            text-slate-700
+            transition
+            hover:bg-slate-100
+          "
         >
-          <div
-            className="
-        bg-white
-        rounded-2xl
-        w-full
-        max-w-lg
-        p-6
-      "
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">
-                {editingUser ? "Edit User" : "Add User"}
-              </h2>
+          Edit
+        </button>
 
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-slate-500"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Employee ID"
-                value={newUser.employeeId}
-                onChange={(e) =>
-                  setNewUser({
-                    ...newUser,
-                    employeeId: e.target.value,
-                  })
-                }
-                className="
-            w-full
-            border
-            rounded-xl
+        <button
+          onClick={async () => {
+            if (
+              window.confirm(
+                `Delete ${user.name}?`
+              )
+            ) {
+              await deleteUser(user._id);
+              fetchUsers();
+            }
+          }}
+          className="
+            rounded-lg
+            bg-red-50
             px-4
-            py-3
+            py-2
+            text-sm
+            font-medium
+            text-red-600
+            transition
+            hover:bg-red-100
           "
-              />
+        >
+          Delete
+        </button>
 
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={newUser.name}
-                onChange={(e) =>
-                  setNewUser({
-                    ...newUser,
-                    name: e.target.value,
-                  })
-                }
-                className="
-            w-full
-            border
-            rounded-xl
-            px-4
-            py-3
-          "
-              />
+      </div>
 
-              <select
-                value={newUser.role}
-                onChange={(e) =>
-                  setNewUser({
-                    ...newUser,
-                    role: e.target.value,
-                  })
-                }
-                className="
-            w-full
-            border
-            rounded-xl
-            px-4
-            py-3
-          "
-              >
-                <option value="FOUNDER">Founder</option>
+    </td>
 
-                <option value="INVENTORY">Inventory</option>
+  </tr>
 
-                <option value="PRODUCTION">Production</option>
+))}
 
-                <option value="ACCOUNTANT">Accountant</option>
+</tbody>
 
-                <option value="CRM">CRM</option>
-              
+</table>
 
-              <option value="ATTENDANCE/HR">ATTENDANCE/HR</option>
-              </select>
+</div>
 
-              <input
-                type="password"
-                placeholder="Password"
-                value={newUser.password}
-                onChange={(e) =>
-                  setNewUser({
-                    ...newUser,
-                    password: e.target.value,
-                  })
-                }
-                className="
-            w-full
-            border
-            rounded-xl
-            px-4
-            py-3
-          "
-              />
+</SectionCard>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="
-              px-5
-              py-3
-              border
-              rounded-xl
-            "
-                >
-                  Cancel
-                </button>
+{/* Modal */}
 
-                <button
-                  className="
-              px-5
-              py-3
-              bg-orange-500
-              text-white
-              rounded-xl
-            "
-                  onClick={async () => {
-                    try {
-                      if (editingUser) {
-                        await updateUser(editingUser._id, newUser);
+{showModal && (
 
-                        setEditingUser(null);
-                      } else {
-                        await createUser(newUser);
-                      }
+<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
 
-                      await fetchUsers();
+  <div className="w-full max-w-xl rounded-3xl bg-white shadow-2xl">
 
-                      setNewUser({
-                        employeeId: "",
-                        name: "",
-                        role: "INVENTORY",
-                        password: "",
-                      });
+    <div className="flex items-center justify-between border-b border-slate-200 px-7 py-6">
 
-                      setShowModal(false);
-                    } catch (error) {
-                      console.error(error);
-                    }
-                  }}
-                >
-                  {editingUser ? "Update User" : "Create User"}{" "}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </AdminLayout>
-  );
+      <div>
+
+        <h2 className="text-2xl font-bold text-slate-900">
+          {editingUser ? "Update User" : "Create User"}
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-500">
+          Manage employee account information.
+        </p>
+
+      </div>
+
+      <button
+        onClick={() => setShowModal(false)}
+        className="rounded-xl p-2 hover:bg-slate-100"
+      >
+        ✕
+      </button>
+
+    </div>
+
+    <div className="space-y-5 p-7">
+
+      <div>
+
+        <label className="mb-2 block text-sm font-medium">
+          Employee ID
+        </label>
+
+        <input
+          value={newUser.employeeId}
+          onChange={(e) =>
+            setNewUser({
+              ...newUser,
+              employeeId: e.target.value,
+            })
+          }
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-[#17357A]"
+        />
+
+      </div>
+
+      <div>
+
+        <label className="mb-2 block text-sm font-medium">
+          Employee Name
+        </label>
+
+        <input
+          value={newUser.name}
+          onChange={(e) =>
+            setNewUser({
+              ...newUser,
+              name: e.target.value,
+            })
+          }
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-[#17357A]"
+        />
+
+      </div>
+
+      <div>
+
+        <label className="mb-2 block text-sm font-medium">
+          Role
+        </label>
+
+        <select
+          value={newUser.role}
+          onChange={(e) =>
+            setNewUser({
+              ...newUser,
+              role: e.target.value,
+            })
+          }
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-[#17357A]"
+        >
+          <option value="FOUNDER">Founder</option>
+          <option value="INVENTORY">Inventory</option>
+          <option value="PRODUCTION">Production</option>
+          <option value="CRM">CRM</option>
+          <option value="ACCOUNTANT">Accountant</option>
+          <option value="ATTENDANCE/HR">Attendance / HR</option>
+        </select>
+
+      </div>
+
+      <div>
+
+        <label className="mb-2 block text-sm font-medium">
+          Password
+        </label>
+
+        <input
+          type="password"
+          value={newUser.password}
+          onChange={(e) =>
+            setNewUser({
+              ...newUser,
+              password: e.target.value,
+            })
+          }
+          className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-[#17357A]"
+        />
+
+      </div>
+
+    </div>
+
+    <div className="flex justify-end gap-3 border-t border-slate-200 px-7 py-5">
+
+      <button
+        onClick={() => setShowModal(false)}
+        className="rounded-xl border border-slate-200 px-5 py-3 font-medium hover:bg-slate-100"
+      >
+        Cancel
+      </button>
+
+      <button
+        onClick={async () => {
+          if (editingUser) {
+            await updateUser(editingUser._id, newUser);
+            setEditingUser(null);
+          } else {
+            await createUser(newUser);
+          }
+
+          await fetchUsers();
+
+          setNewUser({
+            employeeId: "",
+            name: "",
+            role: "INVENTORY",
+            password: "",
+          });
+
+          setShowModal(false);
+        }}
+        className="rounded-xl bg-[#17357A] px-6 py-3 font-semibold text-white hover:bg-[#24479D]"
+      >
+        {editingUser ? "Update User" : "Create User"}
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+)}
+
+</PageContainer>
+
+</AdminLayout>
+
+);
 };
 
 export default UsersPage;

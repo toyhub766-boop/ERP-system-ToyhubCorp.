@@ -17,143 +17,99 @@ import {
 import logo from "../../assets/images/logo.png";
 
 const menuItems = [
-  {
-    label: "Dashboard",
-    icon: <FiHome />,
-    path: "/admin/dashboard",
-  },
-
-  {
-    label: "Categories",
-    icon: <FiLayers />,
-    path: "/admin/categories",
-  },
-
-  {
-    label: "Inventory",
-    icon: <FiBox />,
-    path: "/admin/inventory",
-  },
-  {
-    label: "BOM Management",
-    icon: <FiSettings />,
-    path: "/admin/bom",
-  },
-  {
-    label: "Production",
-    icon: <FiClipboard />,
-    path: "/admin/production",
-  },
-  {
-    label: "Warehouses",
-    icon: <FiGrid />,
-    path: "/admin/warehouses",
-  },
-  {
-    label: "Dispatch",
-    icon: <FiTruck />,
-    path: "/admin/dispatch",
-  },
-  {
-    label: "CRM",
-    icon: <FiUsers />,
-    path: "/admin/crm",
-  },
-
-  {
-  label: "Accounts",
-  icon:  <FiDollarSign />,
-  path: "/admin/accounts",
-},
-
-  {
-    label: "Attendance",
-    icon: <FiUsers />,
-    path: "/admin/attendance",
-  },
-  
-  {
-    label: "Reports",
-    icon: <FiBarChart2 />,
-    path: "/admin/reports",
-  },
-  {
-    label: "Users",
-    icon: <FiUsers />,
-    path: "/admin/users",
-  },
+  { label: "Dashboard", icon: <FiHome />, path: "/admin/dashboard" },
+  { label: "Categories", icon: <FiLayers />, path: "/admin/categories" },
+  { label: "Inventory", icon: <FiBox />, path: "/admin/inventory" },
+  { label: "BOM Management", icon: <FiSettings />, path: "/admin/bom" },
+  { label: "Production", icon: <FiClipboard />, path: "/admin/production" },
+  { label: "Warehouses", icon: <FiGrid />, path: "/admin/warehouses" },
+  { label: "Dispatch", icon: <FiTruck />, path: "/admin/dispatch" },
+  { label: "CRM", icon: <FiUsers />, path: "/admin/crm" },
+  { label: "Accounts", icon: <FiDollarSign />, path: "/admin/accounts" },
+  { label: "Attendance", icon: <FiUsers />, path: "/admin/attendance" },
+  { label: "Reports", icon: <FiBarChart2 />, path: "/admin/reports" },
+  { label: "Users", icon: <FiUsers />, path: "/admin/users" },
 ];
 
 type SidebarProps = {
   collapsed: boolean;
-  setCollapsed: React.Dispatch<
-    React.SetStateAction<boolean>
-  >;
+  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-const Sidebar = ({
-  collapsed,
-  setCollapsed,
-}: SidebarProps) => {
+const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
   const navigate = useNavigate();
+
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
     navigate("/login");
   };
+
   return (
     <aside
-  className={`
-    fixed
-    left-0
-    top-0
-    h-screen
-    bg-[#172B6B]
-    text-white
-    flex
-    flex-col
-    z-40
-    transition-all
-    duration-300
-    ${collapsed ? "w-20" : "w-64"}
-  `}
->
-      {/* Logo Section */}
-      <div
-        className="
-          h-20
-          px-5
-          flex
-          items-center
-          gap-3
-          border-b
-          border-white/10
-        "
-      >
+      className={`
+        sticky
+        top-0
+        h-screen
+        shrink-0
+        bg-[#172B6B]
+        text-white
+        border-r
+        border-white/10
+        flex
+        flex-col
+        transition-all
+        duration-300
+        ${collapsed ? "w-20" : "w-64"}
+      `}
+    >
+      {/* Header */}
+
+      <div className="h-20 px-5 flex items-center border-b border-white/10">
 
         <button
-  onClick={() => setCollapsed(!collapsed)}
-  className="text-xl"
->
-  <FiMenu />
-</button>
+          onClick={() => setCollapsed(!collapsed)}
+          className="h-10 w-10 rounded-xl hover:bg-white/10 transition flex items-center justify-center"
+        >
+          <FiMenu size={20} />
+        </button>
 
-        <img src={logo} alt="Toy Hub" className="h-10 w-auto" />
+        {!collapsed && (
+          <div className="flex items-center gap-3 ml-4">
 
-        <div>
-          <h2 className="font-bold text-sm tracking-wide">TOY HUB</h2>
+            <img
+              src={logo}
+              alt="ToyHub"
+              className="h-10 w-auto"
+            />
 
-          <p className="text-[10px] uppercase text-slate-400">Corporation</p>
-        </div>
+            <div>
+
+              <h2 className="text-sm font-bold tracking-wide">
+                TOYHUB
+              </h2>
+
+              <p className="text-[11px] text-slate-400 uppercase">
+                Corporation
+              </p>
+
+            </div>
+
+          </div>
+        )}
+
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-5 overflow-y-auto">
-        <div className="space-y-6">
+
+      <nav className="flex-1 overflow-y-auto px-3 py-5">
+
+        <div className="space-y-1">
+
           {menuItems.map((item) => (
+
             <NavLink
               key={item.path}
               to={item.path}
@@ -161,77 +117,105 @@ const Sidebar = ({
                 `
                 flex
                 items-center
+                ${collapsed ? "justify-center" : "justify-start"}
                 gap-3
+                h-12
                 px-4
-                py-3
                 rounded-xl
+                text-sm
+                font-medium
                 transition-all
                 duration-200
                 ${
                   isActive
-                    ? "bg-[#2D3466] text-[#FF7A00]"
-                    : "text-slate-300 hover:bg-[#24356E] hover:text-white"
+                    ? "bg-white/10 text-[#FF8A1F]"
+                    : "text-slate-300 hover:bg-white/5 hover:text-white"
                 }
               `
               }
             >
-              <span className="text-lg">{item.icon}</span>
 
-              <span className="text-[15px] font-medium">{item.label}</span>
+              <span className="text-lg shrink-0">
+                {item.icon}
+              </span>
+
+              {!collapsed && (
+                <span>{item.label}</span>
+              )}
+
             </NavLink>
+
           ))}
+
         </div>
+
       </nav>
 
-      {/* User Section */}
-      <div
-        className="
-          border-t
-          border-white/10
-          p-4
-        "
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="
-              h-11
-              w-11
-              rounded-full
-              bg-orange-500
-              flex
-              items-center
-              justify-center
-              font-semibold
-            "
-          >
-            {user.name[0]}
+      {/* Footer */}
+
+      <div className="border-t border-white/10 p-4">
+
+        <div
+          className={`
+            rounded-2xl
+            bg-white/5
+            p-3
+            flex
+            items-center
+            ${collapsed ? "justify-center" : "gap-3"}
+          `}
+        >
+
+          <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center font-semibold">
+
+            {user?.name?.[0] ?? "A"}
+
           </div>
 
-          <div>
-            <h3 className="text-[15px] font-medium">{user.name}</h3>
+          {!collapsed && (
 
-            <p className="text-xs text-slate-400">Founder</p>
-          </div>
+            <div className="min-w-0">
+
+              <h3 className="truncate text-sm font-semibold">
+                {user?.name ?? "Admin"}
+              </h3>
+
+              <p className="text-xs text-slate-400">
+                Founder
+              </p>
+
+            </div>
+
+          )}
+
         </div>
 
         <button
           onClick={handleLogout}
-          className="
-    mt-5
-    flex
-    items-center
-    gap-2
-    text-sm
-    text-slate-300
-    hover:text-white
-    transition-colors
-  "
+          className={`
+            mt-4
+            w-full
+            h-11
+            rounded-xl
+            flex
+            items-center
+            ${collapsed ? "justify-center" : "justify-start px-4 gap-3"}
+            text-sm
+            text-slate-300
+            hover:bg-white/5
+            hover:text-white
+            transition
+          `}
         >
+
           <FiLogOut />
 
-{!collapsed && "Sign Out"}
+          {!collapsed && "Sign Out"}
+
         </button>
+
       </div>
+
     </aside>
   );
 };

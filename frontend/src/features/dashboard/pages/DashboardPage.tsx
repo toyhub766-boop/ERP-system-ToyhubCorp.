@@ -22,6 +22,9 @@ import {
   getAttendance,
   getProduction,
 } from "../services/dashboard.service";
+import PageHeader from "../../../components/ui/PageHeader";
+import PageContainer from "../../../components/ui/PageContainer";
+import SectionCard from "../../../components/ui/SectionCard";
 
 
 const DashboardPage = () => {
@@ -168,21 +171,27 @@ const DashboardPage = () => {
   }, [products]);
 
 
-  return (
-    <AdminLayout>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">
-          Welcome back, Govind 👋
-        </h1>
+return (
+  <AdminLayout>
+    <PageContainer className="space-y-6">
 
-        <p className="text-slate-500 mt-2">
-          Here's your business overview for today.
-        </p>
-      </div>
+      <div className="h-2" />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+      <PageHeader
+        title="Welcome Back, Admin!"
+        subtitle="Here's your business overview for today."
+      />
+
+      <div className="h-4" />
+
+      {/* KPI */}
+
+      <div className="grid grid
+grid-cols-2
+lg:grid-cols-4
+gap-6
+lg:gap-6">
+
         <StatCard
           title="Total Products"
           value={loading ? "..." : dashboardStats.totalProducts}
@@ -202,44 +211,73 @@ const DashboardPage = () => {
           title="Low Stock Items"
           value={loading ? "..." : dashboardStats.lowStock}
         />
+
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
-        <div className="bg-white rounded-2xl border p-6 h-[350px]">
-          <h3 className="font-semibold text-lg mb-4">
+      {/* Charts */}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+        <SectionCard>
+
+          <h3 className="
+text-lg
+font-semibold
+text-slate-900
+
+pb-3
+mb-6
+
+border-b
+border-slate-100
+">
             Stock Movement
           </h3>
 
-          <div className="h-full flex items-center justify-center text-slate-400">
-            <ResponsiveContainer width="100%" height={260}>
+          <div className="h-[240px] sm:h-[280px] lg:h-[340px]">
+
+            <ResponsiveContainer width="100%" height="100%">
+
               <BarChart data={stockMovement}>
                 <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" />
-
                 <XAxis dataKey="name" />
-
                 <YAxis />
-
                 <Tooltip />
-
                 <Bar
                   dataKey="quantity"
                   fill="#172B6B"
-                  radius={[6, 6, 0, 0]}
+                  radius={[8, 8, 0, 0]}
                 />
               </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-2xl border p-6 h-[350px]">
-          <h3 className="font-semibold text-lg mb-4">
+            </ResponsiveContainer>
+
+          </div>
+
+        </SectionCard>
+
+        <SectionCard>
+
+          <h3 className="
+text-lg
+font-semibold
+text-slate-900
+
+pb-3
+mb-6
+
+border-b
+border-slate-100
+">
             Warehouse Distribution
           </h3>
 
-          <div className="h-full flex items-center justify-center text-slate-400">
-            <ResponsiveContainer width="100%" height={260}>
+          <div className="h-[240px] sm:h-[280px] lg:h-[340px]">
+
+            <ResponsiveContainer width="100%" height="100%">
+
               <PieChart>
+
                 <Pie
                   data={warehouseDistribution}
                   dataKey="value"
@@ -258,90 +296,120 @@ const DashboardPage = () => {
                 <Legend />
 
                 <Tooltip />
+
               </PieChart>
+
             </ResponsiveContainer>
+
           </div>
-        </div>
+
+        </SectionCard>
+
       </div>
 
-      {/* Bottom Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
-        <div className="bg-white rounded-2xl border p-6">
-          <h3 className="font-semibold text-lg mb-4">
+      {/* Activity */}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+        <SectionCard>
+
+          <h3 className="
+text-lg
+font-semibold
+text-slate-900
+
+pb-3
+mb-6
+
+border-b
+border-slate-100
+">
             Recent Activity
           </h3>
 
           <div className="space-y-4">
-            <div className="space-y-3">
-              {recentActivity.map((t) => (
-                <div
-                  key={t._id}
-                  className="flex justify-between items-center border-b border-slate-100 pb-3"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {t.product?.name}
-                    </p>
 
-                    <p className="text-sm text-slate-500">
-                      {t.type === "IN" ? "Stock In" : "Stock Out"}
-                    </p>
-                  </div>
+            {recentActivity.map((t) => (
+              <div
+                key={t._id}
+                className="
+flex
+items-center
+justify-between
 
-                  <div className="text-right">
-                    <p
-                      className={`font-semibold ${t.type === "IN"
+py-3
+
+border-b
+border-slate-100
+
+last:border-0
+"
+              >
+                <div>
+
+                  <p className="font-medium">
+                    {t.product?.name}
+                  </p>
+
+                  <p className="text-sm text-slate-500">
+                    {t.type === "IN"
+                      ? "Stock In"
+                      : "Stock Out"}
+                  </p>
+
+                </div>
+
+                <div className="text-right">
+
+                  <p
+                    className={`font-semibold ${
+                      t.type === "IN"
                         ? "text-green-600"
                         : "text-red-600"
-                        }`}
-                    >
-                      {t.type === "IN" ? "+" : "-"}
-                      {t.quantity}
-                    </p>
+                    }`}
+                  >
+                    {t.type === "IN" ? "+" : "-"}
+                    {t.quantity}
+                  </p>
 
-                    <p className="text-xs text-slate-400">
-                      {new Date(t.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
+                  <p className="text-xs text-slate-400">
+                    {new Date(t.createdAt).toLocaleDateString()}
+                  </p>
+
                 </div>
-              ))}
-            </div>
+
+              </div>
+            ))}
+
           </div>
-        </div>
 
-        <div className="bg-white rounded-2xl border p-6">
-          <h3 className="font-semibold text-lg mb-4">
-            Warehouse Overview
-          </h3>
+        </SectionCard>
 
-          <div className="space-y-4">
-            <div className="space-y-4">
-              {warehouseDistribution.map((warehouse) => (
-                <div
-                  key={warehouse.name}
-                  className="flex justify-between"
-                >
-                  <span>{warehouse.name}</span>
+        <SectionCard>
 
-                  <span>{warehouse.value} Products</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          <h3 className="
+text-lg
+font-semibold
+text-slate-900
 
-        <div className="bg-white rounded-2xl border p-6">
-          <h3 className="font-semibold text-lg mb-4">
+pb-3
+mb-6
+
+border-b
+border-slate-100
+">
             Low Stock Alerts
           </h3>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
+
             {lowStockProducts.map((p) => (
               <div
                 key={p._id}
                 className="flex justify-between items-center"
               >
                 <div>
+
                   <p className="font-medium">
                     {p.name}
                   </p>
@@ -349,33 +417,94 @@ const DashboardPage = () => {
                   <p className="text-sm text-slate-500">
                     {p.currentStock} / {p.minimumStock}
                   </p>
+
                 </div>
 
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${p.currentStock === 0
-                    ? "bg-red-100 text-red-700"
-                    : p.currentStock <= p.minimumStock / 2
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    p.currentStock === 0
+                      ? "bg-red-100 text-red-700"
+                      : p.currentStock <= p.minimumStock / 2
                       ? "bg-orange-100 text-orange-700"
                       : "bg-yellow-100 text-yellow-700"
-                    }`}
+                  }`}
                 >
                   {p.currentStock === 0
-                    ? "Out of Stock"
+                    ? "Out"
                     : p.currentStock <= p.minimumStock / 2
-                      ? "Critical"
-                      : "Low"}
+                    ? "Critical"
+                    : "Low"}
                 </span>
+
               </div>
             ))}
-          </div>
-        </div>
 
-        <div className="bg-white rounded-2xl border p-6">
-          <h3 className="font-semibold text-lg mb-5">
+          </div>
+
+        </SectionCard>
+
+      </div>
+
+      {/* Bottom */}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+        <SectionCard>
+
+          <h3 className="
+text-lg
+font-semibold
+text-slate-900
+
+pb-3
+mb-6
+
+border-b
+border-slate-100
+">
+            Warehouse Overview
+          </h3>
+
+          <div className="space-y-4">
+
+            {warehouseDistribution.map((warehouse) => (
+              <div
+                key={warehouse.name}
+                className="flex justify-between"
+              >
+                <span>{warehouse.name}</span>
+
+                <span className="font-medium">
+                  {warehouse.value} Products
+                </span>
+
+              </div>
+            ))}
+
+          </div>
+
+        </SectionCard>
+
+        <SectionCard>
+
+          <h3 className="
+text-lg
+font-semibold
+text-slate-900
+
+pb-3
+mb-6
+
+border-b
+border-slate-100
+">
             Attendance Summary
           </h3>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid
+grid-cols-2
+md:grid-cols-4
+gap-6">
 
             <StatCard title="Present" value={attendanceSummary.present} />
             <StatCard title="Absent" value={attendanceSummary.absent} />
@@ -383,37 +512,43 @@ const DashboardPage = () => {
             <StatCard title="Leave" value={attendanceSummary.leave} />
 
           </div>
-        </div>
 
-        <div className="bg-white rounded-2xl border p-6">
+        </SectionCard>
 
-          <h3 className="font-semibold text-lg mb-5">
-            Production Summary
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            <StatCard
-              title="Draft"
-              value={productionSummary.draft}
-            />
-
-            <StatCard
-              title="In Progress"
-              value={productionSummary.inProgress}
-            />
-
-            <StatCard
-              title="Completed"
-              value={productionSummary.completed}
-            />
-
-          </div>
-
-        </div>
       </div>
-    </AdminLayout>
-  );
+
+      <SectionCard>
+
+        <h3 className="
+text-lg
+font-semibold
+text-slate-900
+
+pb-3
+mb-6
+
+border-b
+border-slate-100
+">
+          Production Summary
+        </h3>
+
+        <div className="grid grid grid
+grid-cols-1
+sm:grid-cols-3
+gap-6 gap-3">
+
+          <StatCard title="Draft" value={productionSummary.draft} />
+          <StatCard title="In Progress" value={productionSummary.inProgress} />
+          <StatCard title="Completed" value={productionSummary.completed} />
+
+        </div>
+
+      </SectionCard>
+
+    </PageContainer>
+  </AdminLayout>
+);
 };
 
 export default DashboardPage;

@@ -62,75 +62,183 @@ const OrderModal = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
 
-            <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+    <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
 
-                <h2 className="text-xl font-bold mb-6">
-                    {order ? "Edit Order" : "Create Order"}
-                </h2>
+      {/* Header */}
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="space-y-4"
-                >
+      <div className="border-b border-slate-200 px-6 py-5">
 
-                    <input
-                        name="totalAmount"
-                        type="number"
-                        placeholder="Total Amount"
-                        value={form.totalAmount}
-                        onChange={handleChange}
-                        className="w-full border rounded-xl p-3"
-                    />
+        <h2 className="text-2xl font-bold text-slate-900">
+          {order ? "Edit Order" : "Create New Order"}
+        </h2>
 
-                    <input
-                        name="dueDate"
-                        type="date"
-                        value={form.dueDate}
-                        onChange={handleChange}
-                        className="w-full border rounded-xl p-3"
-                    />
+        <p className="mt-1 text-sm text-slate-500">
+          {order
+            ? "Update the order details below."
+            : "Create a new order for the selected customer."}
+        </p>
 
-                    <select
-                        name="status"
-                        value={form.status}
-                        onChange={handleChange}
-                        className="w-full border rounded-xl p-3"
-                    >
-                        <option value="Pending">Pending</option>
-                        <option value="Confirmed">Confirmed</option>
-                        <option value="In Production">In Production</option>
-                        <option value="Dispatched">Dispatched</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled</option>
-                    </select>
+      </div>
 
-                    <div className="flex justify-end gap-3">
+      {/* Form */}
 
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="border px-5 py-2 rounded-lg"
-                        >
-                            Cancel
-                        </button>
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 p-6"
+      >
 
-                        <button
-                            type="submit"
-                            className="bg-[#172B6B] text-white px-5 py-2 rounded-lg"
-                        >
-                            Save
-                        </button>
+        {/* Total Amount */}
 
-                    </div>
+        <div>
 
-                </form>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Total Amount
+          </label>
 
-            </div>
+          <input
+            name="totalAmount"
+            type="number"
+            placeholder="Enter total amount"
+            value={form.totalAmount}
+            onChange={handleChange}
+            className="
+              h-12
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              outline-none
+              transition
+              focus:border-[#172B6B]
+              focus:ring-4
+              focus:ring-blue-100
+            "
+          />
 
         </div>
-    );
+
+        {/* Due Date */}
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Due Date
+          </label>
+
+          <input
+            name="dueDate"
+            type="date"
+            value={form.dueDate}
+            onChange={handleChange}
+            className="
+              h-12
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              outline-none
+              transition
+              focus:border-[#172B6B]
+              focus:ring-4
+              focus:ring-blue-100
+            "
+          />
+
+        </div>
+
+        {/* Status */}
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Order Status
+          </label>
+
+          <select
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            className="
+              h-12
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              outline-none
+              transition
+              focus:border-[#172B6B]
+              focus:ring-4
+              focus:ring-blue-100
+            "
+          >
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="In Production">
+              In Production
+            </option>
+            <option value="Dispatched">
+              Dispatched
+            </option>
+            <option value="Delivered">
+              Delivered
+            </option>
+            <option value="Cancelled">
+              Cancelled
+            </option>
+          </select>
+
+        </div>
+
+        {/* Footer */}
+
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              rounded-xl
+              border
+              border-slate-300
+              px-6
+              py-3
+              font-semibold
+              transition
+              hover:bg-slate-50
+            "
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="
+              rounded-xl
+              bg-[#172B6B]
+              px-6
+              py-3
+              font-semibold
+              text-white
+              transition
+              hover:bg-[#20398F]
+            "
+          >
+            {order ? "Update Order" : "Create Order"}
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+);
 };
 
 export default OrderModal;

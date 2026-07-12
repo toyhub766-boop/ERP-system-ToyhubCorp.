@@ -82,142 +82,219 @@ const TaskModal = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-[650px] p-6 space-y-4">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
 
-        <h2 className="text-2xl font-bold">
+    <div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl">
+
+      {/* Header */}
+
+      <div className="border-b border-slate-200 px-8 py-6">
+
+        <h2 className="text-2xl font-bold text-slate-900">
           {task ? "Edit Task" : "Assign Task"}
         </h2>
 
-        <input
-          className="w-full border rounded-lg p-3"
-          placeholder="Task Title"
-          value={form.title}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              title: e.target.value,
-            })
-          }
-        />
+        <p className="mt-1 text-sm text-slate-500">
+          Assign work, manage priorities and track employee progress.
+        </p>
 
-        <textarea
-          rows={3}
-          className="w-full border rounded-lg p-3"
-          placeholder="Description"
-          value={form.description}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              description: e.target.value,
-            })
-          }
-        />
+      </div>
 
-        <select
-          className="w-full border rounded-lg p-3"
-          value={form.assignedTo}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              assignedTo: e.target.value,
-            })
-          }
-        >
-          <option value="">
-            Select Employee
-          </option>
+      {/* Body */}
 
-          {users.map((u) => (
-            <option
-              key={u._id}
-              value={u._id}
-            >
-              {u.name} • {u.role}
-            </option>
-          ))}
-        </select>
+      <div className="space-y-6 p-8">
 
-        <div className="grid grid-cols-3 gap-4">
+        <div>
 
-          <select
-            className="border rounded-lg p-3"
-            value={form.priority}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                priority: e.target.value,
-              })
-            }
-          >
-            <option>Low</option>
-            <option>Medium</option>
-            <option>High</option>
-          </select>
-
-          <select
-            className="border rounded-lg p-3"
-            value={form.status}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                status: e.target.value,
-              })
-            }
-          >
-            <option>Pending</option>
-            <option>In Progress</option>
-            <option>Completed</option>
-          </select>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Task Title
+          </label>
 
           <input
-            type="date"
-            className="border rounded-lg p-3"
-            value={form.dueDate}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            placeholder="Enter task title"
+            value={form.title}
             onChange={(e) =>
               setForm({
                 ...form,
-                dueDate: e.target.value,
+                title: e.target.value,
               })
             }
           />
 
         </div>
 
-        <textarea
-          rows={3}
-          className="w-full border rounded-lg p-3"
-          placeholder="Remarks"
-          value={form.remarks}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              remarks: e.target.value,
-            })
-          }
-        />
+        <div>
 
-        <div className="flex justify-end gap-3">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Description
+          </label>
 
-          <button
-            onClick={onClose}
-            className="border px-5 py-2 rounded-lg"
+          <textarea
+            rows={4}
+            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            placeholder="Task description..."
+            value={form.description}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                description: e.target.value,
+              })
+            }
+          />
+
+        </div>
+
+        <div>
+
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Assign Employee
+          </label>
+
+          <select
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            value={form.assignedTo}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                assignedTo: e.target.value,
+              })
+            }
           >
-            Cancel
-          </button>
+            <option value="">
+              Select Employee
+            </option>
 
-          <button
-            onClick={handleSubmit}
-            className="bg-[#172B6B] text-white px-5 py-2 rounded-lg"
-          >
-            {task ? "Update" : "Save"}
-          </button>
+            {users.map((u) => (
+              <option
+                key={u._id}
+                value={u._id}
+              >
+                {u.name} • {u.role}
+              </option>
+            ))}
+
+          </select>
+
+        </div>
+
+        <div className="grid grid-cols-3 gap-5">
+
+          <div>
+
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Priority
+            </label>
+
+            <select
+              className="w-full rounded-xl border border-slate-300 px-4 py-3"
+              value={form.priority}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  priority: e.target.value,
+                })
+              }
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
+
+          </div>
+
+          <div>
+
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Status
+            </label>
+
+            <select
+              className="w-full rounded-xl border border-slate-300 px-4 py-3"
+              value={form.status}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  status: e.target.value,
+                })
+              }
+            >
+              <option>Pending</option>
+              <option>In Progress</option>
+              <option>Completed</option>
+            </select>
+
+          </div>
+
+          <div>
+
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Due Date
+            </label>
+
+            <input
+              type="date"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3"
+              value={form.dueDate}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  dueDate: e.target.value,
+                })
+              }
+            />
+
+          </div>
+
+        </div>
+
+        <div>
+
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Remarks
+          </label>
+
+          <textarea
+            rows={3}
+            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            placeholder="Additional remarks..."
+            value={form.remarks}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                remarks: e.target.value,
+              })
+            }
+          />
 
         </div>
 
       </div>
+
+      {/* Footer */}
+
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-6">
+
+        <button
+          onClick={onClose}
+          className="rounded-xl border border-slate-300 px-6 py-3 font-medium transition hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          className="rounded-xl bg-[#17357A] px-6 py-3 font-medium text-white transition hover:bg-[#21469E]"
+        >
+          {task ? "Update Task" : "Assign Task"}
+        </button>
+
+      </div>
+
     </div>
-  );
+
+  </div>
+);
 };
 
 export default TaskModal;

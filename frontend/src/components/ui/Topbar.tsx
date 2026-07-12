@@ -1,5 +1,3 @@
-import { FiBell} from "react-icons/fi";
-
 const Topbar = () => {
   const user = JSON.parse(
     localStorage.getItem("user") || "{}"
@@ -50,23 +48,7 @@ const Topbar = () => {
     "
           />
         </div>
-        {/* Notifications */}
-        <button
-          className="
-            h-11
-            w-11
-            rounded-xl
-            border
-            border-slate-200
-            flex
-            items-center
-            justify-center
-            hover:bg-slate-50
-          "
-        >
-          <FiBell size={18} />
-        </button>
-
+        
         {/* User */}
         <div className="flex items-center gap-3">
           <div className="text-right">

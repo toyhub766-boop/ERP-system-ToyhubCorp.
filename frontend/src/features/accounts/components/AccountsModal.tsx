@@ -68,104 +68,157 @@ const AccountsModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    return (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
+    <div className="w-full max-w-xl rounded-3xl bg-white shadow-2xl overflow-hidden">
 
-      <div className="bg-white rounded-xl w-[500px] p-6 space-y-4">
+      {/* Header */}
 
-        <h2 className="text-2xl font-bold">
-          {transaction ? "Edit" : "Add"} Transaction
-        </h2>
+      <div className="flex items-center justify-between border-b border-slate-200 px-7 py-5">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            {transaction ? "Edit Transaction" : "Add Transaction"}
+          </h2>
 
-        <select
-          className="w-full border rounded-lg p-3"
-          value={form.type}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              type: e.target.value,
-            })
-          }
+          <p className="mt-1 text-sm text-slate-500">
+            Record an income or expense transaction.
+          </p>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-slate-100"
         >
-          <option>Income</option>
-          <option>Expense</option>
-        </select>
+          ✕
+        </button>
+      </div>
 
-        <input
-          className="w-full border rounded-lg p-3"
-          placeholder="Category"
-          value={form.category}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              category: e.target.value,
-            })
-          }
-        />
+      {/* Body */}
 
-        <input
-          type="number"
-          className="w-full border rounded-lg p-3"
-          placeholder="Amount"
-          value={form.amount}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              amount: e.target.value,
-            })
-          }
-        />
+      <div className="space-y-5 p-7">
 
-        <select
-          className="w-full border rounded-lg p-3"
-          value={form.paymentMethod}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              paymentMethod: e.target.value,
-            })
-          }
-        >
-          <option>Cash</option>
-          <option>Bank</option>
-          <option>UPI</option>
-        </select>
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Transaction Type
+          </label>
 
-        <textarea
-          className="w-full border rounded-lg p-3"
-          placeholder="Description"
-          rows={3}
-          value={form.description}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              description: e.target.value,
-            })
-          }
-        />
-
-        <div className="flex justify-end gap-3">
-
-          <button
-            onClick={onClose}
-            className="px-5 py-2 border rounded-lg"
+          <select
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-[#17357A]"
+            value={form.type}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                type: e.target.value,
+              })
+            }
           >
-            Cancel
-          </button>
+            <option>Income</option>
+            <option>Expense</option>
+          </select>
+        </div>
 
-          <button
-            onClick={handleSubmit}
-            className="bg-[#172B6B] text-white px-5 py-2 rounded-lg"
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Category
+          </label>
+
+          <input
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            placeholder="e.g. Sales, Rent, Transport"
+            value={form.category}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                category: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Amount
+          </label>
+
+          <input
+            type="number"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            placeholder="Enter amount"
+            value={form.amount}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                amount: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Payment Method
+          </label>
+
+          <select
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-[#17357A]"
+            value={form.paymentMethod}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                paymentMethod: e.target.value,
+              })
+            }
           >
-            Save
-          </button>
+            <option>Cash</option>
+            <option>Bank</option>
+            <option>UPI</option>
+          </select>
+        </div>
 
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Description
+          </label>
+
+          <textarea
+            rows={4}
+            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            placeholder="Additional notes..."
+            value={form.description}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                description: e.target.value,
+              })
+            }
+          />
         </div>
 
       </div>
 
+      {/* Footer */}
+
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-7 py-5">
+
+        <button
+          onClick={onClose}
+          className="rounded-xl border border-slate-300 px-6 py-3 font-medium text-slate-700 transition hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          className="rounded-xl bg-[#17357A] px-6 py-3 font-semibold text-white transition hover:bg-[#21439A]"
+        >
+          {transaction ? "Update Transaction" : "Save Transaction"}
+        </button>
+
+      </div>
+
     </div>
-  );
+  </div>
+);
 };
 
 export default AccountsModal;

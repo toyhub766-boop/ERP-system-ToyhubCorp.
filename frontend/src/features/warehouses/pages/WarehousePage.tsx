@@ -7,6 +7,10 @@ import {
   updateWarehouse,
   deleteWarehouse,
 } from "../services/warehouse.service";
+import PageContainer from "../../../components/ui/PageContainer";
+import SectionCard from "../../../components/ui/SectionCard";
+import PageHeader from "../../../components/ui/PageHeader";
+import StatCard from "../../../components/ui/StatCard";
 
 type Warehouse = {
   _id: string;
@@ -56,154 +60,249 @@ const WarehousePage = () => {
     );
   }, [warehouses, search]);
 
-  return (
-    <AdminLayout>
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Warehouse Management
-          </h1>
+return (
+  <AdminLayout>
+    <PageContainer className="space-y-6">
 
-          <p className="text-slate-500 mt-2">
-            Manage product warehouses for inventory.
-          </p>
-        </div>
+      <PageHeader
+        title="Warehouse Management"
+        subtitle="Manage warehouse locations, managers and inventory distribution."
+        action={
+          <button
+            onClick={() => {
+              setEditingWarehouse(null);
 
-        <button
-          onClick={() => {
-            setEditingWarehouse(null);
+              setNewWarehouse({
+                name: "",
+                location: "",
+                manager: "",
+                status: "ACTIVE",
+              });
 
-            setNewWarehouse({
-              name: "",
-              location: "",
-              manager: "",
-              status: "ACTIVE",
-            });
+              setShowModal(true);
+            }}
+            className="
+              rounded-xl
+              bg-[#172B6B]
+              px-5
+              py-3
+              text-sm
+              font-semibold
+              text-white
+              shadow-sm
+              transition
+              hover:bg-[#20398F]
+            "
+          >
+            + Add Warehouse
+          </button>
+        }
+      />
 
-            setShowModal(true);
-          }}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-xl font-medium shadow-sm"
-        >
-          + Add Warehouse
-        </button>
-      </div>
+      {/* Stats */}
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-        <div className="bg-white border rounded-2xl p-5">
-          <p className="text-slate-500 text-sm">Total warehouses</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
-          <h2 className="text-3xl font-bold mt-2">{warehouses.length}</h2>
-        </div>
+        <StatCard
+          title="Total Warehouses"
+          value={warehouses.length}
+        />
 
-        <div className="bg-white border rounded-2xl p-5">
-          <p className="text-slate-500 text-sm">Active warehouses</p>
+        <StatCard
+          title="Active"
+          value={
+            warehouses.filter((w) => w.status === "ACTIVE").length
+          }
+        />
 
-          <h2 className="text-3xl font-bold mt-2 text-green-600">
-            {warehouses.filter((c) => c.status === "ACTIVE").length}
-          </h2>
-        </div>
+        <StatCard
+          title="Inactive"
+          value={
+            warehouses.filter((w) => w.status === "INACTIVE").length
+          }
+        />
+
+        <StatCard
+          title="Search Results"
+          value={filteredwarehouses.length}
+        />
+
       </div>
 
       {/* Search */}
-      <div className="bg-white border rounded-2xl p-5 mb-6">
-        <input
-          type="text"
-          placeholder="Search Warehouse..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full md:w-80 px-4 py-3 rounded-xl border border-slate-300 outline-none focus:border-orange-500"
-        />
-      </div>
+
+      <SectionCard>
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
+          <input
+            type="text"
+            placeholder="Search warehouse..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="
+              w-full
+              lg:max-w-sm
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-[#172B6B]
+            "
+          />
+
+        </div>
+
+      </SectionCard>
 
       {/* Table */}
-      <div className="bg-white border rounded-2xl overflow-hidden">
+
+      <SectionCard className="overflow-hidden p-0">
+
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
+
+          <table className="min-w-full">
+
+            <thead className="bg-slate-50 border-b">
+
               <tr>
-                <th className="text-left px-6 py-4">Warehouse</th>
 
-                <th className="text-left px-6 py-4">location</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Warehouse
+                </th>
 
-                <th className="text-left px-6 py-4">Manager </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Location
+                </th>
 
-                <th className="text-left px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Manager
+                </th>
 
-                <th className="text-right px-6 py-4">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Status
+                </th>
+
+                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Actions
+                </th>
+
               </tr>
+
             </thead>
 
             <tbody>
-              {filteredwarehouses.map((Warehouse) => (
-                <tr key={Warehouse._id} className="border-t hover:bg-slate-50">
-                  <td className="px-6 py-5 font-medium">{Warehouse.name}</td>
 
-                  <td className="px-6 py-5">{Warehouse.location}</td>
+              {filteredwarehouses.map((warehouse) => (
 
-<td className="px-6 py-5">{Warehouse.manager}</td>
+                <tr
+                  key={warehouse._id}
+                  className="border-b last:border-0 hover:bg-slate-50 transition"
+                >
+
+                  <td className="px-6 py-5 font-semibold text-slate-800">
+                    {warehouse.name}
+                  </td>
+
+                  <td className="px-6 py-5 text-slate-600">
+                    {warehouse.location}
+                  </td>
+
+                  <td className="px-6 py-5 text-slate-600">
+                    {warehouse.manager}
+                  </td>
+
                   <td className="px-6 py-5">
-                    
 
                     <span
-                      className={`px-3 py-1 rounded-full text-xs ${
-                        Warehouse.status === "ACTIVE"
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        warehouse.status === "ACTIVE"
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {Warehouse.status}
+                      {warehouse.status}
                     </span>
+
                   </td>
 
                   <td className="px-6 py-5">
-                    <div className="flex justify-end gap-3">
+
+                    <div className="flex justify-end gap-2">
+
                       <button
-                        className="text-blue-600 hover:text-blue-800"
                         onClick={() => {
-                          setEditingWarehouse(Warehouse);
+                          setEditingWarehouse(warehouse);
 
                           setNewWarehouse({
-                            name: Warehouse.name,
-                            location: Warehouse.location,
-                            manager: Warehouse.manager,
-                            status: Warehouse.status,
+                            name: warehouse.name,
+                            location: warehouse.location,
+                            manager: warehouse.manager,
+                            status: warehouse.status,
                           });
 
                           setShowModal(true);
                         }}
+                        className="
+                          rounded-lg
+                          bg-blue-50
+                          px-3
+                          py-2
+                          text-sm
+                          font-medium
+                          text-blue-700
+                          hover:bg-blue-100
+                        "
                       >
                         Edit
                       </button>
 
                       <button
-                        className="text-red-600 hover:text-red-800"
                         onClick={async () => {
-                          if (window.confirm(`Delete ${Warehouse.name}?`)) {
-                            try {
-                              await deleteWarehouse(Warehouse._id);
-
-                              fetchwarehouses();
-                            } catch (error) {
-                              console.log(error);
-                            }
+                          if (window.confirm(`Delete ${warehouse.name}?`)) {
+                            await deleteWarehouse(warehouse._id);
+                            fetchwarehouses();
                           }
                         }}
+                        className="
+                          rounded-lg
+                          bg-red-50
+                          px-3
+                          py-2
+                          text-sm
+                          font-medium
+                          text-red-700
+                          hover:bg-red-100
+                        "
                       >
                         Delete
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </SectionCard>
+
+      {/* Keep your existing modal below this exactly as it is */}
+
+    </PageContainer>
+
+    {showModal && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">
@@ -312,9 +411,11 @@ const WarehousePage = () => {
             </div>
           </div>
         </div>
-      )}
-    </AdminLayout>
-  );
+
+    )}
+
+  </AdminLayout>
+);
 };
 
 export default WarehousePage;

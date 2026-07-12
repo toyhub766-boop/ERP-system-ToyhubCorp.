@@ -111,219 +111,233 @@ useEffect(() => {
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6">
+return (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-6">
+    <div className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
 
-      <div className="bg-white rounded-3xl w-full max-w-2xl shadow-xl">
+      {/* Header */}
 
-        {/* Header */}
+      <div className="flex items-start justify-between border-b border-slate-200 px-8 py-6">
 
-        <div className="flex items-center justify-between border-b px-6 py-5">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Add Product
+          </h2>
 
-          <div>
-            <h2 className="text-2xl font-bold">
-              Add Product
-            </h2>
-
-            <p className="text-sm text-slate-500">
-              Create a new inventory product
-            </p>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-xl"
-          >
-            <X size={22} />
-          </button>
-
+          <p className="mt-1 text-sm text-slate-500">
+            Create a new inventory item.
+          </p>
         </div>
 
-        {/* Body */}
+        <button
+          onClick={onClose}
+          className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+        >
+          <X size={20} />
+        </button>
 
-        <div className="p-6">
-  <div className="grid grid-cols-2 gap-5">
+      </div>
 
-    <div>
-      <label className="block text-sm font-medium mb-2">
-        Product Name
-      </label>
+      {/* Form */}
 
-      <input
-  type="text"
-  name="name"
-  value={form.name}
-  onChange={handleChange}
-  className="w-full border rounded-xl px-4 py-3"
-/>
-    </div>
+      <div className="max-h-[70vh] overflow-y-auto px-8 py-7">
 
-    <div>
-  <label className="block text-sm font-medium mb-2">
-    Product Type
-  </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-  <select
-    name="type"
-    value={form.type}
-    onChange={handleChange}
-    className="w-full border rounded-xl px-4 py-3"
-  >
-    <option value="RAW">Raw Material</option>
-    <option value="FINISHED">Finished Product</option>
-  </select>
-</div>
+          {/* Product Name */}
 
-    <div>
-      <label className="block text-sm font-medium mb-2">
-        SKU
-      </label>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Product Name *
+            </label>
 
-     <input
-  type="text"
-  name="sku"
-  value={form.sku}
-  onChange={handleChange}
-  className="w-full border rounded-xl px-4 py-3"
-/>
-    </div>
+            <input
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4 transition focus:border-[#17357A] focus:outline-none"
+            />
+          </div>
 
-    <div>
-      <label className="block text-sm font-medium mb-2">
-        Category
-      </label>
+          {/* SKU */}
 
-      <select
-  name="category"
-  value={form.category}
-  onChange={handleChange}
-  className="w-full border rounded-xl px-4 py-3"
->
-  <option value="">Select Category</option>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              SKU *
+            </label>
 
-  {categories.map((category) => (
-    <option
-      key={category._id}
-      value={category._id}
-    >
-      {category.name}
-    </option>
-  ))}
-</select>
-    </div>
+            <input
+              name="sku"
+              value={form.sku}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4 transition focus:border-[#17357A] focus:outline-none"
+            />
+          </div>
 
-    <div>
-      <label className="block text-sm font-medium mb-2">
-        Warehouse
-      </label>
+          {/* Type */}
 
-      <select
-  name="warehouse"
-  value={form.warehouse}
-  onChange={handleChange}
-  className="w-full border rounded-xl px-4 py-3"
->
-  <option value="">
-    Select Warehouse
-  </option>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Product Type *
+            </label>
 
-  {warehouses.map((warehouse) => (
-    <option
-      key={warehouse._id}
-      value={warehouse._id}
-    >
-      {warehouse.name}
-    </option>
-  ))}
-</select>
-    </div>
+            <select
+              name="type"
+              value={form.type}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4"
+            >
+              <option value="RAW">Raw Material</option>
+              <option value="FINISHED">Finished Product</option>
+            </select>
+          </div>
 
-    <div>
-      <label className="block text-sm font-medium mb-2">
-        Unit
-      </label>
+          {/* Unit */}
 
-      <select
-  name="unit"
-  value={form.unit}
-  onChange={handleChange}
-  className="w-full border rounded-xl px-4 py-3"
->
-  <option value="PCS">PCS</option>
-  <option value="BOX">BOX</option>
-  <option value="SET">SET</option>
-  <option value="KG">KG</option>
-</select>
-    </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Unit
+            </label>
 
-    <div>
-      <label className="block text-sm font-medium mb-2">
-        Minimum Stock
-      </label>
+            <select
+              name="unit"
+              value={form.unit}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4"
+            >
+              <option value="PCS">PCS</option>
+              <option value="BOX">BOX</option>
+              <option value="SET">SET</option>
+              <option value="KG">KG</option>
+            </select>
+          </div>
 
-      <input
-  type="number"
-  name="minimumStock"
-  value={form.minimumStock}
-  onChange={handleChange}
-  className="w-full border rounded-xl px-4 py-3"
-/>
-    </div>
+          {/* Category */}
 
-    <div className="col-span-2">
-      <label className="block text-sm font-medium mb-2">
-        Current Stock
-      </label>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Category *
+            </label>
 
-      <input
-  type="number"
-  name="currentStock"
-  value={form.currentStock}
-  onChange={handleChange}
-  className="w-full border rounded-xl px-4 py-3"
-/>
-    </div>
+            <select
+              name="category"
+              value={form.category}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4"
+            >
+              <option value="">Select Category</option>
 
-  </div>
-</div>
+              {categories.map((category) => (
+                <option
+                  key={category._id}
+                  value={category._id}
+                >
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Footer */}
+          {/* Warehouse */}
 
-        <div className="border-t p-6 flex justify-end gap-3">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Warehouse *
+            </label>
 
-          <button
-  onClick={() => {
-    setForm({
-      name: "",
-      type: "RAW",
-      sku: "",
-      category: "",
-      warehouse: "",
-      unit: "PCS",
-      minimumStock: 0,
-      currentStock: 0,
-    });
+            <select
+              name="warehouse"
+              value={form.warehouse}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4"
+            >
+              <option value="">
+                Select Warehouse
+              </option>
 
-    onClose();
-  }}
-  className="px-6 py-3 rounded-xl border hover:bg-slate-100 transition"
->
-  Cancel
-</button>
+              {warehouses.map((warehouse) => (
+                <option
+                  key={warehouse._id}
+                  value={warehouse._id}
+                >
+                  {warehouse.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <button
-  onClick={handleSubmit}
-  className="px-5 py-2 bg-[#17357A] text-white rounded-xl"
->
-  Save Product
-</button>
+          {/* Minimum */}
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Minimum Stock
+            </label>
+
+            <input
+              type="number"
+              name="minimumStock"
+              value={form.minimumStock}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4"
+            />
+          </div>
+
+          {/* Current */}
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Current Stock
+            </label>
+
+            <input
+              type="number"
+              name="currentStock"
+              value={form.currentStock}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-slate-300 px-4"
+            />
+          </div>
 
         </div>
 
       </div>
 
+      {/* Footer */}
+
+      <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-8 py-5">
+
+        <button
+          onClick={() => {
+            setForm({
+              name: "",
+              type: "RAW",
+              sku: "",
+              category: "",
+              warehouse: "",
+              unit: "PCS",
+              minimumStock: 0,
+              currentStock: 0,
+            });
+
+            onClose();
+          }}
+          className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 font-medium transition hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          className="rounded-lg bg-[#17357A] px-5 py-2.5 font-semibold text-white transition hover:bg-[#20459D]"
+        >
+          Save Product
+        </button>
+
+      </div>
+
     </div>
-  );
+  </div>
+);
 };
 
 export default AddProductModal;

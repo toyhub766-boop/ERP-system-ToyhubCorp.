@@ -59,10 +59,13 @@ export const createCustomer = async (
     const count = await Customer.countDocuments();
 
 const customer = await Customer.create({
+  
   ...req.body,
   customerCode: `CUST-${String(count + 1).padStart(3, "0")}`,
 });
 
+console.log("Create customer endpoint hit");
+console.log(req.body);
     res.status(201).json(customer);
 
   } catch (error) {

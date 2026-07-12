@@ -8,43 +8,39 @@ const InventorySearch = ({
   onChange,
 }: InventorySearchProps) => {
   return (
-    <div className="mb-6">
-      <div className="relative">
-        <svg
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"
-          />
-        </svg>
+    <div className="mb-8">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+
+        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+          Search Inventory
+        </label>
 
         <input
           type="text"
-          placeholder="Search by name or SKU..."
+          placeholder="Search products by name or SKU..."
           value={value}
-          onChange={(e) =>
-            onChange(e.target.value)
-          }
+          onChange={(e) => onChange(e.target.value)}
           className="
             w-full
-            pl-12
-            pr-4
-            py-3
+            h-12
+            rounded-xl
             border
-            border-slate-200
-            rounded-2xl
-            bg-white
+            border-slate-300
+            bg-slate-50
+            px-4
+            text-sm
+            text-slate-800
+            placeholder:text-slate-400
             outline-none
+            transition-all
+            duration-200
+            focus:bg-white
             focus:border-[#17357A]
-            transition
+            focus:ring-4
+            focus:ring-[#17357A]/10
           "
         />
+
       </div>
     </div>
   );

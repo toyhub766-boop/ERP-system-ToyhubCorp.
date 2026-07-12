@@ -1,4 +1,7 @@
-import { FiDownload, FiFileText } from "react-icons/fi";
+import {
+  FiDownload,
+  FiFileText,
+} from "react-icons/fi";
 
 interface ReportCardProps {
   title: string;
@@ -14,32 +17,81 @@ const ReportCard = ({
   onExcel,
 }: ReportCardProps) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-all">
-      <h2 className="text-xl font-semibold text-slate-800">
-        {title}
-      </h2>
+    <div
+      className="
+        rounded-3xl
+        border
+        border-slate-200
+        bg-white
+        p-7
+        shadow-sm
+        transition-all
+        hover:-translate-y-1
+        hover:shadow-lg
+      "
+    >
+      <div className="space-y-3">
 
-      <p className="text-slate-500 mt-2 mb-6">
-        {description}
-      </p>
+        <h2 className="text-xl font-semibold text-slate-800">
+          {title}
+        </h2>
 
-      <div className="flex gap-3">
+        <p className="text-sm leading-6 text-slate-500">
+          {description}
+        </p>
+
+      </div>
+
+      <div className="mt-8 flex gap-3">
+
         <button
           onClick={onPdf}
-          className="flex items-center gap-2 bg-[#172B6B] hover:bg-[#0F1F52] text-white px-4 py-2 rounded-lg transition"
+          className="
+            flex-1
+            flex
+            items-center
+            justify-center
+            gap-2
+            rounded-xl
+            bg-[#17357A]
+            px-5
+            py-3
+            font-medium
+            text-white
+            transition
+            hover:bg-[#21469E]
+          "
         >
-          <FiFileText />
-          PDF
+          <FiFileText size={18} />
+          Export PDF
         </button>
 
         <button
           onClick={onExcel}
-          className="flex items-center gap-2 border border-slate-300 hover:bg-slate-100 px-4 py-2 rounded-lg transition"
+          className="
+            flex-1
+            flex
+            items-center
+            justify-center
+            gap-2
+            rounded-xl
+            border
+            border-slate-300
+            bg-white
+            px-5
+            py-3
+            font-medium
+            text-slate-700
+            transition
+            hover:bg-slate-50
+          "
         >
-          <FiDownload />
-          Excel
+          <FiDownload size={18} />
+          Export Excel
         </button>
+
       </div>
+
     </div>
   );
 };

@@ -71,34 +71,47 @@ setPayments(paymentsData);
 
   return (
   <AdminLayout>
-    <div className="space-y-8">
 
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">
-          Reports
-        </h1>
+    <div className="mx-auto max-w-7xl px-8 py-8 space-y-8">
 
-        <p className="text-slate-500 mt-2">
-          Export business reports in PDF or Excel.
-        </p>
+      {/* Header */}
+
+      <div className="flex items-end justify-between">
+
+        <div>
+
+          <p className="text-sm font-medium uppercase tracking-wide text-[#17357A]">
+            Reporting Center
+          </p>
+
+          <h1 className="mt-2 text-4xl font-bold text-slate-900">
+            Reports
+          </h1>
+
+          <p className="mt-3 max-w-2xl text-slate-500">
+            Generate PDF and Excel reports across every department of the ERP
+            system. Export clean business records for analysis, audits and
+            sharing.
+          </p>
+
+        </div>
+
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Report Categories */}
 
-        {/* Inventory */}
+      <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
 
         <ReportCard
           title="Inventory Report"
-          description="Export inventory records."
+          description="Products, stock levels, warehouse information and inventory records."
           onPdf={() => exportPdf(products, "inventory")}
           onExcel={() => exportExcel(products, "inventory")}
         />
 
-        {/* Attendance */}
-
         <ReportCard
           title="Attendance Report"
-          description="Export attendance records."
+          description="Employee attendance, work hours, shifts and attendance logs."
           onPdf={() =>
             exportAttendancePdf(
               attendance,
@@ -113,38 +126,30 @@ setPayments(paymentsData);
           }
         />
 
-        {/* Production */}
-
         <ReportCard
           title="Production Report"
-          description="Export production records."
+          description="Production orders, material consumption and manufacturing records."
           onPdf={() => {}}
           onExcel={() => {}}
         />
-
-        {/* Dispatch */}
 
         <ReportCard
           title="Dispatch Report"
-          description="Export dispatch records."
+          description="Dispatch history, shipments and delivery information."
           onPdf={() => {}}
           onExcel={() => {}}
         />
-
-        {/* Accounts */}
 
         <ReportCard
           title="Accounts Report"
-          description="Export accounts records."
+          description="Income, expenses, balances and financial transactions."
           onPdf={() => {}}
           onExcel={() => {}}
         />
 
-        {/* CRM */}
-
         <ReportCard
           title="CRM Report"
-          description="Export customers, orders and payments."
+          description="Customers, orders, payments and customer relationship records."
           onPdf={() => {}}
           onExcel={() => {}}
         />
@@ -152,6 +157,7 @@ setPayments(paymentsData);
       </div>
 
     </div>
+
   </AdminLayout>
 );
 }

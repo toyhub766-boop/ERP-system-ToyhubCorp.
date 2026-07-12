@@ -8,7 +8,6 @@ import { deleteOrder } from "../services/order.service";
 import { deletePayment } from "../services/payment.service";
 
 import CRMHeader from "../components/CRMHeader";
-import CRMStats from "../components/CRMStats";
 import CRMTabs from "../components/CRMTabs";
 import CustomerList from "../components/CustomerList";
 import CustomerProfile from "../components/CustomerProfile";
@@ -84,150 +83,249 @@ const CRMStaffPage = () => {
     }, []);
 
     return (
-        <CRMStaffLayout>
-            <div className="p-6 space-y-6">
+  <CRMStaffLayout>
 
-                <CRMHeader
-                    onAddCustomer={() =>
-                        setShowAddCustomer(true)
-                    }
-                />
+    <div className="mx-auto w-full max-w-[1450px] space-y-8">
 
-                <CRMStats
-                    customers={customers}
-                    orders={orders}
-                    payments={payments}
-                />
+      {/* ================= HEADER ================= */}
 
-                <CRMTabs
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                />
+      <CRMHeader
+        isStaff
+        onAddCustomer={() =>
+          setShowAddCustomer(true)
+        }
+      />
 
-                {activeTab === "customers" && (
-                    <div className="grid grid-cols-12 gap-6">
+      {/* ================= HERO ================= */}
 
-                        <div className="col-span-7">
+      <div className="rounded-3xl bg-gradient-to-r from-[#172B6B] via-[#25459B] to-[#3458D4] p-8 text-white shadow-lg">
 
-                            <CustomerList
-                                customers={customers}
-                                selectedCustomer={selectedCustomer}
-                                setSelectedCustomer={setSelectedCustomer}
-                            />
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
 
-                        </div>
+          <div className="max-w-2xl">
 
-                        <div className="col-span-5">
+            <h1 className="text-3xl font-bold">
+              CRM Staff Workspace
+            </h1>
 
-                            <CustomerProfile
-                                customer={selectedCustomer}
-                                orders={orders}
-                                onEdit={(customer) => {
-                                    setEditingCustomer(customer);
-                                    setShowAddCustomer(true);
-                                }}
-                                onDelete={async (customer) => {
-                                    if (!window.confirm("Delete customer?")) return;
+            <p className="mt-3 text-blue-100">
+              Manage customers, create orders and record
+              payments from one centralized workspace.
+            </p>
 
-                                    await deleteCustomer(customer._id);
+          </div>
 
-                                    await loadCustomers();
+          <div className="grid grid-cols-2 gap-4">
 
-                                    setSelectedCustomer(null);
-                                }}
-                                onCreateOrder={() => {
-                                    setEditingOrder(null);
-                                    setShowOrderModal(true);
-                                }}
-                                onRecordPayment={() => { }}
-                            />
+            <div className="rounded-2xl bg-white/15 backdrop-blur px-6 py-5">
 
-                        </div>
+              <p className="text-sm text-blue-100">
+                Customers
+              </p>
 
-                    </div>
-                )}
+              <h2 className="mt-2 text-4xl font-bold">
+                {customers.length}
+              </h2>
 
-                {activeTab === "orders" && (
-                    <OrdersTable
-                        orders={orders}
-                        onEdit={(order) => {
-                            setEditingOrder(order);
-                            setShowOrderModal(true);
-                        }}
-                        onDelete={async (order) => {
-                            if (!window.confirm("Delete order?")) return;
-
-                            await deleteOrder(order._id);
-
-                            loadCustomerData();
-                        }}
-                        onRecordPayment={(order) => {
-                            setSelectedOrder(order);
-                            setEditingPayment(null);
-                            setShowPaymentModal(true);
-                        }}
-                    />
-                )}
-
-                {activeTab === "payments" && (
-                    <PaymentsOverview
-                        payments={payments}
-                        onEdit={(payment) => {
-                            setEditingPayment(payment);
-                            setShowPaymentModal(true);
-                        }}
-                        onDelete={async (payment) => {
-                            if (!window.confirm("Delete payment?")) return;
-
-                            await deletePayment(payment._id);
-
-                            loadCustomerData();
-                        }}
-                    />
-                )}
-
-                <CustomerModal
-                    open={showAddCustomer}
-                    customer={editingCustomer}
-                    onClose={() => {
-                        setShowAddCustomer(false);
-                        setEditingCustomer(null);
-                    }}
-                    onSuccess={async () => {
-                        await loadCustomers();
-                        setShowAddCustomer(false);
-                        setEditingCustomer(null);
-                    }}
-                />
-
-                <OrderModal
-                    open={showOrderModal}
-                    customer={selectedCustomer}
-                    order={editingOrder}
-                    onClose={() => {
-                        setShowOrderModal(false);
-                        setEditingOrder(null);
-                    }}
-                    onSuccess={loadCustomerData}
-                />
-
-                <PaymentModal
-                    open={showPaymentModal}
-                    order={selectedOrder}
-                    payment={editingPayment}
-                    onClose={() => {
-                        setShowPaymentModal(false);
-                        setEditingPayment(null);
-                        setSelectedOrder(null);
-                    }}
-                    onSuccess={async () => {
-                        await loadCustomerData();
-                        setSelectedOrder(null);
-                    }}
-                />
             </div>
-        </CRMStaffLayout>
-    );
+
+            <div className="rounded-2xl bg-white/15 backdrop-blur px-6 py-5">
+
+              <p className="text-sm text-blue-100">
+                Orders
+              </p>
+
+              <h2 className="mt-2 text-4xl font-bold">
+                {orders.length}
+              </h2>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ================= MAIN CONTENT ================= */}
+
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg">
+
+        <div className="border-b border-slate-200 px-8 py-6">
+
+          <CRMTabs
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+
+        </div>
+
+        <div className="p-8">
+
+          {activeTab === "customers" && (
+
+            <div className="grid gap-8 xl:grid-cols-[380px_1fr] items-start">
+
+              {/* Customer List */}
+
+              <div className="min-w-0 xl:sticky xl:top-8">
+
+                <CustomerList
+                  customers={customers}
+                  selectedCustomer={selectedCustomer}
+                  setSelectedCustomer={setSelectedCustomer}
+                />
+
+              </div>
+
+              {/* Customer Profile */}
+
+              <div className="min-w-0">
+
+                <CustomerProfile
+                  customer={selectedCustomer}
+                  orders={orders}
+                  onEdit={(customer) => {
+                    setEditingCustomer(customer);
+                    setShowAddCustomer(true);
+                  }}
+                  onDelete={async (customer) => {
+
+                    if (
+                      !window.confirm(
+                        "Delete customer?"
+                      )
+                    )
+                      return;
+
+                    await deleteCustomer(customer._id);
+
+                    await loadCustomers();
+
+                    setSelectedCustomer(null);
+
+                  }}
+                  onCreateOrder={() => {
+                    setEditingOrder(null);
+                    setShowOrderModal(true);
+                  }}
+                  onRecordPayment={() => {}}
+                />
+
+              </div>
+
+            </div>
+
+          )}
+
+          {activeTab === "orders" && (
+
+            <OrdersTable
+              orders={orders}
+              onEdit={(order) => {
+                setEditingOrder(order);
+                setShowOrderModal(true);
+              }}
+              onDelete={async (order) => {
+
+                if (
+                  !window.confirm(
+                    "Delete order?"
+                  )
+                )
+                  return;
+
+                await deleteOrder(order._id);
+
+                loadCustomerData();
+
+              }}
+              onRecordPayment={(order) => {
+                setSelectedOrder(order);
+                setEditingPayment(null);
+                setShowPaymentModal(true);
+              }}
+            />
+
+          )}
+
+          {activeTab === "payments" && (
+
+            <PaymentsOverview
+              payments={payments}
+              onEdit={(payment) => {
+                setEditingPayment(payment);
+                setShowPaymentModal(true);
+              }}
+              onDelete={async (payment) => {
+
+                if (
+                  !window.confirm(
+                    "Delete payment?"
+                  )
+                )
+                  return;
+
+                await deletePayment(payment._id);
+
+                loadCustomerData();
+
+              }}
+            />
+
+          )}
+
+        </div>
+
+      </div>
+
+            {/* ================= MODALS ================= */}
+
+      <CustomerModal
+        open={showAddCustomer}
+        customer={editingCustomer}
+        onClose={() => {
+          setShowAddCustomer(false);
+          setEditingCustomer(null);
+        }}
+        onSuccess={async () => {
+          await loadCustomers();
+
+          setShowAddCustomer(false);
+          setEditingCustomer(null);
+        }}
+      />
+
+      <OrderModal
+        open={showOrderModal}
+        customer={selectedCustomer}
+        order={editingOrder}
+        onClose={() => {
+          setShowOrderModal(false);
+          setEditingOrder(null);
+        }}
+        onSuccess={loadCustomerData}
+      />
+
+      <PaymentModal
+        open={showPaymentModal}
+        order={selectedOrder}
+        payment={editingPayment}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setEditingPayment(null);
+          setSelectedOrder(null);
+        }}
+        onSuccess={async () => {
+          await loadCustomerData();
+          setSelectedOrder(null);
+        }}
+      />
+
+    </div>
+
+  </CRMStaffLayout>
+);
 };
 
 export default CRMStaffPage;

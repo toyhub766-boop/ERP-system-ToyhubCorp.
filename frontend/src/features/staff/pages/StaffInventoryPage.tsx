@@ -8,6 +8,11 @@ import { getProducts } from "../services/inventory.service";
 import type { Product } from "../types/inventory.types";
 
 import BottomNavigation from "../components/BottomNavigation";
+import PageContainer from "../../../components/ui/PageContainer";
+import PageHeader from "../../../components/ui/PageHeader";
+import SectionCard from "../../../components/ui/SectionCard";
+import StatCard from "../../../components/ui/StatCard";
+import InventorySearch from "../../inventory/components/InventorySearch";
 
 import AddProductModal from "../../inventory/components/AddProductModal";
 import AddCategoryModal from "../components/AddCategoryModal";
@@ -104,252 +109,508 @@ const StaffInventoryPage = () => {
 
   console.log("Products state:", products);
   console.log("Filtered:", filteredProducts);
-  return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Header */}
-      <div className="bg-[#17357A] px-4 py-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-white font-bold">
-            TOY HUB <br /> CORPORATION
-          </h1>
+return (
+  <div className="min-h-screen bg-slate-100">
 
-          <p className="text-blue-200 text-xs">Inventory</p>
-        </div>
+    <PageContainer>
 
-        <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">
-          M
-        </div>
-      </div>
+      <div className="mx-auto flex w-full justify-center">
 
-      <div className="flex gap-3 mb-4">
-        <button
-          onClick={() => setShowCategoryModal(true)}
-          className="flex-1 bg-white border rounded-xl py-3 font-medium"
-        >
-          + Category
-        </button>
+        <div className="w-full max-w-4xl space-y-8">
 
-        <button
-          onClick={() => setShowProductModal(true)}
-          className="flex-1 bg-[#17357A] text-white rounded-xl py-3 font-medium"
-        >
-          + Product
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="p-4">
-        <div className="flex gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search products or SKU..."
-            className="flex-1 rounded-xl border px-4 py-3"
+          <PageHeader
+            title="Inventory"
+            subtitle={`${filteredProducts.length} products available`}
           />
 
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-4 rounded-xl border-none bg-transparent"
-          >
-            🔎
-          </button>
-        </div>
+          {/* Stats */}
 
-        {showFilters && (
-          <div className="mt-4 bg-white rounded-2xl border border-slate-200 p-4 space-y-5">
-            {/* Category */}
+          <div className="grid grid-cols-2 gap-5">
 
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-500 mb-3">
-                Category
-              </p>
+            <StatCard
+              title="Products"
+              value={filteredProducts.length}
+            />
 
-              <div className="flex flex-wrap gap-2">
-                {["All", ...categories.map((c) => c.name)].map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setSelectedCategory(item)}
-                    className={`px-4 py-2 rounded-full text-sm transition
-              ${
-                selectedCategory === item
-                  ? "bg-[#17357A] text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <StatCard
+              title="Low Stock"
+              value={
+                products.filter(
+                  (p) => p.currentStock <= p.minimumStock
+                ).length
+              }
+            />
 
-            {/* Warehouse */}
-
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-500 mb-3">
-                Warehouse
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                {["All", ...warehouses.map((w) => w.name)].map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setSelectedWarehouse(item)}
-                    className={`px-4 py-2 rounded-full text-sm transition
-              ${
-                selectedWarehouse === item
-                  ? "bg-[#17357A] text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-        <p className="text-xs font-semibold uppercase text-slate-500 mb-3">
-          Product Type
-        </p>
-
-        <div className="flex flex-wrap gap-2">
-          {["All", "RAW", "FINISHED"].map((item) => (
-            <button
-              key={item}
-              onClick={() => setSelectedType(item)}
-              className={`px-4 py-2 rounded-full text-sm transition ${
-                selectedType === item
-                  ? "bg-[#17357A] text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </div>
-
-            {/* Status */}
-
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-500 mb-3">
-                Status
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                {["All", "Healthy", "Low Stock", "Critical"].map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setSelectedStatus(item)}
-                    className={`px-4 py-2 rounded-full text-sm transition
-              ${
-                selectedStatus === item
-                  ? "bg-[#17357A] text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
-        )}
 
+          {/* Search + Actions */}
 
-      </div>
+          <SectionCard className="space-y-5">
 
+        <InventorySearch
+          value={search}
+          onChange={setSearch}
+        />
+        <div className="h-3"/>
 
-      {/* Products Card*/}
+        <div className="grid grid-cols-2 gap-3">
 
-      <div className="px-4 pb-24 space-y-4">
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="
+              rounded-xl
+              border
+              border-slate-200
+              bg-slate-50
+              py-3.5
+              text-sm
+              font-semibold
+              text-slate-700
+              transition
+              hover:bg-slate-100
+            "
+          >
+            + Add Category
+          </button>
+
+          <button
+            onClick={() => setShowProductModal(true)}
+            className="
+              rounded-xl
+              bg-[#17357A]
+              py-3.5
+              text-sm
+              font-semibold
+              text-white
+              shadow-sm
+              transition
+              hover:bg-[#23428f]
+            "
+          >
+            + Add Product
+          </button>
+
+        </div>
+        <div className="h-3"/>
+
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="
+            w-full
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            py-3
+            text-sm
+            font-medium
+            text-slate-700
+            transition
+            hover:bg-slate-50
+          "
+        >
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </button>
+
+      </SectionCard>
+
+      
+
+      {/* Filters */}
+
+      {showFilters && (
+
+        <SectionCard className="space-y-6">
+
+          <div>
+
+            <h3 className="text-base font-semibold text-slate-800">
+              Filters
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Narrow down products using category, warehouse, product type and stock status.
+            </p>
+
+          </div>
+          
+
+          {/* Category */}
+
+          <div className="space-y-3">
+
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Category
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+
+              {["All", ...categories.map((c) => c.name)].map((item) => (
+
+                <button
+                  key={item}
+                  onClick={() => setSelectedCategory(item)}
+                  className={`
+                    rounded-full
+                    px-4
+                    py-2
+                    text-sm
+                    transition
+
+                    ${
+                      selectedCategory === item
+                        ? "bg-[#17357A] text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }
+                  `}
+                >
+                  {item}
+                </button>
+
+              ))}
+
+            </div>
+
+          </div>
+
+          {/* Warehouse */}
+
+          <div className="space-y-3">
+
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Warehouse
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+
+              {["All", ...warehouses.map((w) => w.name)].map((item) => (
+
+                <button
+                  key={item}
+                  onClick={() => setSelectedWarehouse(item)}
+                  className={`
+                    rounded-full
+                    px-4
+                    py-2
+                    text-sm
+                    transition
+
+                    ${
+                      selectedWarehouse === item
+                        ? "bg-[#17357A] text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }
+                  `}
+                >
+                  {item}
+                </button>
+
+              ))}
+
+            </div>
+
+          </div>
+
+          {/* Product Type */}
+
+          <div className="space-y-5">
+
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Product Type
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+
+              {["All", "RAW", "FINISHED"].map((item) => (
+
+                <button
+                  key={item}
+                  onClick={() => setSelectedType(item)}
+                  className={`
+                    rounded-full
+                    px-4
+                    py-2
+                    text-sm
+                    transition
+
+                    ${
+                      selectedType === item
+                        ? "bg-[#17357A] text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }
+                  `}
+                >
+                  {item === "RAW"
+                    ? "Raw Material"
+                    : item === "FINISHED"
+                    ? "Finished Product"
+                    : "All"}
+                </button>
+
+              ))}
+
+            </div>
+
+          </div>
+
+          {/* Status */}
+
+          <div className="space-y-3">
+
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Stock Status
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+
+              {["All", "Healthy", "Low Stock", "Critical"].map((item) => (
+
+                <button
+                  key={item}
+                  onClick={() => setSelectedStatus(item)}
+                  className={`
+                    rounded-full
+                    px-4
+                    py-2
+                    text-sm
+                    transition
+
+                    ${
+                      selectedStatus === item
+                        ? "bg-[#17357A] text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }
+                  `}
+                >
+                  {item}
+                </button>
+
+              ))}
+
+            </div>
+
+          </div>
+
+        </SectionCard>
+
+      )}
+
+      
+
+            <div className="space-y-4">
+
         {loading ? (
-          <p>Loading...</p>
+
+          <SectionCard>
+
+            <div className="py-16 text-center">
+
+              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#17357A]" />
+
+              <p className="font-medium text-slate-600">
+                Loading inventory...
+              </p>
+
+            </div>
+
+          </SectionCard>
+
+        ) : filteredProducts.length === 0 ? (
+
+          <SectionCard>
+
+            <div className="py-16 text-center">
+
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
+                📦
+              </div>
+
+              <h3 className="text-lg font-semibold text-slate-800">
+                No Products Found
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Try changing your search or filter selection.
+              </p>
+
+            </div>
+
+          </SectionCard>
+
         ) : (
+
           filteredProducts.map((product) => (
-            <div
+
+            <SectionCard
               key={product._id}
-              className="bg-white rounded-2xl shadow-sm border p-4"
+              className="space-y-5"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h2 className="font-bold text-lg">{product.name}</h2>
 
-                  <p className="text-sm text-slate-500">
-                    {product.warehouse.name} • {product.sku}
-                  </p>
+              {/* Top */}
 
-                  <span
-                    className={`inline-block mt-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                      product.type === "FINISHED"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-purple-100 text-purple-700"
-                    }`}
-                  >
-                    {product.type === "FINISHED"
-                      ? "Finished Product"
-                      : "Raw Material"}
-                  </span>
+              <div className="flex items-start justify-between gap-4">
+
+                <div className="flex items-center gap-4">
+
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
+                    📦
+                  </div>
+
+                  <div>
+
+                    <h2 className="text-lg font-bold text-slate-900">
+                      {product.name}
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {product.sku}
+                    </p>
+
+                    <p className="text-sm text-slate-500">
+                      {product.warehouse.name}
+                    </p>
+
+                  </div>
+
                 </div>
 
                 <span
-                  className={`ml-3 shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
                     product.status === "Healthy"
                       ? "bg-green-100 text-green-700"
                       : product.status === "Low Stock"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-red-100 text-red-700"
                   }`}
                 >
                   {product.status}
                 </span>
+
+              </div>
+              <div className="h-5"/>
+
+              {/* Stats */}
+
+              <div className="grid grid-cols-3 gap-3">
+
+                <div className="rounded-xl bg-slate-50 p-3 text-center">
+
+                  <p className="text-xs uppercase text-slate-500">
+                    Current
+                  </p>
+
+                  <h3 className="mt-1 text-2xl font-bold text-[#17357A]">
+                    {product.currentStock}
+                  </h3>
+
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-3 text-center">
+
+                  <p className="text-xs uppercase text-slate-500">
+                    Minimum
+                  </p>
+
+                  <h3 className="mt-1 text-xl font-semibold">
+                    {product.minimumStock}
+                  </h3>
+
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-3 text-center">
+
+                  <p className="text-xs uppercase text-slate-500">
+                    Type
+                  </p>
+
+                  <h3 className="mt-1 text-sm font-semibold">
+
+                    {product.type === "RAW"
+                      ? "Raw"
+                      : "Finished"}
+
+                  </h3>
+
+                </div>
+
               </div>
 
-              <div className="mt-4 flex items-end gap-2">
-                <span className="text-3xl font-bold">
-                  {product.currentStock}
-                </span>
+              {/* Buttons */}
+              <div className="h-5"/>
 
-                <span className="text-slate-500">{product.unit}</span>
-              </div>
+              <div className="grid grid-cols-2 gap-3">
 
-              <div className="grid grid-cols-2 gap-3 mt-5">
                 <button
-                  onClick={() => navigate(`/staff/stock-in/${product._id}`)}
-                  className="rounded-xl py-3 bg-green-100 text-green-700 font-semibold"
+                  onClick={() =>
+                    navigate(`/staff/stock-in/${product._id}`)
+                  }
+                  className="
+                    rounded-xl
+                    bg-green-100
+                    py-3
+                    font-semibold
+                    text-green-700
+                    transition
+                    hover:bg-green-200
+                  "
                 >
-                  + Stock IN
+                  Stock In
                 </button>
 
                 <button
-                  onClick={() => navigate(`/staff/stock-out/${product._id}`)}
-                  className="rounded-xl py-3 bg-red-100 text-red-700 font-semibold"
+                  onClick={() =>
+                    navigate(`/staff/stock-out/${product._id}`)
+                  }
+                  className="
+                    rounded-xl
+                    bg-red-100
+                    py-3
+                    font-semibold
+                    text-red-700
+                    transition
+                    hover:bg-red-200
+                  "
                 >
-                  - Stock OUT
+                  Stock Out
                 </button>
+
               </div>
-            </div>
+              
+
+            </SectionCard>
+            
+
           ))
+          
+
         )}
+        <div className="h-5"/>
+
+      </div>
       </div>
 
-      <AddProductModal
-        open={showProductModal}
-        onClose={() => setShowProductModal(false)}
-        onSuccess={fetchProducts}
-      />
 
-      <AddCategoryModal
-        open={showCategoryModal}
-        onClose={() => setShowCategoryModal(false)}
-        onSuccess={() => {
-          fetchFilters();
-          setShowCategoryModal(false);
-        }}
-      />
-      <BottomNavigation />
-    </div>
-  );
+    <AddProductModal
+      open={showProductModal}
+      onClose={() => setShowProductModal(false)}
+      onSuccess={fetchProducts}
+    />
+
+    <AddCategoryModal
+      open={showCategoryModal}
+      onClose={() => setShowCategoryModal(false)}
+      onSuccess={() => {
+        fetchFilters();
+        setShowCategoryModal(false);
+      }}
+    />
+
+    <BottomNavigation />
+
+  </div>
+  </PageContainer>
+  </div>
+);
 };
 
 export default StaffInventoryPage;

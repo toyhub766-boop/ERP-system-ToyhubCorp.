@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../../app/layouts/AdminLayout";
 
-import InventoryHeader from "../components/InventoryHeader";
+
 import InventorySearch from "../components/InventorySearch";
 import InventoryFilters from "../components/InventoryFilters";
 import InventoryCard from "../components/InventoryCard";
@@ -18,6 +18,10 @@ import type { Category } from "../../categories/types/category.types";
 import AddProductModal from "../components/AddProductModal";
 import EditProductModal from "../components/EditProductModal";
 import DeleteProductModal from "../components/DeleteProductModal";
+import PageContainer from "../../../components/ui/PageContainer";
+import SectionCard from "../../../components/ui/SectionCard";
+import PageHeader from "../../../components/ui/PageHeader";
+import StatCard from "../../../components/ui/StatCard";
 
 const InventoryPage = () => {
   const navigate = useNavigate();
@@ -93,69 +97,189 @@ const InventoryPage = () => {
   });
 
   return (
+  <AdminLayout>
+    <PageContainer className="space-y-10">
 
-    <AdminLayout>
-    <div className="space-y-6">
-      <InventoryHeader
-        totalProducts={filteredProducts.length}
-        onAddProduct={() => setShowProductModal(true)}
+      {/* Header */}
+
+      <PageHeader
+        title="Inventory Management"
+        subtitle="Track products, stock levels and warehouse inventory."
+        action={
+          <button
+            onClick={() => setShowProductModal(true)}
+            className="
+              rounded-xl
+              bg-[#172B6B]
+              px-5
+              py-3
+              text-sm
+              font-semibold
+              text-white
+              shadow-sm
+              transition
+              hover:bg-[#20398F]
+            "
+          >
+            + Add Product
+          </button>
+        }
       />
 
-      <InventorySearch value={search} onChange={setSearch} />
+      {/* KPI Cards */}
 
-      <InventoryFilters
-        categories={categories.map((c) => c.name)}
-        warehouses={warehouses}
-        selectedCategory={selectedCategory}
-        selectedStatus={selectedStatus}
-        selectedWarehouse={selectedWarehouse}
-        selectedType={selectedType}
-        onCategoryChange={setSelectedCategory}
-        onStatusChange={setSelectedStatus}
-        onWarehouseChange={setSelectedWarehouse}
-        onTypeChange={setSelectedType}
-      />
+      <section className="space-y-4">
 
-      <div className="grid gap-5">
-        {filteredProducts.map((product) => (
-          <InventoryCard
-            key={product._id}
-            product={product}
-            onView={(id) => navigate(`/inventory/${id}`)}
-            onEdit={(product) => {
-              setSelectedProduct(product);
-              setShowEditModal(true);
-            }}
-            onDelete={(product) => {
-              setSelectedProduct(product);
-              setShowDeleteModal(true);
-            }}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+
+          <StatCard
+            title="Products"
+            value={filteredProducts.length}
           />
-        ))}
 
-        <AddProductModal
-          open={showProductModal}
-          onClose={() => setShowProductModal(false)}
-          onSuccess={fetchData}
+          <StatCard
+            title="Categories"
+            value={categories.length}
+          />
+
+          <StatCard
+            title="Warehouses"
+            value={warehouses.length}
+          />
+
+          <StatCard
+            title="Low Stock"
+            value={
+              products.filter(
+                (p) => p.currentStock <= p.minimumStock
+              ).length
+            }
+          />
+
+        </div>
+
+      </section>
+
+      {/* Search + Filters */}
+
+      <section className="space-y-6">
+
+        <InventorySearch
+          value={search}
+          onChange={setSearch}
         />
 
-        <EditProductModal
-          open={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onSuccess={fetchData}
-          product={selectedProduct}
+        <InventoryFilters
+          categories={categories.map((c) => c.name)}
+          warehouses={warehouses}
+          selectedCategory={selectedCategory}
+          selectedStatus={selectedStatus}
+          selectedWarehouse={selectedWarehouse}
+          selectedType={selectedType}
+          onCategoryChange={setSelectedCategory}
+          onStatusChange={setSelectedStatus}
+          onWarehouseChange={setSelectedWarehouse}
+          onTypeChange={setSelectedType}
         />
 
-        <DeleteProductModal
-          open={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
-          onSuccess={fetchData}
-          product={selectedProduct}
-        />
-      </div>
-    </div>
-    </AdminLayout>
-  );
+      </section>
+
+      {/* Products */}
+
+      <section className="space-y-5">
+
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+
+          <div>
+
+            <h2 className="text-xl font-semibold text-slate-900">
+              Products
+            </h2>
+
+            <p className="text-sm text-slate-500">
+              {filteredProducts.length} product
+              {filteredProducts.length !== 1 ? "s" : ""} found
+            </p>
+
+          </div>
+
+        </div>
+
+        <div className="mx-auto max-w-[1100px] space-y-5">
+
+          {filteredProducts.length > 0 ? (
+
+            filteredProducts.map((product) => (
+              <InventoryCard
+                key={product._id}
+                product={product}
+                onView={(id) =>
+                  navigate(`/inventory/${id}`)
+                }
+                onEdit={(product) => {
+                  setSelectedProduct(product);
+                  setShowEditModal(true);
+                }}
+                onDelete={(product) => {
+                  setSelectedProduct(product);
+                  setShowDeleteModal(true);
+                }}
+              />
+            ))
+
+          ) : (
+
+            <SectionCard>
+
+              <div className="py-16 text-center">
+
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl">
+                  📦
+                </div>
+
+                <h3 className="text-lg font-semibold text-slate-800">
+                  No Products Found
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-500">
+                  Try changing your search or filters.
+                </p>
+
+              </div>
+
+            </SectionCard>
+
+          )}
+
+        </div>
+
+      </section>
+
+      {/* Modals */}
+
+      <AddProductModal
+        open={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        onSuccess={fetchData}
+      />
+
+      <EditProductModal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={fetchData}
+        product={selectedProduct}
+      />
+
+      <DeleteProductModal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={fetchData}
+        product={selectedProduct}
+      />
+
+    </PageContainer>
+  </AdminLayout>
+);
 };
 
 export default InventoryPage;

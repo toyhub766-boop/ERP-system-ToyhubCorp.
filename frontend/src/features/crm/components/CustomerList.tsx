@@ -26,30 +26,64 @@ const loadCustomers = async () => {
   }
 };
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl">
+  <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
 
-      <div className="p-5 border-b border-slate-200">
+    {/* Header */}
 
-        <input
-          type="text"
-          placeholder="Search customers..."
-          className="
-            w-full
-            px-4
-            py-3
-            border
-            border-slate-300
-            rounded-xl
-            outline-none
-            focus:border-[#172B6B]
-          "
-        />
+    <div className="border-b border-slate-200 p-6">
 
-      </div>
+      <h2 className="text-xl font-bold text-slate-900">
+        Customers
+      </h2>
 
-      <div className="max-h-[620px] overflow-y-auto">
+      <p className="mt-1 text-sm text-slate-500">
+        Browse and select a customer to view their profile.
+      </p>
 
-        {customers.map((customer) => {
+      <input
+        type="text"
+        placeholder="Search customers..."
+        className="
+          mt-5
+          h-12
+          w-full
+          rounded-xl
+          border
+          border-slate-300
+          bg-white
+          px-4
+          text-sm
+          outline-none
+          transition
+          focus:border-[#172B6B]
+          focus:ring-4
+          focus:ring-blue-100
+        "
+      />
+
+    </div>
+
+    {/* Customer List */}
+
+    <div className="max-h-[700px] overflow-y-auto">
+
+      {customers.length === 0 ? (
+
+        <div className="flex h-72 flex-col items-center justify-center text-slate-500">
+
+          <div className="mb-4 text-5xl">
+            👥
+          </div>
+
+          <p className="font-semibold">
+            No Customers Found
+          </p>
+
+        </div>
+
+      ) : (
+
+        customers.map((customer) => {
 
           const selected =
             selectedCustomer?._id === customer._id;
@@ -63,43 +97,85 @@ const loadCustomers = async () => {
               }
               className={`
                 w-full
-                text-left
-                p-5
                 border-b
-                transition
+                p-5
+                text-left
+                transition-all
+                duration-200
+
                 ${
                   selected
-                    ? "bg-blue-50 border-blue-200"
-                    : "hover:bg-slate-50 border-slate-100"
+                    ? "border-l-4 border-l-[#172B6B] bg-blue-50"
+                    : "hover:bg-slate-50"
                 }
               `}
             >
 
-              <h3 className="font-semibold">
-                {customer.name}
-              </h3>
+              <div className="flex items-start justify-between">
 
-              <p className="text-sm text-slate-500 mt-1">
-                {customer.company || "-"}
-              </p>
+                <div className="min-w-0 flex-1">
 
-              <div className="mt-3 text-sm text-slate-500 space-y-1">
+                  <h3 className="truncate text-lg font-semibold text-slate-900">
+                    {customer.contactPerson ||
+                      customer.name}
+                  </h3>
 
-                <p>{customer.phone || "-"}</p>
+                  <p className="mt-1 truncate text-sm text-slate-500">
+                    {customer.companyName ||
+                      customer.company ||
+                      "-"}
+                  </p>
 
-                <p>{customer.city}</p>
+                </div>
+
+                {selected && (
+                  <span className="rounded-full bg-[#172B6B] px-3 py-1 text-xs font-semibold text-white">
+                    Active
+                  </span>
+                )}
+
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+
+                <div>
+
+                  <p className="text-slate-400">
+                    Phone
+                  </p>
+
+                  <p className="mt-1 font-medium text-slate-700">
+                    {customer.phone || "-"}
+                  </p>
+
+                </div>
+
+                <div>
+
+                  <p className="text-slate-400">
+                    City
+                  </p>
+
+                  <p className="mt-1 font-medium text-slate-700">
+                    {customer.city || "-"}
+                  </p>
+
+                </div>
 
               </div>
 
             </button>
 
           );
-        })}
 
-      </div>
+        })
+
+      )}
 
     </div>
-  );
+
+  </div>
+);
 };
 
 

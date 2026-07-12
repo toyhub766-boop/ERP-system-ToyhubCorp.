@@ -84,72 +84,184 @@ const PaymentModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
 
-        <h2 className="text-2xl font-bold mb-6">
+    <div className="w-full max-w-xl rounded-3xl bg-white shadow-2xl">
+
+      {/* Header */}
+
+      <div className="border-b border-slate-200 px-6 py-5">
+
+        <h2 className="text-2xl font-bold text-slate-900">
           {payment ? "Edit Payment" : "Record Payment"}
         </h2>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
+        <p className="mt-1 text-sm text-slate-500">
+          {payment
+            ? "Update the payment information."
+            : "Record a payment against the selected customer order."}
+        </p>
 
-          <input
-            type="number"
-            name="amountPaid"
-            placeholder="Amount Paid"
-            value={form.amountPaid}
-            onChange={handleChange}
-            className="w-full border rounded-xl p-3"
-            required
-          />
+      </div>
 
-          <select
-            name="paymentMethod"
-            value={form.paymentMethod}
-            onChange={handleChange}
-            className="w-full border rounded-xl p-3"
-          >
-            <option value="Cash">Cash</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Cheque">Cheque</option>
-            <option value="UPI">UPI</option>
-          </select>
+      {/* Form */}
 
-          <input
-            name="remarks"
-            placeholder="Remarks"
-            value={form.remarks}
-            onChange={handleChange}
-            className="w-full border rounded-xl p-3"
-          />
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 p-6"
+      >
 
-          <div className="flex justify-end gap-3">
+        <div className="grid gap-5 md:grid-cols-2">
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="border rounded-lg px-5 py-2"
-            >
-              Cancel
-            </button>
+          {/* Amount */}
 
-            <button
-              type="submit"
-              className="bg-[#172B6B] text-white rounded-lg px-5 py-2"
-            >
-              Save
-            </button>
+          <div>
+
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Amount Paid
+            </label>
+
+            <input
+              type="number"
+              name="amountPaid"
+              placeholder="Enter amount"
+              value={form.amountPaid}
+              onChange={handleChange}
+              required
+              className="
+                h-12
+                w-full
+                rounded-xl
+                border
+                border-slate-300
+                px-4
+                outline-none
+                transition
+                focus:border-[#172B6B]
+                focus:ring-4
+                focus:ring-blue-100
+              "
+            />
 
           </div>
 
-        </form>
+          {/* Method */}
 
-      </div>
+          <div>
+
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Payment Method
+            </label>
+
+            <select
+              name="paymentMethod"
+              value={form.paymentMethod}
+              onChange={handleChange}
+              className="
+                h-12
+                w-full
+                rounded-xl
+                border
+                border-slate-300
+                px-4
+                outline-none
+                transition
+                focus:border-[#172B6B]
+                focus:ring-4
+                focus:ring-blue-100
+              "
+            >
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">
+                Bank Transfer
+              </option>
+              <option value="Cheque">
+                Cheque
+              </option>
+              <option value="UPI">
+                UPI
+              </option>
+            </select>
+
+          </div>
+
+          {/* Remarks */}
+
+          <div className="md:col-span-2">
+
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Remarks
+            </label>
+
+            <input
+              name="remarks"
+              placeholder="Additional remarks..."
+              value={form.remarks}
+              onChange={handleChange}
+              className="
+                h-12
+                w-full
+                rounded-xl
+                border
+                border-slate-300
+                px-4
+                outline-none
+                transition
+                focus:border-[#172B6B]
+                focus:ring-4
+                focus:ring-blue-100
+              "
+            />
+
+          </div>
+
+        </div>
+
+        {/* Footer */}
+
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              rounded-xl
+              border
+              border-slate-300
+              px-6
+              py-3
+              font-semibold
+              transition
+              hover:bg-slate-50
+            "
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="
+              rounded-xl
+              bg-[#172B6B]
+              px-6
+              py-3
+              font-semibold
+              text-white
+              transition
+              hover:bg-[#20398F]
+            "
+          >
+            {payment ? "Update Payment" : "Record Payment"}
+          </button>
+
+        </div>
+
+      </form>
+
     </div>
-  );
+
+  </div>
+);
 };
 
 export default PaymentModal;

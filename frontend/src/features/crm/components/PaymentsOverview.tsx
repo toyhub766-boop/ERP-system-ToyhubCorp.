@@ -10,85 +10,160 @@ const PaymentsOverview = ({
   onDelete,
 }: Props) => {
   return (
-    <div className="space-y-4">
+  <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
 
-      {payments.length === 0 && (
-        <div className="bg-white border rounded-xl p-8 text-center text-slate-500">
-          No payments found.
-        </div>
-      )}
+    {/* Header */}
 
-      {payments.map((payment) => (
-        <div
-          key={payment._id}
-          className="bg-white border border-slate-200 rounded-2xl p-5"
-        >
+    <div className="border-b border-slate-200 px-6 py-5">
 
-          <div className="flex justify-between">
+      <h2 className="text-xl font-bold text-slate-900">
+        Payments
+      </h2>
 
-            <div>
-
-              <h3 className="font-semibold">
-                ₹{payment.amountPaid.toLocaleString()}
-              </h3>
-
-              <p className="text-sm text-slate-500 mt-1">
-                {payment.paymentMethod}
-              </p>
-
-            </div>
-
-            <div className="text-right">
-
-              <p className="text-sm text-slate-500">
-                Payment Date
-              </p>
-
-              <p className="font-medium">
-                {new Date(
-                  payment.paymentDate
-                ).toLocaleDateString()}
-              </p>
-
-            </div>
-
-          </div>
-
-          <div className="mt-5">
-
-            <p className="text-sm text-slate-500">
-              Remarks
-            </p>
-
-            <p>
-              {payment.remarks || "-"}
-            </p>
-
-          </div>
-
-          <div className="flex gap-3 mt-6">
-
-            <button
-              onClick={() => onEdit(payment)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-            >
-              Edit
-            </button>
-
-            <button
-              onClick={() => onDelete(payment)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg"
-            >
-              Delete
-            </button>
-
-          </div>
-
-        </div>
-      ))}
+      <p className="mt-1 text-sm text-slate-500">
+        Track payment history and manage customer transactions.
+      </p>
 
     </div>
-  );
+
+    <div className="space-y-5 p-6">
+
+      {payments.length === 0 ? (
+
+        <div className="flex h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+
+          <div className="mb-4 text-5xl">
+            💳
+          </div>
+
+          <h3 className="text-xl font-semibold text-slate-700">
+            No Payments Found
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Payment records will appear here once recorded.
+          </p>
+
+        </div>
+
+      ) : (
+
+        payments.map((payment) => (
+
+          <div
+            key={payment._id}
+            className="
+              rounded-3xl
+              border
+              border-slate-200
+              bg-white
+              p-6
+              transition-all
+              duration-200
+              hover:shadow-md
+            "
+          >
+
+            {/* Top */}
+
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+
+              <div>
+
+                <p className="text-sm font-medium text-slate-500">
+                  Amount Paid
+                </p>
+
+                <h2 className="mt-2 text-4xl font-bold text-[#172B6B]">
+                  ₹{payment.amountPaid.toLocaleString()}
+                </h2>
+
+                <span className="mt-4 inline-flex rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                  {payment.paymentMethod}
+                </span>
+
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-6 py-4 text-right">
+
+                <p className="text-sm text-slate-500">
+                  Payment Date
+                </p>
+
+                <p className="mt-2 text-lg font-semibold text-slate-800">
+                  {new Date(
+                    payment.paymentDate
+                  ).toLocaleDateString()}
+                </p>
+
+              </div>
+
+            </div>
+
+            {/* Remarks */}
+
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+
+              <p className="text-sm font-medium text-slate-500">
+                Remarks
+              </p>
+
+              <p className="mt-2 text-slate-700">
+                {payment.remarks || "No remarks available."}
+              </p>
+
+            </div>
+
+            {/* Actions */}
+
+            <div className="mt-6 flex flex-wrap gap-3">
+
+              <button
+                onClick={() => onEdit(payment)}
+                className="
+                  rounded-xl
+                  bg-[#172B6B]
+                  px-5
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-white
+                  transition
+                  hover:bg-[#20398F]
+                "
+              >
+                Edit Payment
+              </button>
+
+              <button
+                onClick={() => onDelete(payment)}
+                className="
+                  rounded-xl
+                  bg-red-600
+                  px-5
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-white
+                  transition
+                  hover:bg-red-700
+                "
+              >
+                Delete
+              </button>
+
+            </div>
+
+          </div>
+
+        ))
+
+      )}
+
+    </div>
+
+  </div>
+);
 };
 
 export default PaymentsOverview;

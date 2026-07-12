@@ -121,191 +121,241 @@ const EditProductModal = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl w-full max-w-2xl shadow-xl">
-        {/* Header */}
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-6">
 
-        <div className="flex items-center justify-between border-b px-6 py-5">
-          <div>
-            <h2 className="text-2xl font-bold">Edit Product</h2>
+    <div className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
 
-            <p className="text-sm text-slate-500">Update product information</p>
-          </div>
+      {/* Header */}
 
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-xl"
-          >
-            <X size={22} />
-          </button>
+      <div className="flex items-start justify-between border-b border-slate-200 px-8 py-6">
+
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Edit Product
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Update product information.
+          </p>
         </div>
 
-        {/* Body */}
+        <button
+          onClick={onClose}
+          className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+        >
+          <X size={20} />
+        </button>
 
-        <div className="p-6">
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Product Name
-              </label>
-
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Product Type
-              </label>
-
-              <select
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              >
-                <option value="RAW">Raw Material</option>
-                <option value="FINISHED">Finished Product</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">SKU</label>
-
-              <input
-                type="text"
-                name="sku"
-                value={form.sku}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Category</label>
-
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              >
-                <option value="">Select Category</option>
-
-                {categories.map((category) => (
-                  <option key={category._id} value={category._id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Warehouse
-              </label>
-
-              <select
-                name="warehouse"
-                value={form.warehouse}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              >
-                <option value="">Select Warehouse</option>
-
-                {warehouses.map((warehouse) => (
-                  <option key={warehouse._id} value={warehouse._id}>
-                    {warehouse.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Unit</label>
-
-              <select
-                name="unit"
-                value={form.unit}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              >
-                <option value="PCS">PCS</option>
-                <option value="BOX">BOX</option>
-                <option value="SET">SET</option>
-                <option value="KG">KG</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Minimum Stock
-              </label>
-
-              <input
-                type="number"
-                name="minimumStock"
-                value={form.minimumStock}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-2">
-                Current Stock
-              </label>
-
-              <input
-                type="number"
-                name="currentStock"
-                value={form.currentStock}
-                onChange={handleChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-
-        <div className="border-t p-6 flex justify-end gap-3">
-          <button
-            onClick={() => {
-              setForm({
-                name: "",
-                type: "RAW",
-                sku: "",
-                category: "",
-                warehouse: "",
-                unit: "PCS",
-                minimumStock: 0,
-                currentStock: 0,
-              });
-
-              onSuccess();
-              onClose();
-            }}
-            className="px-6 py-3 rounded-xl border hover:bg-slate-100 transition"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={handleSubmit}
-            className="px-5 py-2 bg-[#17357A] text-white rounded-xl"
-          >
-            Update Product
-          </button>
-        </div>
       </div>
+
+      {/* Body */}
+
+      <div className="max-h-[70vh] overflow-y-auto px-8 py-7">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Product Name *
+            </label>
+
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4 transition focus:border-[#17357A] focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              SKU *
+            </label>
+
+            <input
+              type="text"
+              name="sku"
+              value={form.sku}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4 transition focus:border-[#17357A] focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Product Type *
+            </label>
+
+            <select
+              name="type"
+              value={form.type}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4"
+            >
+              <option value="RAW">Raw Material</option>
+              <option value="FINISHED">Finished Product</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Unit
+            </label>
+
+            <select
+              name="unit"
+              value={form.unit}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4"
+            >
+              <option value="PCS">PCS</option>
+              <option value="BOX">BOX</option>
+              <option value="SET">SET</option>
+              <option value="KG">KG</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Category *
+            </label>
+
+            <select
+              name="category"
+              value={form.category}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4"
+            >
+              <option value="">Select Category</option>
+
+              {categories.map((category) => (
+                <option
+                  key={category._id}
+                  value={category._id}
+                >
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Warehouse *
+            </label>
+
+            <select
+              name="warehouse"
+              value={form.warehouse}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4"
+            >
+              <option value="">
+                Select Warehouse
+              </option>
+
+              {warehouses.map((warehouse) => (
+                <option
+                  key={warehouse._id}
+                  value={warehouse._id}
+                >
+                  {warehouse.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Minimum Stock
+            </label>
+
+            <input
+              type="number"
+              name="minimumStock"
+              value={form.minimumStock}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Current Stock
+            </label>
+
+            <input
+              type="number"
+              name="currentStock"
+              value={form.currentStock}
+              onChange={handleChange}
+              className="h-11 w-full rounded-xl border border-slate-300 px-4"
+            />
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* Footer */}
+
+      <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-8 py-5">
+
+        <button
+          onClick={() => {
+  if (!product) return;
+  setForm({
+    name: product.name,
+    type: product.type,
+    sku: product.sku,
+    category: product.category._id,
+    warehouse: product.warehouse._id,
+    unit: product.unit,
+    minimumStock: product.minimumStock,
+    currentStock: product.currentStock,
+  });
+
+  onClose();
+}}
+          className="
+            rounded-xl
+            border
+            border-slate-300
+            bg-white
+            px-5
+            py-2.5
+            font-medium
+            text-slate-700
+            transition
+            hover:bg-slate-100
+          "
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          className="
+            rounded-xl
+            bg-[#17357A]
+            px-5
+            py-2.5
+            font-semibold
+            text-white
+            transition
+            hover:bg-[#20459D]
+          "
+        >
+          Update Product
+        </button>
+
+      </div>
+
     </div>
-  );
+
+  </div>
+);
 };
 
 export default EditProductModal;

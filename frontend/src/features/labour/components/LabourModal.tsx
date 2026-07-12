@@ -64,99 +64,151 @@ const LabourModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
 
-      <div className="bg-white rounded-xl w-[500px] p-6 space-y-4">
+    <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
 
-        <h2 className="text-2xl font-bold">
+      {/* Header */}
+
+      <div className="border-b border-slate-200 px-6 py-5">
+
+        <h2 className="text-2xl font-bold text-slate-900">
           {labour ? "Edit Labour" : "Add Labour"}
         </h2>
 
-        <input
-          className="w-full border rounded-lg p-3"
-          placeholder="Name"
-          value={form.name}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              name: e.target.value,
-            })
-          }
-        />
+        <p className="mt-1 text-sm text-slate-500">
+          Manage labour information and daily wages.
+        </p>
 
-        <input
-          className="w-full border rounded-lg p-3"
-          placeholder="Department"
-          value={form.department}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              department: e.target.value,
-            })
-          }
-        />
+      </div>
 
-        <input
-          type="number"
-          className="w-full border rounded-lg p-3"
-          placeholder="Daily Wage"
-          value={form.dailyWage}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              dailyWage: Number(e.target.value),
-            })
-          }
-        />
+      {/* Body */}
 
-        <input
-          className="w-full border rounded-lg p-3"
-          placeholder="Phone"
-          value={form.phone}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              phone: e.target.value,
-            })
-          }
-        />
+      <div className="space-y-5 p-6">
 
-        <select
-          className="w-full border rounded-lg p-3"
-          value={form.status}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              status: e.target.value,
-            })
-          }
-        >
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="INACTIVE">INACTIVE</option>
-        </select>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Labour Name
+          </label>
 
-        <div className="flex justify-end gap-3">
+          <input
+            value={form.name}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                name: e.target.value,
+              })
+            }
+            placeholder="Enter labour name"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+          />
+        </div>
 
-          <button
-            onClick={onClose}
-            className="border px-5 py-2 rounded-lg"
-          >
-            Cancel
-          </button>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Department
+          </label>
 
-          <button
-            onClick={handleSubmit}
-            className="bg-[#172B6B] text-white px-5 py-2 rounded-lg"
-          >
-            {labour ? "Update" : "Save"}
-          </button>
+          <input
+            value={form.department}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                department: e.target.value,
+              })
+            }
+            placeholder="Production"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+          />
+        </div>
 
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Daily Wage
+            </label>
+
+            <input
+              type="number"
+              value={form.dailyWage}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  dailyWage: Number(e.target.value),
+                })
+              }
+              placeholder="0"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Status
+            </label>
+
+            <select
+              value={form.status}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  status: e.target.value,
+                })
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </select>
+          </div>
+
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Phone Number
+          </label>
+
+          <input
+            value={form.phone}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                phone: e.target.value,
+              })
+            }
+            placeholder="9876543210"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
+          />
         </div>
 
       </div>
 
+      {/* Footer */}
+
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-5">
+
+        <button
+          onClick={onClose}
+          className="rounded-xl border border-slate-300 px-5 py-3 font-medium transition hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          className="rounded-xl bg-[#17357A] px-6 py-3 font-medium text-white transition hover:bg-[#24479d]"
+        >
+          {labour ? "Update Labour" : "Save Labour"}
+        </button>
+
+      </div>
+
     </div>
-  );
+
+  </div>
+);
 };
 
 export default LabourModal;

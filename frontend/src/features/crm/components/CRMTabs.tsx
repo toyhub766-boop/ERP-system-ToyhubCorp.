@@ -25,39 +25,60 @@ const CRMTabs = ({
   setActiveTab,
 }: Props) => {
   return (
-    <div className="border-b border-slate-200">
+  <div className="overflow-x-auto">
 
-      <div className="flex gap-8">
+    <div className="inline-flex rounded-2xl bg-slate-100 p-1">
 
-        {tabs.map((tab) => (
+      {tabs.map((tab) => {
+
+        const active = activeTab === tab.id;
+
+        return (
 
           <button
             key={tab.id}
-            onClick={() =>
-              setActiveTab(tab.id)
-            }
+            onClick={() => setActiveTab(tab.id)}
             className={`
-              pb-4
+              rounded-xl
+              px-6
+              py-3
               text-sm
-              font-medium
-              border-b-2
-              transition
+              font-semibold
+              transition-all
+              duration-200
+
               ${
-                activeTab === tab.id
-                  ? "border-[#172B6B] text-[#172B6B]"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
+                active
+                  ? "bg-white text-[#172B6B] shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
               }
             `}
           >
-            {tab.label}
+
+            <div className="flex items-center gap-2">
+
+              <span className="text-base">
+                {tab.id === "customers" && "👥"}
+                {tab.id === "orders" && "📦"}
+                {tab.id === "payments" && "💳"}
+              </span>
+
+              <span>
+                {tab.label}
+              </span>
+
+            </div>
+
           </button>
 
-        ))}
+        );
 
-      </div>
+      })}
 
     </div>
-  );
+
+  </div>
+);
 };
 
 export default CRMTabs;

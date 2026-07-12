@@ -3,70 +3,57 @@ import {
   FiMenu,
   FiX,
   FiHome,
-  FiClipboard,
-  FiTruck,
   FiLogOut,
 } from "react-icons/fi";
-import { FaIndustry } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
-const links = [
+
+const menuItems = [
   {
-    name: "Dashboard",
-    path: "/production-staff",
+    label: "Dashboard",
     icon: <FiHome />,
-  },
-  {
-    name: "BOM",
-    path: "/production-staff/bom",
-    icon: <FiClipboard />,
-  },
-  {
-    name: "Production",
-    path: "/production-staff/production",
-    icon: <FaIndustry />,
-  },
-  {
-    name: "Dispatch",
-    path: "/production-staff/dispatch",
-    icon: <FiTruck />,
+    path: "",
   },
 ];
 
-const ProductionSidebar = () => {
+const HRSidebar = () => {
   const navigate = useNavigate();
+
   const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
     navigate("/login");
   };
 
   return (
     <>
-      {/* Floating Mobile Menu */}
+      {/* Mobile Header */}
 
-      <button
-        onClick={() => setOpen(true)}
-        className="
-          lg:hidden
-          fixed
-          top-4
-          right-4
-          z-50
-          h-11
-          w-11
-          rounded-xl
-          bg-[#172B6B]
-          text-white
-          shadow-lg
-          flex
-          items-center
-          justify-center
-        "
-      >
-        <FiMenu size={22} />
-      </button>
+      {/* Floating Mobile Menu Button */}
+
+<button
+  onClick={() => setOpen(true)}
+  className="
+    lg:hidden
+    fixed
+    top-4
+    right-4
+    z-50
+    h-11
+    w-11
+    rounded-xl
+    bg-[#172B6B]
+    text-white
+    shadow-lg
+    flex
+    items-center
+    justify-center
+  "
+>
+  <FiMenu size={22} />
+</button>
 
       {/* Mobile Drawer */}
 
@@ -83,13 +70,15 @@ const ProductionSidebar = () => {
             <div className="flex items-center justify-between px-6 py-5 border-b">
 
               <div>
+
                 <h2 className="text-xl font-bold text-[#172B6B]">
                   TOY HUB
                 </h2>
 
                 <p className="text-sm text-slate-500">
-                  Production Staff
+                  HR Staff
                 </p>
+
               </div>
 
               <button
@@ -103,10 +92,10 @@ const ProductionSidebar = () => {
 
             <nav className="flex-1 p-4 space-y-2">
 
-              {links.map((link) => (
+              {menuItems.map((item) => (
                 <NavLink
-                  key={link.path}
-                  to={link.path}
+                  key={item.path}
+                  to={item.path}
                   onClick={() => setOpen(false)}
                   className={({ isActive }) =>
                     `flex items-center gap-3 rounded-xl px-4 py-3 transition ${
@@ -116,8 +105,8 @@ const ProductionSidebar = () => {
                     }`
                   }
                 >
-                  {link.icon}
-                  <span>{link.name}</span>
+                  {item.icon}
+                  <span>{item.label}</span>
                 </NavLink>
               ))}
 
@@ -151,17 +140,17 @@ const ProductionSidebar = () => {
           </h1>
 
           <p className="text-sm text-slate-500 mt-1">
-            Production Staff
+            HR Staff
           </p>
 
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
 
-          {links.map((link) => (
+          {menuItems.map((item) => (
             <NavLink
-              key={link.path}
-              to={link.path}
+              key={item.path}
+              to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-xl px-4 py-3 transition ${
                   isActive
@@ -170,8 +159,8 @@ const ProductionSidebar = () => {
                 }`
               }
             >
-              {link.icon}
-              <span>{link.name}</span>
+              {item.icon}
+              <span>{item.label}</span>
             </NavLink>
           ))}
 
@@ -194,4 +183,4 @@ const ProductionSidebar = () => {
   );
 };
 
-export default ProductionSidebar;
+export default HRSidebar;

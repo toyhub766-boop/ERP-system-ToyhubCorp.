@@ -182,224 +182,559 @@ if (form.tasksCompleted > form.tasksAssigned) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
 
-      <div className="bg-white rounded-xl w-[650px] p-6 space-y-4">
+    <div
+      className="
+        w-full
+        max-w-2xl
+        max-h-[92vh]
+        overflow-hidden
+        rounded-3xl
+        bg-white
+        shadow-2xl
+      "
+    >
 
-        <h2 className="text-2xl font-bold">
+      {/* Header */}
+
+      <div className="border-b border-slate-200 px-8 py-6">
+
+        <h2 className="text-2xl font-bold text-slate-900">
+
           {attendance
             ? "Edit Attendance"
             : "Add Attendance"}
+
         </h2>
 
-        <select
-          className="w-full border rounded-lg p-3"
-          value={form.attendanceType}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              attendanceType: e.target.value,
-              employee: "",
-              labour: "",
-            })
-          }
-        >
-          <option value="EMPLOYEE">
-            Employee
-          </option>
+        <p className="mt-2 text-sm text-slate-500">
+          Record employee or labour attendance with work details.
+        </p>
 
-          <option value="LABOUR">
-            Labour
-          </option>
-        </select>
+      </div>
 
-        {form.attendanceType === "EMPLOYEE" && (
+      {/* Body */}
 
-          <select
-            className="w-full border rounded-lg p-3"
-            value={form.employee}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                employee: e.target.value,
-              })
-            }
-          >
+      <div className="max-h-[70vh] overflow-y-auto px-8 py-7">
 
-            <option value="">
-              Select Employee
-            </option>
+        <div className="space-y-7">
 
-            {employees.map((emp) => (
-              <option
-                key={emp._id}
-                value={emp._id}
+          {/* ================= BASIC INFORMATION ================= */}
+
+          <div className="space-y-5">
+
+            <div>
+
+              <h3 className="text-base font-semibold text-slate-800">
+                Basic Information
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Choose the attendance type and person.
+              </p>
+
+            </div>
+
+            <div>
+
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Attendance Type
+              </label>
+
+              <select
+                className="
+                  h-12
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-300
+                  bg-white
+                  px-4
+                  text-sm
+                  transition
+                  focus:border-[#172B6B]
+                  focus:outline-none
+                  focus:ring-4
+                  focus:ring-blue-100
+                "
+                value={form.attendanceType}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    attendanceType: e.target.value,
+                    employee: "",
+                    labour: "",
+                  })
+                }
               >
-                {emp.name} ({emp.role})
-              </option>
-            ))}
 
-          </select>
+                <option value="EMPLOYEE">
+                  Employee
+                </option>
 
-        )}
+                <option value="LABOUR">
+                  Labour
+                </option>
 
-        {form.attendanceType === "LABOUR" && (
+              </select>
 
-          <select
-            className="w-full border rounded-lg p-3"
-            value={form.labour}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                labour: e.target.value,
-              })
-            }
-          >
+            </div>
 
-            <option value="">
-              Select Labour
-            </option>
+            {form.attendanceType === "EMPLOYEE" && (
 
-            {labours.map((labour) => (
-              <option
-                key={labour._id}
-                value={labour._id}
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Employee
+                </label>
+
+                <select
+                  className="
+                    h-12
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    bg-white
+                    px-4
+                    text-sm
+                    transition
+                    focus:border-[#172B6B]
+                    focus:outline-none
+                    focus:ring-4
+                    focus:ring-blue-100
+                  "
+                  value={form.employee}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      employee: e.target.value,
+                    })
+                  }
+                >
+
+                  <option value="">
+                    Select Employee
+                  </option>
+
+                  {employees.map((emp) => (
+
+                    <option
+                      key={emp._id}
+                      value={emp._id}
+                    >
+                      {emp.name} ({emp.role})
+                    </option>
+
+                  ))}
+
+                </select>
+
+              </div>
+
+            )}
+
+            {form.attendanceType === "LABOUR" && (
+
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Labour
+                </label>
+
+                <select
+                  className="
+                    h-12
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    bg-white
+                    px-4
+                    text-sm
+                    transition
+                    focus:border-[#172B6B]
+                    focus:outline-none
+                    focus:ring-4
+                    focus:ring-blue-100
+                  "
+                  value={form.labour}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      labour: e.target.value,
+                    })
+                  }
+                >
+
+                  <option value="">
+                    Select Labour
+                  </option>
+
+                  {labours.map((labour) => (
+
+                    <option
+                      key={labour._id}
+                      value={labour._id}
+                    >
+                      {labour.name}
+                    </option>
+
+                  ))}
+
+                </select>
+
+              </div>
+
+            )}
+
+          </div>
+
+          {/* ================= ATTENDANCE DETAILS ================= */}
+
+          <div className="space-y-5">
+
+            <div>
+
+              <h3 className="text-base font-semibold text-slate-800">
+                Attendance Details
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Fill in attendance timings and working status.
+              </p>
+
+            </div>
+
+            <div>
+
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Date
+              </label>
+
+              <input
+                type="date"
+                className="
+                  h-12
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-300
+                  px-4
+                  text-sm
+                  transition
+                  focus:border-[#172B6B]
+                  focus:outline-none
+                  focus:ring-4
+                  focus:ring-blue-100
+                "
+                value={form.date}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    date: e.target.value,
+                  })
+                }
+              />
+
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Check In
+                </label>
+
+                <input
+                  type="time"
+                  className="
+                    h-12
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    text-sm
+                    transition
+                    focus:border-[#172B6B]
+                    focus:outline-none
+                    focus:ring-4
+                    focus:ring-blue-100
+                  "
+                  value={form.checkIn}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      checkIn: e.target.value,
+                    })
+                  }
+                />
+
+              </div>
+
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Check Out
+                </label>
+
+                <input
+                  type="time"
+                  className="
+                    h-12
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    text-sm
+                    transition
+                    focus:border-[#172B6B]
+                    focus:outline-none
+                    focus:ring-4
+                    focus:ring-blue-100
+                  "
+                  value={form.checkOut}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      checkOut: e.target.value,
+                    })
+                  }
+                />
+
+              </div>
+
+            </div>
+
+                        <div>
+
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Attendance Status
+              </label>
+
+              <select
+                className="
+                  h-12
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-300
+                  bg-white
+                  px-4
+                  text-sm
+                  transition
+                  focus:border-[#172B6B]
+                  focus:outline-none
+                  focus:ring-4
+                  focus:ring-blue-100
+                "
+                value={form.status}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    status: e.target.value,
+                  })
+                }
               >
-                {labour.name}
-              </option>
-            ))}
+                <option>Present</option>
+                <option>Absent</option>
+                <option>Half Day</option>
+                <option>Leave</option>
+              </select>
 
-          </select>
+            </div>
 
-        )}
+          </div>
 
-        <input
-          type="date"
-          className="w-full border rounded-lg p-3"
-          value={form.date}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              date: e.target.value,
-            })
-          }
-        />
+          {/* ================= PRODUCTIVITY ================= */}
 
-        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-5">
 
-          <input
-            type="time"
-            className="border rounded-lg p-3"
-            value={form.checkIn}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                checkIn: e.target.value,
-              })
-            }
-            placeholder="Check In"
-          />
+            <div>
 
-          <input
-            type="time"
-            className="border rounded-lg p-3"
-            value={form.checkOut}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                checkOut: e.target.value,
-              })
-            }
-            placeholder="Check Out"
-          />
+              <h3 className="text-base font-semibold text-slate-800">
+                Productivity
+              </h3>
 
-        </div>
+              <p className="mt-1 text-sm text-slate-500">
+                Track assigned work and completed work.
+              </p>
 
-        <select
-          className="w-full border rounded-lg p-3"
-          value={form.status}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              status: e.target.value,
-            })
-          }
-        >
-          <option>Present</option>
-          <option>Absent</option>
-          <option>Half Day</option>
-          <option>Leave</option>
-        </select>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
 
-          <input
-            type="number"
-            className="border rounded-lg p-3"
-            placeholder="Tasks Assigned"
-            value={form.tasksAssigned}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                tasksAssigned: Number(
-                  e.target.value
-                ),
-              })
-            }
-          />
+              <div>
 
-          <input
-            type="number"
-            className="border rounded-lg p-3"
-            placeholder="Tasks Completed"
-            value={form.tasksCompleted}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                tasksCompleted: Number(
-                  e.target.value
-                ),
-              })
-            }
-          />
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Tasks Assigned
+                </label>
 
-        </div>
+                <input
+                  type="number"
+                  value={form.tasksAssigned}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      tasksAssigned: Number(e.target.value),
+                    })
+                  }
+                  placeholder="0"
+                  className="
+                    h-12
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    text-sm
+                    transition
+                    focus:border-[#172B6B]
+                    focus:outline-none
+                    focus:ring-4
+                    focus:ring-blue-100
+                  "
+                />
 
-        <textarea
-          rows={4}
-          className="w-full border rounded-lg p-3"
-          placeholder="Remarks"
-          value={form.remarks}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              remarks: e.target.value,
-            })
-          }
-        />
+              </div>
 
-        <div className="flex justify-end gap-3">
+              <div>
 
-          <button
-            onClick={onClose}
-            className="border px-5 py-2 rounded-lg"
-          >
-            Cancel
-          </button>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Tasks Completed
+                </label>
 
-          <button
-            onClick={handleSubmit}
-            className="bg-[#172B6B] text-white px-5 py-2 rounded-lg"
-          >
-            {attendance ? "Update" : "Save"}
-          </button>
+                <input
+                  type="number"
+                  value={form.tasksCompleted}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      tasksCompleted: Number(e.target.value),
+                    })
+                  }
+                  placeholder="0"
+                  className="
+                    h-12
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    text-sm
+                    transition
+                    focus:border-[#172B6B]
+                    focus:outline-none
+                    focus:ring-4
+                    focus:ring-blue-100
+                  "
+                />
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* ================= REMARKS ================= */}
+
+          <div className="space-y-4">
+
+            <div>
+
+              <h3 className="text-base font-semibold text-slate-800">
+                Additional Remarks
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Add any notes related to this attendance record.
+              </p>
+
+            </div>
+
+            <textarea
+              rows={5}
+              value={form.remarks}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  remarks: e.target.value,
+                })
+              }
+              placeholder="Write remarks here..."
+              className="
+                w-full
+                rounded-xl
+                border
+                border-slate-300
+                px-4
+                py-3
+                text-sm
+                resize-none
+                transition
+                focus:border-[#172B6B]
+                focus:outline-none
+                focus:ring-4
+                focus:ring-blue-100
+              "
+            />
+
+          </div>
 
         </div>
 
       </div>
 
+      {/* ================= FOOTER ================= */}
+
+      <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-8 py-5 sm:flex-row sm:justify-end">
+
+        <button
+          onClick={onClose}
+          className="
+            h-11
+            rounded-xl
+            border
+            border-slate-300
+            bg-white
+            px-6
+            text-sm
+            font-medium
+            text-slate-700
+            transition
+            hover:bg-slate-100
+          "
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          className="
+            h-11
+            rounded-xl
+            bg-[#172B6B]
+            px-6
+            text-sm
+            font-semibold
+            text-white
+            transition
+            hover:bg-[#20398F]
+          "
+        >
+          {attendance ? "Update Attendance" : "Save Attendance"}
+        </button>
+
+      </div>
+
     </div>
-  );
+
+  </div>
+);
 };
 
 export default AttendanceModal;

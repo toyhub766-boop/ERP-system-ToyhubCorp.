@@ -39,66 +39,139 @@ const AddCategoryModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
 
-      <div className="bg-white rounded-3xl w-[420px] p-6">
+    <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
 
-        <div className="flex justify-between items-center mb-6">
+      {/* Header */}
 
-          <h2 className="text-2xl font-bold">
+      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+
+        <div>
+
+          <h2 className="text-2xl font-bold text-slate-900">
             Add Category
           </h2>
 
-          <button onClick={onClose}>
-            <X />
-          </button>
+          <p className="mt-1 text-sm text-slate-500">
+            Create a new inventory category.
+          </p>
 
         </div>
 
-        <div className="space-y-4">
+        <button
+          onClick={onClose}
+          className="rounded-xl p-2 transition hover:bg-slate-100"
+        >
+          <X size={22} />
+        </button>
+
+      </div>
+
+      {/* Body */}
+
+      <div className="space-y-5 p-6">
+
+        <div>
+
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Category Name
+          </label>
 
           <input
             value={name}
-            onChange={(e)=>
-              setName(e.target.value)
-            }
-            placeholder="Category Name"
-            className="w-full border rounded-xl px-4 py-3"
-          />
-
-          <textarea
-            value={description}
-            onChange={(e)=>
-              setDescription(e.target.value)
-            }
-            placeholder="Description"
-            className="w-full border rounded-xl px-4 py-3 h-24"
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter category name"
+            className="
+              w-full
+              rounded-2xl
+              border
+              border-slate-200
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-[#17357A]
+            "
           />
 
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div>
 
-          <button
-            onClick={onClose}
-            className="border rounded-xl px-5 py-2"
-          >
-            Cancel
-          </button>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Description
+          </label>
 
-          <button
-            onClick={handleSubmit}
-            className="bg-[#17357A] text-white rounded-xl px-5 py-2"
-          >
-            Save
-          </button>
+          <textarea
+            rows={5}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Write a short description..."
+            className="
+              w-full
+              resize-none
+              rounded-2xl
+              border
+              border-slate-200
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-[#17357A]
+            "
+          />
 
         </div>
 
       </div>
 
+      {/* Footer */}
+
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-5">
+
+        <button
+          onClick={() => {
+            setName("");
+            setDescription("");
+            onClose();
+          }}
+          className="
+            rounded-xl
+            border
+            border-slate-200
+            px-6
+            py-3
+            font-medium
+            transition
+            hover:bg-slate-100
+          "
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          className="
+            rounded-xl
+            bg-[#17357A]
+            px-6
+            py-3
+            font-semibold
+            text-white
+            transition
+            hover:bg-[#21479f]
+          "
+        >
+          Save Category
+        </button>
+
+      </div>
+
     </div>
-  );
+
+  </div>
+);
 };
 
 export default AddCategoryModal;

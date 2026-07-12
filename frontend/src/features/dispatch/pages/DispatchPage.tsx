@@ -284,396 +284,781 @@ const DispatchPage = () => {
     return new Date(d.createdAt).toDateString() === new Date().toDateString();
   }).length;
 
-  return (
-    <AdminLayout>
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dispatch Management</h1>
+return (
+  <AdminLayout>
+    <div className="space-y-8">
 
-        <p className="text-slate-500 mt-1">
-          Track dispatches and delivery status
-        </p>
-      </div>
+      {/* Header */}
 
-      <div className="mb-5">
-        <input
-          type="text"
-          placeholder="🔍 Search product, destination, vehicle..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full border rounded-xl p-3"
-        />
-      </div>
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
 
-      <div className="flex gap-3 mb-5">
-        {["All", "Pending", "Dispatched", "Delivered"].map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 rounded-xl transition ${
-              statusFilter === status ? "bg-blue-700 text-white" : "border"
-            }`}
-          >
-            {status}
-          </button>
-        ))}
-      </div>
+        <div>
 
-      <div className="flex justify-end">
+          <p className="text-sm text-slate-500">
+            Admin / Dispatch
+          </p>
+
+          <h1 className="text-3xl font-bold text-slate-900 mt-1">
+            Dispatch Management
+          </h1>
+
+          <p className="text-slate-500 mt-2">
+            Track dispatches, deliveries and shipment progress.
+          </p>
+
+        </div>
+
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-700 text-white px-5 py-2 rounded-xl"
+          className="
+            bg-[#17357A]
+            hover:bg-[#10295F]
+            text-white
+            px-6
+            py-3
+            rounded-xl
+            font-medium
+            transition
+          "
         >
           + New Dispatch
         </button>
+
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border p-5">
-          <p className="text-3xl font-bold">{totalDispatches}</p>
-          <p className="text-slate-500">Total Dispatches</p>
-        </div>
+      {/* Search + Filter */}
 
-        <div className="bg-white rounded-xl border p-5">
-          <p className="text-3xl font-bold">{pendingDispatches}</p>
-          <p className="text-slate-500">Pending</p>
-        </div>
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
 
-        <div className="bg-white rounded-xl border p-5">
-          <p className="text-3xl font-bold">{dispatchedDispatches}</p>
-          <p className="text-slate-500">Dispatched</p>
-        </div>
+        <div className="flex flex-col lg:flex-row gap-4">
 
-        <div className="bg-white rounded-xl border p-5">
-          <p className="text-3xl font-bold">{deliveredDispatches}</p>
-          <p className="text-slate-500">Delivered</p>
-        </div>
+          <input
+            type="text"
+            placeholder="Search product, destination or vehicle..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="
+              flex-1
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              focus:outline-none
+              focus:ring-2
+              focus:ring-[#17357A]
+            "
+          />
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border p-5">
-            <p className="text-3xl font-bold">{totalUnits}</p>
+          <div className="flex flex-wrap gap-2">
 
-            <p className="text-slate-500">Total Units Dispatched</p>
+            {["All", "Pending", "Dispatched", "Delivered"].map(
+              (status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-5 py-2 rounded-xl transition ${
+                    statusFilter === status
+                      ? "bg-[#17357A] text-white"
+                      : "border border-slate-300 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  {status}
+                </button>
+              )
+            )}
+
           </div>
 
-          <div className="bg-white rounded-xl border p-5">
-            <p className="text-3xl font-bold">{todaysDispatches}</p>
-
-            <p className="text-slate-500">Today's Dispatches</p>
-          </div>
         </div>
+
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-7">
-          <div className="bg-white rounded-xl border p-6">
-            <h2 className="text-lg font-semibold mb-5">Dispatch Records</h2>
+      {/* Statistics */}
 
+      <div className="grid grid-cols-2 xl:grid-cols-6 gap-5">
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <p className="text-sm text-slate-500">
+            Total Dispatches
+          </p>
+
+          <h2 className="text-3xl font-bold mt-2">
+            {totalDispatches}
+          </h2>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <p className="text-sm text-slate-500">
+            Pending
+          </p>
+
+          <h2 className="text-3xl font-bold text-yellow-600 mt-2">
+            {pendingDispatches}
+          </h2>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <p className="text-sm text-slate-500">
+            Dispatched
+          </p>
+
+          <h2 className="text-3xl font-bold text-blue-600 mt-2">
+            {dispatchedDispatches}
+          </h2>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <p className="text-sm text-slate-500">
+            Delivered
+          </p>
+
+          <h2 className="text-3xl font-bold text-green-600 mt-2">
+            {deliveredDispatches}
+          </h2>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <p className="text-sm text-slate-500">
+            Units
+          </p>
+
+          <h2 className="text-3xl font-bold mt-2">
+            {totalUnits}
+          </h2>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <p className="text-sm text-slate-500">
+            Today
+          </p>
+
+          <h2 className="text-3xl font-bold mt-2">
+            {todaysDispatches}
+          </h2>
+        </div>
+
+      </div>
+
+      {/* Main Content */}
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+        <div className="xl:col-span-7">
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+
+            <h2 className="text-xl font-semibold mb-6">
+              Dispatch Records
+            </h2>
+            
             {loading ? (
-              <p className="text-slate-500">Loading...</p>
-            ) : filteredDispatches.length === 0 ? (
-              <p className="text-slate-500">No dispatches found.</p>
-            ) : (
-              <div className="space-y-4">
-                {filteredDispatches.map((dispatch: any) => (
-                  <div
-                    key={dispatch._id}
-                    onClick={() => setSelectedDispatch(dispatch)}
-                    className={`border rounded-xl p-4 cursor-pointer transition ${
-                      selectedDispatch?._id === dispatch._id
-                        ? "border-blue-600"
-                        : "hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="flex justify-between">
-                      <div>
-                        <h3 className="font-semibold">
-                          {dispatch.production?.finishedProduct?.name}
-                        </h3>
 
-                        <p className="text-sm text-slate-500">
-                          {dispatch.destination}
-                        </p>
-                      </div>
+  <div className="py-16 text-center text-slate-500">
+    Loading dispatches...
+  </div>
 
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full font-medium ${
-                          dispatch.status === "Pending"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : dispatch.status === "Dispatched"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {dispatch.status}
-                      </span>
-                    </div>
+) : filteredDispatches.length === 0 ? (
 
-                    <div className="flex justify-between mt-4 text-sm text-slate-500">
-                      <span>{dispatch.quantity} units</span>
+  <div className="py-16 text-center text-slate-500">
+    No dispatches found.
+  </div>
 
-                      <span>
-                        {new Date(dispatch.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
+) : (
 
-                    <div className="flex gap-2 mt-4">
-                      <button
-  onClick={(e) => {
-  e.stopPropagation();
-  handlePrint();
-}}
-  className="px-3 py-1 text-sm border rounded-lg hover:bg-slate-100"
->
-  🖨 Print
-</button>
+  <div className="space-y-4">
 
-                      {dispatch.status === "Dispatched" && (
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
+    {filteredDispatches.map((dispatch: any) => (
 
-                            try {
-                              await updateDispatch(dispatch._id, {
-                                ...dispatch,
-                                status: "Delivered",
-                              });
+      <div
+        key={dispatch._id}
+        onClick={() => setSelectedDispatch(dispatch)}
+        className={`rounded-2xl border p-5 cursor-pointer transition-all ${
+          selectedDispatch?._id === dispatch._id
+            ? "border-[#17357A] bg-blue-50"
+            : "border-slate-200 hover:border-slate-300 hover:shadow-md"
+        }`}
+      >
 
-                              await loadDispatches();
-                            } catch (error) {
-                              console.error(error);
-                            }
-                          }}
-                          className="px-3 py-1 text-sm bg-green-600 text-white rounded-lg"
-                        >
-                          🚚 Deliver
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="flex items-start justify-between gap-4">
+
+          <div>
+
+            <h3 className="text-lg font-semibold text-slate-900">
+              {dispatch.production?.finishedProduct?.name}
+            </h3>
+
+            <p className="text-sm text-slate-500 mt-1">
+              {dispatch.destination}
+            </p>
+
           </div>
+
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              dispatch.status === "Pending"
+                ? "bg-yellow-100 text-yellow-700"
+                : dispatch.status === "Dispatched"
+                ? "bg-blue-100 text-blue-700"
+                : "bg-green-100 text-green-700"
+            }`}
+          >
+            {dispatch.status}
+          </span>
+
         </div>
 
-        <div className="col-span-5">
-          <div className="bg-white rounded-xl border p-6">
-            {!selectedDispatch ? (
-              <div className="text-center text-slate-500 py-20">
-                Select a dispatch
-              </div>
-            ) : (
-              <>
-                <h2 className="text-xl font-semibold">
-                  {selectedDispatch.production?.finishedProduct?.name}
-                </h2>
+        <div className="grid grid-cols-2 gap-4 mt-5 text-sm">
 
-                <p className="text-slate-500 mb-6">
-                  {selectedDispatch.destination}
-                </p>
+          <div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-slate-500 text-sm">Quantity</p>
+            <p className="text-slate-500">
+              Quantity
+            </p>
 
-                    <p className="font-semibold">{selectedDispatch.quantity}</p>
-                  </div>
+            <p className="font-semibold mt-1">
+              {dispatch.quantity} units
+            </p>
 
-                  <div>
-                    <p className="text-slate-500 text-sm">Vehicle</p>
-
-                    <p className="font-semibold">
-                      {selectedDispatch.vehicleNumber || "-"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-slate-500 text-sm">Status</p>
-
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full font-medium ${
-                        selectedDispatch.status === "Pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : selectedDispatch.status === "Dispatched"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {selectedDispatch.status}
-                    </span>
-                  </div>
-
-                  <div>
-                    <p className="text-slate-500 text-sm">Date</p>
-
-                    <p className="font-semibold">
-                      {new Date(
-                        selectedDispatch.createdAt,
-                      ).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedDispatch.notes && (
-                  <div className="mt-6">
-                    <p className="text-slate-500 text-sm">Notes</p>
-
-                    <p className="mt-2">{selectedDispatch.notes}</p>
-                  </div>
-                )}
-
-                <hr className="my-6" />
-
-                <h3 className="font-semibold text-lg mb-4">
-                  Dispatch Timeline
-                </h3>
-
-                <div className="space-y-5">
-                  <div className="flex gap-4">
-                    <div className="w-3 h-3 rounded-full bg-blue-600 mt-2" />
-
-                    <div>
-                      <p className="font-medium">Dispatch Created</p>
-
-                      <p className="text-sm text-slate-500">
-                        {new Date(selectedDispatch.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div
-                      className={`w-3 h-3 rounded-full mt-2 ${
-                        selectedDispatch.status === "Pending"
-                          ? "bg-gray-300"
-                          : "bg-orange-500"
-                      }`}
-                    />
-
-                    <div>
-                      <p className="font-medium">Dispatched</p>
-
-                      <p className="text-sm text-slate-500">
-                        {selectedDispatch.dispatchedAt
-                          ? new Date(
-                              selectedDispatch.dispatchedAt,
-                            ).toLocaleString()
-                          : "Waiting"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div
-                      className={`w-3 h-3 rounded-full mt-2 ${
-                        selectedDispatch.status === "Delivered"
-                          ? "bg-green-600"
-                          : "bg-gray-300"
-                      }`}
-                    />
-
-                    <div>
-                      <p className="font-medium">Delivered</p>
-
-                      <p className="text-sm text-slate-500">
-                        {selectedDispatch.status === "Delivered"
-                          ? "Completed"
-                          : "Waiting"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedDispatch.status === "Dispatched" && (
-                  <button
-                    onClick={handleMarkDelivered}
-                    className="w-full mt-6 bg-green-600 text-white py-3 rounded-xl"
-                  >
-                    Mark as Delivered
-                  </button>
-                )}
-              </>
-            )}
           </div>
+
+          <div>
+
+            <p className="text-slate-500">
+              Date
+            </p>
+
+            <p className="font-semibold mt-1">
+              {new Date(dispatch.createdAt).toLocaleDateString()}
+            </p>
+
+          </div>
+
         </div>
+
+        <div className="flex gap-3 mt-5">
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePrint();
+            }}
+            className="
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-2
+              text-sm
+              hover:bg-slate-50
+              transition
+            "
+          >
+            🖨 Print
+          </button>
+
+          {dispatch.status === "Dispatched" && (
+
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+
+                try {
+                  await updateDispatch(dispatch._id, {
+                    ...dispatch,
+                    status: "Delivered",
+                  });
+
+                  await loadDispatches();
+                } catch (error) {
+                  console.error(error);
+                }
+              }}
+              className="
+                rounded-xl
+                bg-green-600
+                hover:bg-green-700
+                text-white
+                px-4
+                py-2
+                text-sm
+                transition
+              "
+            >
+              🚚 Deliver
+            </button>
+
+          )}
+
+        </div>
+
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-[600px]">
-            <h2 className="text-xl font-semibold mb-5">Create Dispatch</h2>
+    ))}
 
-            <div className="space-y-4">
-              <select
-                className="w-full border rounded-lg p-3"
-                value={selectedProduction}
-                onChange={(e) => setSelectedProduction(e.target.value)}
-              >
-                <option value="">Select Completed Production</option>
+  </div>
 
-                {completedProductions.map((production: any) => (
-                  <option key={production._id} value={production._id}>
-                    {production.orderNumber} —{" "}
-                    {production.finishedProduct?.name}
-                  </option>
-                ))}
-              </select>
+)}
 
-              <input
-                type="number"
-                placeholder="Dispatch Quantity"
-                className="w-full border rounded-lg p-3"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
+        </div>
 
-              <input
-                type="text"
-                placeholder="Destination"
-                className="w-full border rounded-lg p-3"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-              />
+        <div className="xl:col-span-5">
 
-              <input
-                type="text"
-                placeholder="Vehicle Number"
-                className="w-full border rounded-lg p-3"
-                value={vehicleNumber}
-                onChange={(e) => setVehicleNumber(e.target.value)}
-              />
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            {!selectedDispatch ? (
 
-              <textarea
-                rows={3}
-                placeholder="Notes"
-                className="w-full border rounded-lg p-3"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
+  <div className="py-24 text-center text-slate-500">
+    Select a dispatch record to view details.
+  </div>
+
+) : (
+
+  <>
+
+    <div className="flex items-start justify-between">
+
+      <div>
+
+        <h2 className="text-2xl font-bold">
+          {selectedDispatch.production?.finishedProduct?.name}
+        </h2>
+
+        <p className="text-slate-500 mt-1">
+          {selectedDispatch.destination}
+        </p>
+
+      </div>
+
+      <span
+        className={`px-4 py-2 rounded-full text-sm font-semibold ${
+          selectedDispatch.status === "Pending"
+            ? "bg-yellow-100 text-yellow-700"
+            : selectedDispatch.status === "Dispatched"
+            ? "bg-blue-100 text-blue-700"
+            : "bg-green-100 text-green-700"
+        }`}
+      >
+        {selectedDispatch.status}
+      </span>
+
+    </div>
+
+    {/* Summary */}
+
+    <div className="grid grid-cols-2 gap-4 mt-8">
+
+      <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+        <p className="text-sm text-slate-500">
+          Quantity
+        </p>
+
+        <h3 className="font-semibold text-lg mt-1">
+          {selectedDispatch.quantity}
+        </h3>
+      </div>
+
+      <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+        <p className="text-sm text-slate-500">
+          Vehicle
+        </p>
+
+        <h3 className="font-semibold text-lg mt-1">
+          {selectedDispatch.vehicleNumber || "-"}
+        </h3>
+      </div>
+
+      <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+        <p className="text-sm text-slate-500">
+          Dispatch Date
+        </p>
+
+        <h3 className="font-semibold mt-1">
+          {new Date(
+            selectedDispatch.createdAt
+          ).toLocaleDateString()}
+        </h3>
+      </div>
+
+      <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+        <p className="text-sm text-slate-500">
+          Destination
+        </p>
+
+        <h3 className="font-semibold mt-1">
+          {selectedDispatch.destination}
+        </h3>
+      </div>
+
+    </div>
+
+    {/* Notes */}
+
+    {selectedDispatch.notes && (
+
+      <div className="mt-8">
+
+        <h3 className="font-semibold mb-2">
+          Notes
+        </h3>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-700">
+          {selectedDispatch.notes}
+        </div>
+
+      </div>
+
+    )}
+
+    {/* Timeline */}
+
+    <div className="mt-8">
+
+      <h3 className="font-semibold text-lg mb-5">
+        Dispatch Timeline
+      </h3>
+
+      <div className="space-y-6">
+
+        <div className="flex gap-4">
+
+          <div className="w-3 h-3 rounded-full bg-blue-600 mt-2" />
+
+          <div>
+
+            <p className="font-medium">
+              Dispatch Created
+            </p>
+
+            <p className="text-sm text-slate-500">
+              {new Date(
+                selectedDispatch.createdAt
+              ).toLocaleString()}
+            </p>
+
+          </div>
+
+        </div>
+
+        <div className="flex gap-4">
+
+          <div
+            className={`w-3 h-3 rounded-full mt-2 ${
+              selectedDispatch.status === "Pending"
+                ? "bg-slate-300"
+                : "bg-orange-500"
+            }`}
+          />
+
+          <div>
+
+            <p className="font-medium">
+              Dispatched
+            </p>
+
+            <p className="text-sm text-slate-500">
+              {selectedDispatch.dispatchedAt
+                ? new Date(
+                    selectedDispatch.dispatchedAt
+                  ).toLocaleString()
+                : "Waiting"}
+            </p>
+
+          </div>
+
+        </div>
+
+        <div className="flex gap-4">
+
+          <div
+            className={`w-3 h-3 rounded-full mt-2 ${
+              selectedDispatch.status === "Delivered"
+                ? "bg-green-600"
+                : "bg-slate-300"
+            }`}
+          />
+
+          <div>
+
+            <p className="font-medium">
+              Delivered
+            </p>
+
+            <p className="text-sm text-slate-500">
+              {selectedDispatch.status === "Delivered"
+                ? "Completed"
+                : "Waiting"}
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    {selectedDispatch.status === "Dispatched" && (
+
+      <button
+        onClick={handleMarkDelivered}
+        className="
+          w-full
+          mt-8
+          rounded-xl
+          bg-green-600
+          py-3
+          font-medium
+          text-white
+          transition
+          hover:bg-green-700
+        "
+      >
+        Mark as Delivered
+      </button>
+
+    )}
+
+  </>
+
+)}
+
+      </div>
+
+    </div>
+
+          {showModal && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
+
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+
+            {/* Header */}
+
+            <div className="border-b border-slate-200 px-8 py-6">
+
+              <h2 className="text-2xl font-bold">
+                Create Dispatch
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Schedule a new dispatch from completed production.
+              </p>
+
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            {/* Body */}
+
+            <div className="space-y-6 p-8">
+
+              <div>
+
+                <label className="mb-2 block text-sm font-medium">
+                  Completed Production
+                </label>
+
+                <select
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    py-3
+                    outline-none
+                    transition
+                    focus:border-[#17357A]
+                  "
+                  value={selectedProduction}
+                  onChange={(e) => setSelectedProduction(e.target.value)}
+                >
+                  <option value="">
+                    Select Completed Production
+                  </option>
+
+                  {completedProductions.map((production: any) => (
+
+                    <option
+                      key={production._id}
+                      value={production._id}
+                    >
+                      {production.orderNumber} —{" "}
+                      {production.finishedProduct?.name}
+                    </option>
+
+                  ))}
+
+                </select>
+
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium">
+                    Dispatch Quantity
+                  </label>
+
+                  <input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) =>
+                      setQuantity(Number(e.target.value))
+                    }
+                    className="
+                      w-full
+                      rounded-xl
+                      border
+                      border-slate-300
+                      px-4
+                      py-3
+                      outline-none
+                      transition
+                      focus:border-[#17357A]
+                    "
+                  />
+
+                </div>
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium">
+                    Vehicle Number
+                  </label>
+
+                  <input
+                    type="text"
+                    value={vehicleNumber}
+                    onChange={(e) =>
+                      setVehicleNumber(e.target.value)
+                    }
+                    placeholder="MH12 AB1234"
+                    className="
+                      w-full
+                      rounded-xl
+                      border
+                      border-slate-300
+                      px-4
+                      py-3
+                      outline-none
+                      transition
+                      focus:border-[#17357A]
+                    "
+                  />
+
+                </div>
+
+              </div>
+
+              <div>
+
+                <label className="mb-2 block text-sm font-medium">
+                  Destination
+                </label>
+
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) =>
+                    setDestination(e.target.value)
+                  }
+                  placeholder="Customer / Warehouse"
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    py-3
+                    outline-none
+                    transition
+                    focus:border-[#17357A]
+                  "
+                />
+
+              </div>
+
+              <div>
+
+                <label className="mb-2 block text-sm font-medium">
+                  Notes
+                </label>
+
+                <textarea
+                  rows={4}
+                  value={notes}
+                  onChange={(e) =>
+                    setNotes(e.target.value)
+                  }
+                  placeholder="Additional dispatch notes..."
+                  className="
+                    w-full
+                    resize-none
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    py-3
+                    outline-none
+                    transition
+                    focus:border-[#17357A]
+                  "
+                />
+
+              </div>
+
+            </div>
+
+            {/* Footer */}
+
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-6">
+
               <button
                 onClick={() => setShowModal(false)}
-                className="px-5 py-2 border rounded-lg"
+                className="
+                  rounded-xl
+                  border
+                  border-slate-300
+                  px-6
+                  py-3
+                  font-medium
+                  transition
+                  hover:bg-slate-100
+                "
               >
                 Cancel
               </button>
 
               <button
                 onClick={handleCreateDispatch}
-                className="px-5 py-2 bg-blue-700 text-white rounded-lg"
+                className="
+                  rounded-xl
+                  bg-[#17357A]
+                  px-6
+                  py-3
+                  font-semibold
+                  text-white
+                  transition
+                  hover:bg-[#10295F]
+                "
               >
                 Create Dispatch
               </button>
+
             </div>
+
           </div>
+
         </div>
+
       )}
+
     </div>
-    </AdminLayout>
-  );
-};
+    </div>
+    </div>
+
+  </AdminLayout>
+);
+            };
 
 export default DispatchPage;

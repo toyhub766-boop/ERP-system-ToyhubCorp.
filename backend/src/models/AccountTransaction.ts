@@ -63,7 +63,7 @@ const accountTransactionSchema =
       createdBy: {
         type: Schema.Types.ObjectId,
         ref: "User",
-        required: true,
+        required: false,
       },
 
       date: {

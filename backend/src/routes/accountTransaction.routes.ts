@@ -10,21 +10,15 @@ import {
   deleteTransaction,
 } from "../controllers/accountTransaction.controller";
 
+console.log("✅ accountTransaction.routes loaded");
+
 const router = express.Router();
 
 router.use(authMiddleware);
 
 // Left Panel
-router.get("/parties", (_req, res) => {
-  console.log("PARTIES ROUTE HIT");
-  res.json([
-    {
-      _id: "1",
-      companyName: "ABC Toys",
-      currentBalance: 2500,
-    },
-  ]);
-});
+router.get("/parties", getParties);
+
 
 // Right Panel
 router.get("/ledger/:customerId", getCustomerLedger);

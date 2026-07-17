@@ -2,8 +2,11 @@ interface Props {
   selectedParty: any;
   ledger: any[];
   loading: boolean;
+
   onMoneyIn: () => void;
   onMoneyOut: () => void;
+
+  onDelete: (id: string) => void;
 }
 
 const LedgerPanel = ({
@@ -12,6 +15,7 @@ const LedgerPanel = ({
   loading,
   onMoneyIn,
   onMoneyOut,
+  onDelete,
 }: Props) => {
   if (!selectedParty) {
     return (
@@ -113,55 +117,53 @@ const LedgerPanel = ({
                 key={item._id}
                 className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
               >
-                <div className="flex justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">
-                      {new Date(
-                        item.createdAt
-                      ).toLocaleDateString()}
-                    </p>
+                <div className="flex justify-between items-start">
+  <div>
+    <p className="text-sm text-slate-500">
+      {new Date(item.createdAt).toLocaleDateString()}
+    </p>
 
-                    <h3 className="mt-2 text-lg font-semibold">
-                      {item.transactionType ===
-                      "MONEY_IN"
-                        ? "Payment Received"
-                        : "Payment Sent"}
-                    </h3>
+    <h3 className="mt-2 text-lg font-semibold">
+      {item.transactionType === "MONEY_IN"
+        ? "Payment Received"
+        : "Payment Sent"}
+    </h3>
 
-                    <p className="mt-2 text-slate-500">
-                      {item.remarks ||
-                        "No remarks"}
-                    </p>
-                  </div>
+    <p className="mt-2 text-slate-500">
+      {item.remarks || "No remarks"}
+    </p>
 
-                  <div className="text-right">
-                    <h2
-                      className={`text-3xl font-bold ${
-                        item.transactionType ===
-                        "MONEY_IN"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {item.transactionType ===
-                      "MONEY_IN"
-                        ? "+"
-                        : "-"}
-                      ₹{item.amount}
-                    </h2>
+    <div className="mt-4 flex gap-2">
 
-                    <p className="mt-2 text-sm text-slate-500">
-                      Balance
-                    </p>
+      <button
+        onClick={() => onDelete(item._id)}
+        className="rounded-lg bg-red-600 px-3 py-1 text-sm text-white"
+      >
+        Delete
+      </button>
+    </div>
+  </div>
 
-                    <p className="font-semibold">
-                      ₹
-                      {
-                        item.balanceAfterTransaction
-                      }
-                    </p>
-                  </div>
-                </div>
+  <div className="text-right">
+    <h2
+      className={`text-3xl font-bold ${
+        item.transactionType === "MONEY_IN"
+          ? "text-green-600"
+          : "text-red-600"
+      }`}
+    >
+      {item.transactionType === "MONEY_IN" ? "+" : "-"}₹{item.amount}
+    </h2>
+
+    <p className="mt-2 text-sm text-slate-500">
+      Balance
+    </p>
+
+    <p className="font-semibold">
+      ₹{item.balanceAfterTransaction}
+    </p>
+  </div>
+</div>
               </div>
             ))}
           </div>

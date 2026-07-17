@@ -68,6 +68,8 @@ app.use("/api/orders", orderRoutes);
 
 app.use("/api/payments", paymentRoutes);
 
+console.log("✅ accountTransaction.routes loaded");
+
 app.use("/api/accounts", accountTransactionRoutes);
 
 app.use("/api/attendance", attendanceRoutes);

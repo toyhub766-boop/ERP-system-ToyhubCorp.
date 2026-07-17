@@ -3,25 +3,17 @@ import { AuthRequest } from "../middlewares/auth.middleware";
 import mongoose from "mongoose";
 import AccountTransaction from "../models/AccountTransaction";
 import Customer from "../models/customer";
-import { recalculateCustomerBalance } from "../services/ledger.service";
 
 export const getParties = async (
-    req: Request,
-    res: Response
+  req: Request,
+  res: Response
 ) => {
-    try {
-        const parties = await Customer.find().sort({
-            companyName: 1,
-        });
+  const parties = await Customer.find();
 
-        res.json(parties);
-    } catch (error) {
-        console.error(error);
+  console.log("PARTIES:", parties.length);
+  console.log(parties);
 
-        res.status(500).json({
-            message: "Failed to fetch parties.",
-        });
-    }
+  res.json(parties);
 };
 
 
@@ -49,74 +41,71 @@ export const getCustomerLedger = async (
 };
 
 export const createTransaction = async (
-    req: AuthRequest,
-    res: Response
+  req: AuthRequest,
+  res: Response
 ) => {
-    const session = await mongoose.startSession();
+  const session = await mongoose.startSession();
 
-    try {
-        session.startTransaction();
+  try {
+    session.startTransaction();
 
-        const {
-            customer,
-            transactionType,
-            amount,
-            paymentMethod,
-            remarks,
-        } = req.body;
+    const {
+      customer,
+      transactionType,
+      amount,
+      paymentMethod,
+      remarks,
+    } = req.body;
 
-        const customerDoc = await Customer.findById(customer).session(session);
+    const customerDoc = await Customer.findById(customer).session(session);
 
-        if (!customerDoc) {
-            await session.abortTransaction();
-            return res.status(404).json({
-                message: "Customer not found.",
-            });
-        }
-
-        let updatedBalance = customerDoc.currentBalance;
-
-        if (transactionType === "MONEY_IN") {
-            updatedBalance += Number(amount);
-        } else {
-            updatedBalance -= Number(amount);
-        }
-
-        const transaction = await AccountTransaction.create(
-            [
-                {
-                    customer,
-                    transactionType,
-                    amount,
-                    paymentMethod,
-                    remarks,
-                    balanceAfterTransaction: updatedBalance,
-                    createdBy: new mongoose.Types.ObjectId(req.user!.userId),
-                },
-            ],
-            { session }
-        );
-
-        await session.commitTransaction();
-
-        await recalculateCustomerBalance(customer._id.toString());
-
-        return res.status(201).json(transaction[0]);
-
-        await session.commitTransaction();
-
-        res.status(201).json(transaction[0]);
-    } catch (error) {
-        await session.abortTransaction();
-
-        console.error(error);
-
-        res.status(500).json({
-            message: "Failed to create transaction.",
-        });
-    } finally {
-        session.endSession();
+    if (!customerDoc) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        message: "Customer not found.",
+      });
     }
+
+    const updatedBalance =
+      transactionType === "MONEY_IN"
+        ? customerDoc.currentBalance + Number(amount)
+        : customerDoc.currentBalance - Number(amount);
+
+    const transaction = new AccountTransaction({
+      customer,
+      transactionType,
+      amount: Number(amount),
+      paymentMethod,
+      remarks,
+      balanceAfterTransaction: updatedBalance,
+      createdBy: req.user?.userId,
+    });
+
+    await transaction.save({ session });
+
+    customerDoc.currentBalance = updatedBalance;
+    await customerDoc.save({ session });
+
+    await session.commitTransaction();
+
+    return res.status(201).json(transaction);
+
+  } catch (error) {
+
+    await session.abortTransaction();
+
+    console.error("CREATE TRANSACTION ERROR");
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Failed to create transaction",
+    });
+
+  } finally {
+
+    session.endSession();
+
+  }
 };
 
 export const updateTransaction = async (
@@ -146,10 +135,6 @@ export const updateTransaction = async (
       req.body.remarks;
 
     await transaction.save();
-
-    await recalculateCustomerBalance(
-      transaction.customer.toString()
-    );
 
     res.json(transaction);
 
@@ -182,10 +167,6 @@ export const deleteTransaction = async (
 
     await transaction.deleteOne();
 
-    await recalculateCustomerBalance(
-      customerId
-    );
-
     res.json({
       message:
         "Transaction deleted successfully.",
@@ -202,3 +183,4 @@ export const deleteTransaction = async (
 
   }
 };
+

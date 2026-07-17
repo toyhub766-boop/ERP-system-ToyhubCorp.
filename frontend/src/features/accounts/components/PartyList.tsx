@@ -17,7 +17,19 @@ const PartyList = ({
     "CUSTOMER" | "SUPPLIER"
   >("CUSTOMER");
 
-  const [search, setSearch] = useState("");
+    const [search, setSearch] = useState("");
+
+  const filteredParties = parties.filter((party) => {
+  const matchesTab =
+    (party.partyType || "CUSTOMER").toUpperCase() === activeTab;
+
+  const matchesSearch =
+    party.companyName
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+  return matchesTab && matchesSearch;
+});
 
   return (
     <div className="flex h-full flex-col">
@@ -29,14 +41,14 @@ const PartyList = ({
       />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-  {parties.map((party: any) => (
-    <PartyCard
-      key={party._id}
-      party={party}
-      selected={selectedParty?._id === party._id}
-      onClick={() => setSelectedParty(party)}
-    />
-  ))}
+  {filteredParties.map((party) => (
+  <PartyCard
+    key={party._id}
+    party={party}
+    selected={selectedParty?._id === party._id}
+    onClick={() => setSelectedParty(party)}
+  />
+))}
 </div>
 </div>
   );

@@ -13,6 +13,7 @@ import TransactionModal from "../components/TransactionModal";
 import {
   getParties,
   getCustomerLedger,
+  deleteTransaction,
 } from "../services/accountTransaction.service";
 
 const AccountsPage = () => {
@@ -26,40 +27,33 @@ const AccountsPage = () => {
     "MONEY_IN" | "MONEY_OUT"
   >("MONEY_IN");
 
-  const demoParty = {
-  _id: "demo-party",
-  companyName: "ABC Toys",
-  partyType: "Customer",
-  currentBalance: 25000,
-  contactPerson: "Rahul",
-  phone: "9876543210",
-};
+  const customers = parties.filter(
+    p => p.partyType === "CUSTOMER"
+  );
 
-  // const loadParties = async () => {
-  //   try {
-  //     const data = await getParties();
-  //     setParties(data);
-  //   } catch (err) {
-  //     console.error(err);
-  //   }
-  // };
+  const suppliers = parties.filter(
+    p => p.partyType === "SUPPLIER"
+  );
+
+  const youllGet = parties
+    .filter(p => p.currentBalance > 0)
+    .reduce((sum, p) => sum + p.currentBalance, 0);
+
+  const youllGive = parties
+    .filter(p => p.currentBalance < 0)
+    .reduce((sum, p) => sum + Math.abs(p.currentBalance), 0);
+
 
   const loadParties = async () => {
-  try {
-    const data = await getParties();
-
-    if (data && data.length > 0) {
+    try {
+      const data = await getParties();
       setParties(data);
-    } else {
-      setParties([demoParty]);
+      return data;
+    } catch (err) {
+      console.error(err);
+      return [];
     }
-  } catch (error) {
-    console.error(error);
-
-    // Temporary fallback while backend isn't deployed
-    setParties([demoParty]);
-  }
-};
+  };
 
   const loadLedger = async (customerId: string) => {
     try {
@@ -78,6 +72,55 @@ const AccountsPage = () => {
   useEffect(() => {
     loadParties();
   }, []);
+
+const handleDelete = async (
+  id: string
+) => {
+  if (
+    !window.confirm(
+      "Delete this transaction?"
+    )
+  )
+    return;
+
+  try {
+    await deleteTransaction(id);
+
+    await refreshAccounts();
+
+  } catch (err) {
+    console.error(err);
+
+    alert(
+      "Failed to delete transaction."
+    );
+  }
+};
+
+const refreshAccounts = async () => {
+  if (!selectedParty) return;
+
+  const updatedParties = await getParties();
+
+  setParties(updatedParties);
+
+  const updatedSelectedParty =
+    updatedParties.find(
+      (p: any) =>
+        p._id === selectedParty._id
+    );
+
+  if (updatedSelectedParty) {
+    setSelectedParty(updatedSelectedParty);
+  }
+
+  const updatedLedger =
+    await getCustomerLedger(
+      selectedParty._id
+    );
+
+  setLedger(updatedLedger);
+};
 
   return (
     <AdminLayout>
@@ -98,7 +141,7 @@ const AccountsPage = () => {
             </p>
 
             <h2 className="mt-2 text-3xl font-bold text-green-600">
-              ₹0
+              ₹{youllGet}
             </h2>
           </div>
 
@@ -108,27 +151,27 @@ const AccountsPage = () => {
             </p>
 
             <h2 className="mt-2 text-3xl font-bold text-red-600">
-              ₹0
+              ₹{youllGive}
             </h2>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">
-              Customers
+              Total Customers
             </p>
 
             <h2 className="mt-2 text-3xl font-bold text-[#17357A]">
-              0
+              {customers.length}
             </h2>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">
-              Suppliers
+              Total Suppliers
             </p>
 
             <h2 className="mt-2 text-3xl font-bold text-[#17357A]">
-              0
+              {suppliers.length}
             </h2>
           </div>
 
@@ -166,14 +209,18 @@ const AccountsPage = () => {
                 selectedParty={selectedParty}
                 ledger={ledger}
                 loading={loading}
+
                 onMoneyIn={() => {
                   setTransactionType("MONEY_IN");
                   setModalOpen(true);
                 }}
+
                 onMoneyOut={() => {
                   setTransactionType("MONEY_OUT");
                   setModalOpen(true);
                 }}
+
+                onDelete={handleDelete}
               />
 
             </div>
@@ -187,12 +234,7 @@ const AccountsPage = () => {
           onClose={() => setModalOpen(false)}
           customerId={selectedParty?._id || ""}
           transactionType={transactionType}
-          onSuccess={async () => {
-            if (!selectedParty) return;
-
-            await loadParties();
-            await loadLedger(selectedParty._id);
-          }}
+          onSuccess={refreshAccounts}
         />
 
       </PageContainer>

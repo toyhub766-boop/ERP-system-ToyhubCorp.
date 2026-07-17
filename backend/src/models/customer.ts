@@ -12,6 +12,9 @@ export interface ICustomer extends Document {
   pincode: string;
   gstNumber: string;
   status: "Active" | "Inactive";
+  partyType: "CUSTOMER" | "SUPPLIER";
+  openingBalance: number;
+  currentBalance: number;
 }
 
 const customerSchema = new Schema<ICustomer>(
@@ -72,6 +75,23 @@ const customerSchema = new Schema<ICustomer>(
       enum: ["Active", "Inactive"],
       default: "Active",
     },
+
+    //NEW
+    partyType: {
+      type: String,
+      enum: ["CUSTOMER", "SUPPLIER"],
+      default: "CUSTOMER",
+    },
+
+    openingBalance: {
+      type: Number,
+      default: 0,
+    },
+
+    currentBalance: {
+      type: Number,
+      default: 0,
+    }, 
   },
   {
     timestamps: true,

@@ -26,7 +26,7 @@ import orderRoutes from "./routes/order.routes";
 
 import paymentRoutes from "./routes/payment.routes";
 
-import accountRoutes from "./routes/account.routes";
+import accountTransactionRoutes from "./routes/accountTransaction.routes";
 
 import attendanceRoutes from "./routes/attendance.routes";
 
@@ -68,12 +68,13 @@ app.use("/api/orders", orderRoutes);
 
 app.use("/api/payments", paymentRoutes);
 
-app.use("/api/accounts", accountRoutes);
+app.use("/api/accounts", accountTransactionRoutes);
 
 app.use("/api/attendance", attendanceRoutes);
 
 app.use("/api/labour", labourRoutes);
 
 app.use("/api/tasks", taskRoutes);
+
 
 export default app;

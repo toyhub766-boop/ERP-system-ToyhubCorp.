@@ -41,17 +41,22 @@ export const createProduct = async (
   res: Response
 ) => {
   try {
+
+
     const status = getStockStatus(
-      Number(req.body.currentStock),
-      Number(req.body.minimumStock)
-    );
+  Number(req.body.currentStock),
+  Number(req.body.minimumStock)
+);
 
-    const product = await Product.create({
-      ...req.body,
-      status,
-    });
+const file = (req as any).file;
 
-    res.status(201).json(product);
+const product = await Product.create({
+  ...req.body,
+  image: file ? file.path : "",
+  status,
+});
+
+res.status(201).json(product);
   } catch (error: any) {
   console.error("CREATE PRODUCT ERROR:");
   console.error(error);
@@ -74,17 +79,24 @@ export const updateProduct = async (
       Number(req.body.minimumStock)
     );
 
-    const product =
-      await Product.findByIdAndUpdate(
-        req.params.id,
-        {
-          ...req.body,
-          status,
-        },
-        {
-          new: true,
-        }
-      );
+      const updateData: any = {
+  ...req.body,
+  status,
+};
+
+const file = (req as any).file;
+
+if (file) {
+  updateData.image = file.path;
+}
+
+const product = await Product.findByIdAndUpdate(
+  req.params.id,
+  updateData,
+  {
+    new: true,
+  }
+);
 
     res.json(product);
   } catch (error) {

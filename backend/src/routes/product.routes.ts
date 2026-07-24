@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import authMiddleware from "../middlewares/auth.middleware";
 import roleMiddleware from "../middlewares/role.middleware";
+import upload from "../middlewares/upload.middleware";
 
 import {
   getProducts,
@@ -23,6 +24,7 @@ router.post(
   "/",
   authMiddleware,
   roleMiddleware(["FOUNDER", "INVENTORY"]),
+  upload.single("image"),
   createProduct
 );
 
@@ -36,6 +38,7 @@ router.put(
   "/:id",
   authMiddleware,
   roleMiddleware(["FOUNDER", "INVENTORY"]),
+  upload.single("image"),
   updateProduct
 );
 

@@ -43,6 +43,9 @@ const EditProductModal = ({
       minimumStock: product.minimumStock,
       currentStock: product.currentStock,
     });
+
+    setPreview(product.image || "");
+setImage(null);
   }, [product]);
 
   const [categories, setCategories] = useState<{ _id: string; name: string }[]>(
@@ -52,6 +55,9 @@ const EditProductModal = ({
   const [warehouses, setWarehouses] = useState<{ _id: string; name: string }[]>(
     [],
   );
+
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState("");
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -64,39 +70,54 @@ const EditProductModal = ({
   };
 
   const handleSubmit = async () => {
-    try {
-      if (
-        !form.name ||
-        !form.type ||
-        !form.sku ||
-        !form.category ||
-        !form.warehouse
-      ) {
-        alert("Please fill all required fields.");
-        return;
-      }
-
-      await updateProduct(product!._id, form);
-
-      onSuccess();
-
-      onClose();
-
-      setForm({
-        name: "",
-        type: "RAW",
-        sku: "",
-        category: "",
-        warehouse: "",
-        unit: "PCS",
-        minimumStock: 0,
-        currentStock: 0,
-      });
-    } catch (error) {
-      console.error(error);
-      alert("Failed to create product.");
+  try {
+    if (
+      !product ||
+      !form.name ||
+      !form.type ||
+      !form.sku ||
+      !form.category ||
+      !form.warehouse
+    ) {
+      alert("Please fill all required fields.");
+      return;
     }
-  };
+
+    const formData = new FormData();
+
+    formData.append("name", form.name);
+    formData.append("type", form.type);
+    formData.append("sku", form.sku);
+    formData.append("category", form.category);
+    formData.append("warehouse", form.warehouse);
+    formData.append("unit", form.unit);
+    formData.append(
+      "minimumStock",
+      String(form.minimumStock)
+    );
+    formData.append(
+      "currentStock",
+      String(form.currentStock)
+    );
+
+    if (image) {
+      formData.append("image", image);
+    }
+
+    await updateProduct(product._id, formData);
+
+    onSuccess();
+    onClose();
+
+    setImage(null);
+    setPreview("");
+
+  } catch (error) {
+    console.error(error);
+    alert("Failed to update product.");
+  }
+};
+
 
   useEffect(() => {
     if (!open) return;
@@ -153,6 +174,33 @@ const EditProductModal = ({
       <div className="max-h-[70vh] overflow-y-auto px-8 py-7">
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Product Image
+              </label>
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+
+                  if (!file) return;
+
+                  setImage(file);
+                  setPreview(URL.createObjectURL(file));
+                }}
+              />
+
+              {preview && (
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="mt-4 h-40 w-40 rounded-xl border object-cover"
+                />
+              )}
+            </div>
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -315,6 +363,9 @@ const EditProductModal = ({
     minimumStock: product.minimumStock,
     currentStock: product.currentStock,
   });
+
+  setPreview(product.image || "");
+setImage(null);
 
   onClose();
 }}

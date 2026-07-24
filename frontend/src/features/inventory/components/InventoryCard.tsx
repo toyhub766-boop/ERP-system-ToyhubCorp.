@@ -34,66 +34,70 @@ const InventoryCard = ({
     ">
 
       {/* Header */}
+<div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
 
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+  <div className="flex gap-4">
 
-        <div className="flex gap-4">
+    <div
+      className="
+        h-16
+        w-16
+        rounded-2xl
+        overflow-hidden
+        bg-slate-100
+        flex
+        items-center
+        justify-center
+      "
+    >
+      {product.image ? (
+        <img
+          src={product.image}
+          alt={product.name}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <Package className="h-8 w-8 text-[#17357A]" />
+      )}
+    </div>
 
-          <div className="
-            h-16
-            w-16
-            rounded-2xl
-            bg-slate-100
-            flex
-            items-center
-            justify-center
-          ">
-            <Package className="h-8 w-8 text-[#17357A]" />
-          </div>
+    <div>
+      <h2 className="text-xl font-bold text-slate-900">
+        {product.name}
+      </h2>
 
-          <div>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+        <span>{product.sku}</span>
 
-            <h2 className="text-xl font-bold text-slate-900">
-              {product.name}
-            </h2>
+        <span>•</span>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-
-              <span>{product.sku}</span>
-
-              <span>•</span>
-
-              <span>{product.category?.name}</span>
-
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  product.type === "FINISHED"
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-orange-100 text-orange-700"
-                }`}
-              >
-                {product.type === "FINISHED"
-                  ? "Finished Product"
-                  : "Raw Material"}
-              </span>
-
-            </div>
-
-          </div>
-
-        </div>
+        <span>{product.category?.name}</span>
 
         <span
-          className={`inline-flex h-fit rounded-full px-3 py-1 text-xs font-semibold ${
-            statusColor[
-              product.status as keyof typeof statusColor
-            ]
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+            product.type === "FINISHED"
+              ? "bg-blue-100 text-blue-700"
+              : "bg-orange-100 text-orange-700"
           }`}
         >
-          {product.status}
+          {product.type === "FINISHED"
+            ? "Finished Product"
+            : "Raw Material"}
         </span>
-
       </div>
+    </div>
+
+  </div>
+
+  <span
+    className={`inline-flex h-fit rounded-full px-3 py-1 text-xs font-semibold ${
+      statusColor[product.status as keyof typeof statusColor]
+    }`}
+  >
+    {product.status}
+  </span>
+
+</div>
 
       {/* Divider */}
 

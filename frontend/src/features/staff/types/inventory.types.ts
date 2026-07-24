@@ -5,6 +5,8 @@ export interface Product {
 
   type: "RAW" | "FINISHED";
 
+  image?: string;
+
   sku: string;
 
   unit: string;

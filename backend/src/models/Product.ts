@@ -12,7 +12,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["FINISHED", "RAW"],
       default: "RAW",
-      required:  true,
+      required: true,
     },
 
     sku: {
@@ -53,6 +53,11 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["Healthy", "Low Stock", "Critical"],
       default: "Healthy",
+    },
+
+    image: {
+      type: String,
+      default: "",
     },
   },
   {

@@ -10,11 +10,26 @@ import {
   deleteTransaction,
 } from "../controllers/accountTransaction.controller";
 
-console.log("✅ accountTransaction.routes loaded");
+import AccountTransaction from "../models/AccountTransaction";
 
 const router = express.Router();
 
 router.use(authMiddleware);
+
+router.get("/", async (_req, res) => {
+  try {
+    const transactions = await AccountTransaction.find()
+      .populate("customer", "companyName")
+      .sort({ createdAt: -1 });
+
+    res.json(transactions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Failed to fetch accounts report.",
+    });
+  }
+});
 
 // Left Panel
 router.get("/parties", getParties);

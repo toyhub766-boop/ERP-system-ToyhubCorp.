@@ -25,7 +25,7 @@ const ReportsPage = () => {
 const [attendance, setAttendance] = useState<any[]>([]);
 const [, setProduction] = useState<any[]>([]);
 const [, setDispatch] = useState<any[]>([]);
-const [, setAccounts] = useState<any[]>([]);
+const [accounts, setAccounts] = useState<any[]>([]);
 const [, setCustomers] = useState<any[]>([]);
 const [, setOrders] = useState<any[]>([]);
 const [, setPayments] = useState<any[]>([]);
@@ -141,11 +141,11 @@ setPayments(paymentsData);
         />
 
         <ReportCard
-          title="Accounts Report"
-          description="Income, expenses, balances and financial transactions."
-          onPdf={() => {}}
-          onExcel={() => {}}
-        />
+  title="Accounts Report"
+  description="Customer ledger, balances and transaction history."
+  onPdf={() => exportPdf(accounts, "accounts")}
+  onExcel={() => exportExcel(accounts, "accounts")}
+/>
 
         <ReportCard
           title="CRM Report"

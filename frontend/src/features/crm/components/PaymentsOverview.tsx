@@ -14,19 +14,64 @@ const PaymentsOverview = ({
 
     {/* Header */}
 
-    <div className="border-b border-slate-200 px-6 py-5">
+    <div className="border-b border-slate-200 p-6">
 
-      <h2 className="text-xl font-bold text-slate-900">
+  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
+    <div>
+
+      <h2 className="text-2xl font-bold text-slate-900">
         Payments
       </h2>
 
       <p className="mt-1 text-sm text-slate-500">
-        Track payment history and manage customer transactions.
+        Payment history, receipts and transaction records.
       </p>
 
     </div>
 
-    <div className="space-y-5 p-6">
+    <div className="flex flex-wrap gap-3">
+
+      <div className="rounded-2xl bg-green-50 px-5 py-3">
+
+        <p className="text-xs uppercase tracking-wide text-green-600">
+          Payments
+        </p>
+
+        <h3 className="text-xl font-bold text-green-700">
+          {payments.length}
+        </h3>
+
+      </div>
+
+      <div className="rounded-2xl bg-blue-50 px-5 py-3">
+
+        <p className="text-xs uppercase tracking-wide text-blue-600">
+          Received
+        </p>
+
+        <h3 className="text-xl font-bold text-blue-700">
+
+          ₹
+          {payments
+            .reduce(
+              (sum, payment) =>
+                sum + (payment.amountPaid || 0),
+              0
+            )
+            .toLocaleString()}
+
+        </h3>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div className="grid gap-5 p-6 lg:grid-cols-2">
 
       {payments.length === 0 ? (
 
@@ -78,9 +123,6 @@ const PaymentsOverview = ({
                   ₹{payment.amountPaid.toLocaleString()}
                 </h2>
 
-                <span className="mt-4 inline-flex rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-                  {payment.paymentMethod}
-                </span>
 
               </div>
 

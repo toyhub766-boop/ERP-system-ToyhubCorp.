@@ -1,22 +1,18 @@
 import api from "../../../services/api/axios";
+import type { CustomerForm } from "../types/customer.types";
 
 export const getCustomers = async () => {
   const { data } = await api.get("/customers");
   return data;
 };
 
-export const getCustomerById = async (
-  id: string
-) => {
-  const { data } = await api.get(
-    `/customers/${id}`
-  );
-
+export const getCustomerById = async (id: string) => {
+  const { data } = await api.get(`/customers/${id}`);
   return data;
 };
 
 export const createCustomer = async (
-  customer: any
+  customer: CustomerForm
 ) => {
   const { data } = await api.post(
     "/customers",
@@ -28,7 +24,7 @@ export const createCustomer = async (
 
 export const updateCustomer = async (
   id: string,
-  customer: any
+  customer: CustomerForm
 ) => {
   const { data } = await api.put(
     `/customers/${id}`,
@@ -38,9 +34,7 @@ export const updateCustomer = async (
   return data;
 };
 
-export const deleteCustomer = async (
-  id: string
-) => {
+export const deleteCustomer = async (id: string) => {
   const { data } = await api.delete(
     `/customers/${id}`
   );

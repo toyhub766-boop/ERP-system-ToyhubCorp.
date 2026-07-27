@@ -5,6 +5,9 @@ import {
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  addCustomerNote,
+  updateCustomerNote,
+  deleteCustomerNote,
 } from "../controllers/customer.controller";
 
 import authMiddleware from "../middlewares/auth.middleware";
@@ -20,6 +23,21 @@ router.get("/:id", getCustomerById);
 router.post("/", createCustomer);
 
 router.put("/:id", updateCustomer);
+
+router.post(
+  "/:id/notes",
+  addCustomerNote
+);
+
+router.put(
+  "/:id/notes/:noteId",
+  updateCustomerNote
+);
+
+router.delete(
+  "/:id/notes/:noteId",
+  deleteCustomerNote
+);
 
 router.delete("/:id", deleteCustomer);
 

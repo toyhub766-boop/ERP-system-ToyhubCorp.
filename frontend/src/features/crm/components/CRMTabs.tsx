@@ -27,7 +27,7 @@ const CRMTabs = ({
   return (
   <div className="overflow-x-auto">
 
-    <div className="inline-flex rounded-2xl bg-slate-100 p-1">
+    <div className="flex min-w-max gap-2 rounded-2xl bg-slate-100 p-2">
 
       {tabs.map((tab) => {
 
@@ -39,35 +39,40 @@ const CRMTabs = ({
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
+              flex
+              flex-1
+              items-center
+              justify-center
               rounded-xl
               px-6
               py-3
               text-sm
               font-semibold
+              whitespace-nowrap
               transition-all
               duration-200
 
               ${
                 active
                   ? "bg-white text-[#172B6B] shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                  : "text-slate-600 hover:bg-slate-200 hover:text-slate-900"
               }
             `}
           >
 
-            <div className="flex items-center gap-2">
+            {tab.id === "customers" && (
+              <span className="mr-2"></span>
+            )}
 
-              <span className="text-base">
-                {tab.id === "customers" && "👥"}
-                {tab.id === "orders" && "📦"}
-                {tab.id === "payments" && "💳"}
-              </span>
+            {tab.id === "orders" && (
+              <span className="mr-2"></span>
+            )}
 
-              <span>
-                {tab.label}
-              </span>
+            {tab.id === "payments" && (
+              <span className="mr-2"></span>
+            )}
 
-            </div>
+            {tab.label}
 
           </button>
 

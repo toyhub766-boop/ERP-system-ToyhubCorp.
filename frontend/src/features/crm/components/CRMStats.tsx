@@ -56,37 +56,34 @@ const CRMStats = ({
     },
   ];
 
-  return (
-  <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+return (
+  <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
 
     {cards.map((card) => (
 
       <div
         key={card.title}
         className="
-          group
-          rounded-3xl
+          rounded-2xl
           border
           border-slate-200
           bg-white
-          p-6
+          p-5
           shadow-sm
-          transition-all
-          duration-200
-          hover:-translate-y-1
-          hover:shadow-lg
+          transition
+          hover:shadow-md
         "
       >
 
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between">
 
           <div>
 
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               {card.title}
             </p>
 
-            <h2 className="mt-4 text-4xl font-bold tracking-tight text-slate-900">
+            <h2 className="mt-2 text-3xl font-bold text-slate-900">
               {card.value}
             </h2>
 
@@ -95,13 +92,12 @@ const CRMStats = ({
           <div
             className={`
               flex
-              h-14
-              w-14
+              h-12
+              w-12
               items-center
               justify-center
-              rounded-2xl
-              text-xl
-              font-bold
+              rounded-xl
+              text-lg
               ${card.color}
             `}
           >
@@ -110,29 +106,6 @@ const CRMStats = ({
             {card.title === "Pending Orders" && "📦"}
             {card.title === "Outstanding" && "₹"}
           </div>
-
-        </div>
-
-        <div className="mt-6 h-2 overflow-hidden rounded-full bg-slate-100">
-
-          <div
-            className={`
-              h-full
-              rounded-full
-              transition-all
-              duration-300
-
-              ${
-                card.title === "Total Customers"
-                  ? "w-full bg-blue-500"
-                  : card.title === "Active Customers"
-                  ? "w-4/5 bg-green-500"
-                  : card.title === "Pending Orders"
-                  ? "w-2/3 bg-yellow-500"
-                  : "w-3/5 bg-red-500"
-              }
-            `}
-          />
 
         </div>
 

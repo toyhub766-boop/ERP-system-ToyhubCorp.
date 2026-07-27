@@ -1,183 +1,306 @@
-import { useEffect, useState } from "react";
-import { getCustomers } from "../services/customer.service";
-
 interface Props {
   customers: any[];
+
   selectedCustomer: any;
-  setSelectedCustomer: (customer: any) => void;
+
+  setSelectedCustomer: (
+    customer: any
+  ) => void;
+
+  search: string;
+
+  setSearch: React.Dispatch<
+    React.SetStateAction<string>
+  >;
 }
 
 const CustomerList = ({
+  customers,
   selectedCustomer,
   setSelectedCustomer,
+  search,
+  setSearch,
 }: Props) => {
-  const [customers, setCustomers] = useState<any[]>([]);
 
-useEffect(() => {
-  loadCustomers();
-}, []);
+  const filteredCustomers =
+    customers.filter((customer) => {
 
-const loadCustomers = async () => {
-  try {
-    const data = await getCustomers();
-    setCustomers(data);
-  } catch (error) {
-    console.error(error);
-  }
-};
+      const q = search.toLowerCase();
+
+      return (
+
+        customer.companyName
+          ?.toLowerCase()
+          .includes(q)
+
+        ||
+
+        customer.contactPerson
+          ?.toLowerCase()
+          .includes(q)
+
+        ||
+
+        customer.phone
+          ?.toLowerCase()
+          .includes(q)
+
+        ||
+
+        customer.customerCode
+          ?.toLowerCase()
+          .includes(q)
+
+        ||
+
+        customer.gstNumber
+          ?.toLowerCase()
+          .includes(q)
+
+      );
+
+    });
+
   return (
-  <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
 
-    {/* Header */}
+    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
 
-    <div className="border-b border-slate-200 p-6">
+      {/* Header */}
 
-      <h2 className="text-xl font-bold text-slate-900">
-        Customers
-      </h2>
+      <div className="border-b border-slate-200 p-6">
 
-      <p className="mt-1 text-sm text-slate-500">
-        Browse and select a customer to view their profile.
-      </p>
+        <h2 className="text-2xl font-bold text-slate-900">
+          Customers
+        </h2>
 
-      <input
-        type="text"
-        placeholder="Search customers..."
-        className="
-          mt-5
-          h-12
-          w-full
-          rounded-xl
-          border
-          border-slate-300
-          bg-white
-          px-4
-          text-sm
-          outline-none
-          transition
-          focus:border-[#172B6B]
-          focus:ring-4
-          focus:ring-blue-100
-        "
-      />
+        <p className="mt-1 text-sm text-slate-500">
+          Manage customer relationships
+        </p>
 
-    </div>
+      </div>
 
-    {/* Customer List */}
+      {/* Search */}
 
-    <div className="max-h-[700px] overflow-y-auto">
+      <div className="p-6">
 
-      {customers.length === 0 ? (
+        <div className="relative">
 
-        <div className="flex h-72 flex-col items-center justify-center text-slate-500">
-
-          <div className="mb-4 text-5xl">
-            👥
-          </div>
-
-          <p className="font-semibold">
-            No Customers Found
-          </p>
+          <input
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder="Search customers..."
+            className="
+              h-12
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              pl-11
+              pr-4
+              outline-none
+              transition
+              focus:border-[#172B6B]
+              focus:ring-4
+              focus:ring-blue-100
+            "
+          />
 
         </div>
 
-      ) : (
+                {/* Filters */}
 
-        customers.map((customer) => {
+        <div className="mt-5 flex flex-wrap gap-2">
 
-          const selected =
-            selectedCustomer?._id === customer._id;
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+            {customers.length} Customers
+          </span>
 
-          return (
+          <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+            {
+              customers.filter(
+                (c) => c.status === "Active"
+              ).length
+            }{" "}
+            Active
+          </span>
 
-            <button
-              key={customer._id}
-              onClick={() =>
-                setSelectedCustomer(customer)
-              }
-              className={`
-                w-full
-                border-b
-                p-5
-                text-left
-                transition-all
-                duration-200
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+            {
+              customers.filter(
+                (c) =>
+                  c.stage === "LEAD"
+              ).length
+            }{" "}
+            Leads
+          </span>
+
+        </div>
+
+      </div>
+
+      {/* Customer List */}
+
+      <div className="max-h-[700px] space-y-3 overflow-y-auto p-4">
+
+        {!filteredCustomers.length ? (
+
+          <div className="rounded-2xl border border-dashed border-slate-300 py-16 text-center">
+
+            <div className="text-5xl">
+              🔍
+            </div>
+
+            <h3 className="mt-5 text-lg font-bold text-slate-800">
+              No Customers Found
+            </h3>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Try another search keyword.
+            </p>
+
+          </div>
+
+        ) : (
+
+          filteredCustomers.map(
+            (customer) => (
+
+              <button
+                key={customer._id}
+                onClick={() =>
+                  setSelectedCustomer(customer)
+                }
+                className={`w-full rounded-2xl border p-5 text-left transition-all
 
                 ${
-                  selected
-                    ? "border-l-4 border-l-[#172B6B] bg-blue-50"
-                    : "hover:bg-slate-50"
-                }
-              `}
-            >
+                  selectedCustomer?._id ===
+                  customer._id
+                    ? "border-[#172B6B] bg-blue-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-[#172B6B]/30 hover:shadow-sm"
+                }`}
+              >
 
-              <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between">
 
-                <div className="min-w-0 flex-1">
+                  <div className="flex gap-4">
 
-                  <h3 className="truncate text-lg font-semibold text-slate-900">
-                    {customer.contactPerson ||
-                      customer.name}
-                  </h3>
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#172B6B] text-lg font-bold text-white">
 
-                  <p className="mt-1 truncate text-sm text-slate-500">
-                    {customer.companyName ||
-                      customer.company ||
-                      "-"}
-                  </p>
+                      {customer.companyName
+                        ?.charAt(0)
+                        ?.toUpperCase()}
 
-                </div>
+                    </div>
 
-                {selected && (
-                  <span className="rounded-full bg-[#172B6B] px-3 py-1 text-xs font-semibold text-white">
-                    Active
+                    <div>
+
+                      <h3 className="text-base font-bold text-slate-900">
+
+                        {customer.companyName}
+
+                      </h3>
+
+                      <p className="mt-1 text-sm text-slate-600">
+
+                        {customer.contactPerson}
+
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500">
+
+                        📞 {customer.phone}
+
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold
+
+                    ${
+                      customer.status ===
+                      "Active"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {customer.status}
                   </span>
-                )}
-
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-
-                <div>
-
-                  <p className="text-slate-400">
-                    Phone
-                  </p>
-
-                  <p className="mt-1 font-medium text-slate-700">
-                    {customer.phone || "-"}
-                  </p>
 
                 </div>
 
-                <div>
+                <div className="mt-5 flex flex-wrap gap-2">
 
-                  <p className="text-slate-400">
-                    City
-                  </p>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
 
-                  <p className="mt-1 font-medium text-slate-700">
-                    {customer.city || "-"}
-                  </p>
+                    {customer.stage}
+
+                  </span>
+
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+
+                    {customer.category}
+
+                  </span>
+
+                  <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
+
+                    {customer.partyType}
+
+                  </span>
 
                 </div>
 
+                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+
+                  <div>
+
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Outstanding
+                    </p>
+
+                    <p className="text-lg font-bold text-red-600">
+
+                      ₹
+                      {customer.currentBalance || 0}
+
+                    </p>
+
+                  </div>
+
+                  <div className="text-right">
+
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Code
+                    </p>
+
+                    <p className="font-semibold text-slate-700">
+
+                      {customer.customerCode}
+
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </button>
+
+            )
+          )
+
+        )}
+
               </div>
-
-            </button>
-
-          );
-
-        })
-
-      )}
 
     </div>
 
-  </div>
-);
+  );
+
 };
-
-
 
 export default CustomerList;

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getCategories } from "../../categories/services/category.service";
-import { getWarehouses } from "../../warehouses/services/warehouse.service";
+// import { getWarehouses } from "../../warehouses/services/warehouse.service";
 
 import { getProducts } from "../services/inventory.service";
 import type { Product } from "../types/inventory.types";
@@ -36,7 +36,7 @@ const StaffInventoryPage = () => {
 
   const [categories, setCategories] = useState<any[]>([]);
 
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses,] = useState<any[]>([]);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
@@ -45,8 +45,6 @@ const StaffInventoryPage = () => {
   const fetchProducts = async () => {
     try {
       const data = await getProducts();
-
-      console.log("Products:", data);
 
       setProducts(data);
     } catch (error) {
@@ -58,15 +56,8 @@ const StaffInventoryPage = () => {
 
   const fetchFilters = async () => {
     try {
-      console.log("Fetching categories...");
       const categoryData = await getCategories();
-      console.log("Categories:", categoryData);
       setCategories(categoryData);
-
-      console.log("Fetching warehouses...");
-      const warehouseData = await getWarehouses();
-      console.log("Warehouses:", warehouseData);
-      setWarehouses(warehouseData);
     } catch (err) {
       console.error("Filter Error:", err);
     }
@@ -106,9 +97,6 @@ const StaffInventoryPage = () => {
       );
     });
   }, [products, search, selectedCategory, selectedWarehouse, selectedStatus]);
-
-  console.log("Products state:", products);
-  console.log("Filtered:", filteredProducts);
 return (
   <div className="min-h-screen bg-slate-100">
 

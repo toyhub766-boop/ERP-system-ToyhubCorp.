@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import Product from "../models/Product";
 import InventoryTransaction from "../models/InventoryTransaction";
+import { AuthRequest } from "../middlewares/auth.middleware";
+import Warehouse from "../models/Warehouse";
 
 const getStockStatus = (
   currentStock: number,
@@ -19,18 +21,40 @@ const getStockStatus = (
 
 
 export const getProducts = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
-    const products = await Product.find()
-      .populate("category", "name")
-      .populate("warehouse", "name")
-      .sort({ createdAt: -1 });
 
-    res.json(products);
-  } catch {
-    res.status(500).json({
+let products: any[] = [];
+    if (req.user?.role === "FOUNDER") {
+      products = await Product.find()
+        .populate("category", "name")
+        .populate("warehouse", "name")
+        .sort({ createdAt: -1 });
+    } else if (req.user?.role === "INVENTORY") {
+      const warehouses = await Warehouse.find({
+        manager: req.user.userId,
+      }).select("_id");
+
+
+      const warehouseIds = warehouses.map((w) => w._id);
+
+
+      products = await Product.find({
+        warehouse: { $in: warehouseIds },
+      })
+        .populate("category", "name")
+        .populate("warehouse", "name")
+        .sort({ createdAt: -1 });
+
+    }
+
+    return res.json(products);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
       message: "Failed to fetch products",
     });
   }

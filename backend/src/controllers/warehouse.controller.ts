@@ -1,21 +1,46 @@
 import { Request, Response } from "express";
 import Warehouse from "../models/Warehouse";
+import authMiddleware, {
+  AuthRequest,
+} from "../middlewares/auth.middleware";
 
 export const getWarehouses = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
-    const warehouses =
-      await Warehouse.find().sort({
-        createdAt: -1,
-      });
+
+let warehouses: any[] = [];
+
+
+    if (req.user?.role === "FOUNDER") {
+
+      warehouses = await Warehouse.find()
+        .populate("manager", "name")
+        .sort({ createdAt: -1 });
+
+    } else if (req.user?.role === "INVENTORY") {
+
+      warehouses = await Warehouse.find({
+        manager: req.user.userId,
+      })
+        .populate("manager", "name")
+        .sort({ createdAt: -1 });
+
+    } else {
+
+      warehouses = [];
+
+    }
 
     res.json(warehouses);
+
   } catch {
+
     res.status(500).json({
       message: "Failed to fetch warehouses",
     });
+
   }
 };
 

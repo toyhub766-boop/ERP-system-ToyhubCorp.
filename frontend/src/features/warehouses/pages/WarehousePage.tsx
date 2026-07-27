@@ -11,12 +11,21 @@ import PageContainer from "../../../components/ui/PageContainer";
 import SectionCard from "../../../components/ui/SectionCard";
 import PageHeader from "../../../components/ui/PageHeader";
 import StatCard from "../../../components/ui/StatCard";
+import { getUsers } from "../../users/services/user.service";
 
 type Warehouse = {
   _id: string;
   name: string;
   location: string;
-  manager: string;
+
+  manager:
+    | string
+    | {
+        _id: string;
+        name: string;
+      }
+    | null;
+
   status: string;
 };
 
@@ -30,6 +39,8 @@ const WarehousePage = () => {
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(
     null,
   );
+const [inventoryUsers, setInventoryUsers] =
+  useState<any[]>([]);
 
   const [newWarehouse, setNewWarehouse] = useState({
     name: "",
@@ -48,8 +59,24 @@ const WarehousePage = () => {
     }
   };
 
+  const fetchInventoryUsers = async () => {
+
+  const users = await getUsers();
+
+  setInventoryUsers(
+
+    users.filter(
+      (user: any) =>
+        user.role === "INVENTORY"
+    )
+
+  );
+
+};
+
   useEffect(() => {
-    fetchwarehouses();
+fetchwarehouses();
+fetchInventoryUsers();
   }, []);
 
   const filteredwarehouses = useMemo(() => {
@@ -212,8 +239,10 @@ return (
                   </td>
 
                   <td className="px-6 py-5 text-slate-600">
-                    {warehouse.manager}
-                  </td>
+  {typeof warehouse.manager === "string"
+    ? warehouse.manager
+    : warehouse.manager?.name ?? "-"}
+</td>
 
                   <td className="px-6 py-5">
 
@@ -240,7 +269,10 @@ return (
                           setNewWarehouse({
                             name: warehouse.name,
                             location: warehouse.location,
-                            manager: warehouse.manager,
+                            manager:
+  typeof warehouse.manager === "string"
+    ? warehouse.manager
+    : warehouse.manager?._id || "",
                             status: warehouse.status,
                           });
 
@@ -339,18 +371,33 @@ return (
                 className="w-full border rounded-xl px-4 py-3"
               />
 
-              <input
-                type="text"
-                placeholder="Manager"
-                value={newWarehouse.manager}
-                onChange={(e) =>
-                  setNewWarehouse({
-                    ...newWarehouse,
-                    manager: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl px-4 py-3"
-              />
+              <select
+  value={newWarehouse.manager}
+  onChange={(e) =>
+    setNewWarehouse({
+      ...newWarehouse,
+      manager: e.target.value,
+    })
+  }
+  className="w-full border rounded-xl px-4 py-3"
+>
+
+  <option value="">
+    Select Inventory Manager
+  </option>
+
+  {inventoryUsers.map((user) => (
+
+    <option
+      key={user._id}
+      value={user._id}
+    >
+      {user.name}
+    </option>
+
+  ))}
+
+</select>
 
               <select
                 value={newWarehouse.status}

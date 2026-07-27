@@ -15,9 +15,10 @@ const warehouseSchema = new mongoose.Schema(
     },
 
     manager: {
-      type: String,
-      default: "",
-    },
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  default: null,
+},  
 
     status: {
       type: String,

@@ -203,7 +203,7 @@ return (
                 </th>
 
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Manager
+                  Manager(s)
                 </th>
 
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">

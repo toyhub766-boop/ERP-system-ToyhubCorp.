@@ -327,161 +327,306 @@ warehouse.managers?.map((m) => m._id) || [],
       {/* Keep your existing modal below this exactly as it is */}
 
     </PageContainer>
+{showModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
 
-    {showModal && (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">
-                {editingWarehouse ? "Edit Warehouse" : "Add Warehouse"}
-              </h2>
+    <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
 
-              <button onClick={() => setShowModal(false)}>✕</button>
-            </div>
+      {/* Header */}
 
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Warehouse Name"
-                value={newWarehouse.name}
-                onChange={(e) =>
-                  setNewWarehouse({
-                    ...newWarehouse,
-                    name: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl px-4 py-3"
-              />
+      <div className="flex items-start justify-between border-b border-slate-200 px-8 py-6">
 
-              <input 
-              type="text"
-                placeholder="location"
-                value={newWarehouse.location}
-                onChange={(e) =>
-                  setNewWarehouse({
-                    ...newWarehouse,
-                    location: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl px-4 py-3"
-              />
+        <div>
 
-              <div className="border rounded-xl p-4">
+          <h2 className="text-2xl font-bold text-slate-900">
+            {editingWarehouse
+              ? "Edit Warehouse"
+              : "Add Warehouse"}
+          </h2>
 
-  <p className="mb-3 font-medium">
-    Assign Inventory Managers
-  </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Assign warehouse details and inventory managers.
+          </p>
 
-  <div className="space-y-2 max-h-56 overflow-y-auto">
-
-    {inventoryUsers.map((user) => (
-
-      <label
-        key={user._id}
-        className="flex items-center gap-3 cursor-pointer"
-      >
-
-        <input
-          type="checkbox"
-          checked={newWarehouse.managers.includes(user._id)}
-          onChange={(e) => {
-
-            if (e.target.checked) {
-
-              setNewWarehouse({
-                ...newWarehouse,
-                managers: [
-                  ...newWarehouse.managers,
-                  user._id,
-                ],
-              });
-
-            } else {
-
-              setNewWarehouse({
-                ...newWarehouse,
-                managers:
-                  newWarehouse.managers.filter(
-                    (id) => id !== user._id
-                  ),
-              });
-
-            }
-
-          }}
-        />
-
-        {user.name}
-
-      </label>
-
-    ))}
-
-  </div>
-
-</div>
-
-              <select
-                value={newWarehouse.status}
-                onChange={(e) =>
-                  setNewWarehouse({
-                    ...newWarehouse,
-                    status: e.target.value,
-                  })
-                }
-                className="w-full border rounded-xl px-4 py-3"
-              >
-                <option value="ACTIVE">ACTIVE</option>
-
-                <option value="INACTIVE">INACTIVE</option>
-              </select>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="px-5 py-3 border rounded-xl"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="px-5 py-3 bg-orange-500 text-white rounded-xl"
-                  onClick={async () => {
-                    try {
-                      if (editingWarehouse) {
-                        await updateWarehouse(
-                          editingWarehouse._id,
-                          newWarehouse,
-                        );
-                      } else {
-                        await createWarehouse(newWarehouse);
-                      }
-
-                      await fetchwarehouses();
-
-                      setShowModal(false);
-
-                      setEditingWarehouse(null);
-
-                      setNewWarehouse({
-                        name: "",
-                        location: "",
-                        managers: [] as string[],
-                        status: "ACTIVE",
-                      });
-                    } catch (error) {
-                      console.error(error);
-                    }
-                  }}
-                >
-                  {editingWarehouse ? "Update" : "Create"}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
 
-    )}
+        <button
+          onClick={() => setShowModal(false)}
+          className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      {/* Body */}
+
+      <div className="space-y-6 p-8">
+
+        {/* Warehouse Name */}
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Warehouse Name
+          </label>
+
+          <input
+            type="text"
+            placeholder="e.g. Floor 1"
+            value={newWarehouse.name}
+            onChange={(e) =>
+              setNewWarehouse({
+                ...newWarehouse,
+                name: e.target.value,
+              })
+            }
+            className="
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-[#172B6B]
+            "
+          />
+
+        </div>
+
+        {/* Location */}
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Location
+          </label>
+
+          <input
+            type="text"
+            placeholder="Factory Burari"
+            value={newWarehouse.location}
+            onChange={(e) =>
+              setNewWarehouse({
+                ...newWarehouse,
+                location: e.target.value,
+              })
+            }
+            className="
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-[#172B6B]
+            "
+          />
+
+        </div>
+
+        {/* Managers */}
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Inventory Managers
+          </label>
+
+          <p className="mb-3 text-sm text-slate-500">
+            Select one or more managers for this warehouse.
+          </p>
+
+          <div className="max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-slate-300 p-4">
+
+            {inventoryUsers.map((user) => (
+
+              <label
+                key={user._id}
+                className="
+                  flex
+                  cursor-pointer
+                  items-center
+                  gap-3
+                  rounded-xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-3
+                  transition
+                  hover:bg-slate-50
+                "
+              >
+
+                <input
+                  type="checkbox"
+                  checked={newWarehouse.managers.includes(user._id)}
+                  onChange={(e) => {
+
+                    if (e.target.checked) {
+
+                      setNewWarehouse({
+                        ...newWarehouse,
+                        managers: [
+                          ...newWarehouse.managers,
+                          user._id,
+                        ],
+                      });
+
+                    } else {
+
+                      setNewWarehouse({
+                        ...newWarehouse,
+                        managers:
+                          newWarehouse.managers.filter(
+                            (id) => id !== user._id
+                          ),
+                      });
+
+                    }
+
+                  }}
+                  className="h-4 w-4 accent-[#172B6B]"
+                />
+
+                <div>
+
+                  <p className="font-medium text-slate-800">
+                    {user.name}
+                  </p>
+
+                  <p className="text-xs text-slate-500">
+                    {user.employeeId}
+                  </p>
+
+                </div>
+
+              </label>
+
+            ))}
+
+          </div>
+
+        </div>
+
+        {/* Status */}
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Status
+          </label>
+
+          <select
+            value={newWarehouse.status}
+            onChange={(e) =>
+              setNewWarehouse({
+                ...newWarehouse,
+                status: e.target.value,
+              })
+            }
+            className="
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-[#172B6B]
+            "
+          >
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="INACTIVE">INACTIVE</option>
+          </select>
+
+        </div>
+
+      </div>
+
+      {/* Footer */}
+
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-5">
+
+        <button
+          onClick={() => setShowModal(false)}
+          className="
+            rounded-xl
+            border
+            border-slate-300
+            px-5
+            py-3
+            font-medium
+            text-slate-700
+            hover:bg-slate-50
+          "
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={async () => {
+            try {
+
+              if (editingWarehouse) {
+
+                await updateWarehouse(
+                  editingWarehouse._id,
+                  newWarehouse
+                );
+
+              } else {
+
+                await createWarehouse(
+                  newWarehouse
+                );
+
+              }
+
+              await fetchwarehouses();
+
+              setShowModal(false);
+
+              setEditingWarehouse(null);
+
+              setNewWarehouse({
+                name: "",
+                location: "",
+                managers: [],
+                status: "ACTIVE",
+              });
+
+            } catch (error) {
+              console.error(error);
+            }
+          }}
+          className="
+            rounded-xl
+            bg-[#172B6B]
+            px-6
+            py-3
+            font-semibold
+            text-white
+            transition
+            hover:bg-[#20398F]
+          "
+        >
+          {editingWarehouse
+            ? "Update Warehouse"
+            : "Create Warehouse"}
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
 
   </AdminLayout>
 );

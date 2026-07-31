@@ -16,7 +16,7 @@ let warehouses: any[] = [];
     if (req.user?.role === "FOUNDER") {
 
       warehouses = await Warehouse.find()
-        .populate("manager", "name")
+        .populate("managers", "name")
         .sort({ createdAt: -1 });
 
     } else if (req.user?.role === "INVENTORY") {
@@ -24,7 +24,7 @@ let warehouses: any[] = [];
       warehouses = await Warehouse.find({
         manager: req.user.userId,
       })
-        .populate("manager", "name")
+        .populate("managers", "name")
         .sort({ createdAt: -1 });
 
     } else {

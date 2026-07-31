@@ -18,13 +18,10 @@ type Warehouse = {
   name: string;
   location: string;
 
-  manager:
-    | string
-    | {
-        _id: string;
-        name: string;
-      }
-    | null;
+  managers: {
+  _id: string;
+  name: string;
+}[];
 
   status: string;
 };
@@ -45,7 +42,7 @@ const [inventoryUsers, setInventoryUsers] =
   const [newWarehouse, setNewWarehouse] = useState({
     name: "",
     location: "",
-    manager: "",
+    managers: [] as string[],
     status: "ACTIVE",
   });
 
@@ -102,7 +99,7 @@ return (
               setNewWarehouse({
                 name: "",
                 location: "",
-                manager: "",
+                managers: [] as string[],
                 status: "ACTIVE",
               });
 
@@ -239,9 +236,9 @@ return (
                   </td>
 
                   <td className="px-6 py-5 text-slate-600">
-  {typeof warehouse.manager === "string"
-    ? warehouse.manager
-    : warehouse.manager?.name ?? "-"}
+  {warehouse.managers?.length
+  ? warehouse.managers.map((m) => m.name).join(", ")
+  : "-"}
 </td>
 
                   <td className="px-6 py-5">
@@ -269,10 +266,8 @@ return (
                           setNewWarehouse({
                             name: warehouse.name,
                             location: warehouse.location,
-                            manager:
-  typeof warehouse.manager === "string"
-    ? warehouse.manager
-    : warehouse.manager?._id || "",
+                            managers:
+warehouse.managers?.map((m) => m._id) || [],
                             status: warehouse.status,
                           });
 
@@ -371,33 +366,60 @@ return (
                 className="w-full border rounded-xl px-4 py-3"
               />
 
-              <select
-  value={newWarehouse.manager}
-  onChange={(e) =>
-    setNewWarehouse({
-      ...newWarehouse,
-      manager: e.target.value,
-    })
-  }
-  className="w-full border rounded-xl px-4 py-3"
->
+              <div className="border rounded-xl p-4">
 
-  <option value="">
-    Select Inventory Manager
-  </option>
+  <p className="mb-3 font-medium">
+    Assign Inventory Managers
+  </p>
 
-  {inventoryUsers.map((user) => (
+  <div className="space-y-2 max-h-56 overflow-y-auto">
 
-    <option
-      key={user._id}
-      value={user._id}
-    >
-      {user.name}
-    </option>
+    {inventoryUsers.map((user) => (
 
-  ))}
+      <label
+        key={user._id}
+        className="flex items-center gap-3 cursor-pointer"
+      >
 
-</select>
+        <input
+          type="checkbox"
+          checked={newWarehouse.managers.includes(user._id)}
+          onChange={(e) => {
+
+            if (e.target.checked) {
+
+              setNewWarehouse({
+                ...newWarehouse,
+                managers: [
+                  ...newWarehouse.managers,
+                  user._id,
+                ],
+              });
+
+            } else {
+
+              setNewWarehouse({
+                ...newWarehouse,
+                managers:
+                  newWarehouse.managers.filter(
+                    (id) => id !== user._id
+                  ),
+              });
+
+            }
+
+          }}
+        />
+
+        {user.name}
+
+      </label>
+
+    ))}
+
+  </div>
+
+</div>
 
               <select
                 value={newWarehouse.status}
@@ -444,7 +466,7 @@ return (
                       setNewWarehouse({
                         name: "",
                         location: "",
-                        manager: "",
+                        managers: [] as string[],
                         status: "ACTIVE",
                       });
                     } catch (error) {

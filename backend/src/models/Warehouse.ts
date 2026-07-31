@@ -14,11 +14,15 @@ const warehouseSchema = new mongoose.Schema(
       default: "",
     },
 
-    manager: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User",
-  default: null,
-},  
+    managers: {
+  type: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
+  default: [],
+},
 
     status: {
       type: String,

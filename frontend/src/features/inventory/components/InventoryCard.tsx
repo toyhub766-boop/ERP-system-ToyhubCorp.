@@ -1,4 +1,5 @@
 import { Eye, Pencil, Trash2, MapPin, Package } from "lucide-react";
+import { useState } from "react";
 import type { Product } from "../../staff/types/inventory.types";
 
 interface InventoryCardProps {
@@ -19,6 +20,8 @@ const InventoryCard = ({
     "Low Stock": "bg-yellow-100 text-yellow-700",
     Critical: "bg-red-100 text-red-700",
   };
+
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   return (
     <div className="
@@ -52,10 +55,23 @@ const InventoryCard = ({
     >
       {product.image ? (
         <img
-          src={product.image}
-          alt={product.name}
-          className="h-full w-full object-cover"
-        />
+  src={product.image}
+  alt={product.name}
+onClick={() => {
+  if (product.image) {
+    setPreviewImage(product.image);
+  }
+}}  title="Click to enlarge"
+  className="
+    h-full
+    w-full
+    cursor-pointer
+    object-cover
+    transition
+    duration-200
+    hover:scale-105
+  "
+/>
       ) : (
         <Package className="h-8 w-8 text-[#17357A]" />
       )}
@@ -170,7 +186,8 @@ const InventoryCard = ({
       <div className="flex flex-wrap justify-end gap-3">
 
         <button
-          onClick={() => onView(product._id)}
+          onClick={() => {onView(product._id);
+}}
           className="
             flex
             items-center
@@ -232,6 +249,45 @@ const InventoryCard = ({
         </button>
 
       </div>
+
+      {previewImage && (
+  <div
+    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+    onClick={() => setPreviewImage(null)}
+  >
+    <button
+      onClick={() => setPreviewImage(null)}
+      className="
+        absolute
+        right-6
+        top-6
+        rounded-full
+        bg-white
+        px-4
+        py-2
+        text-xl
+        font-bold
+        shadow-lg
+      "
+    >
+      ✕
+    </button>
+
+    <img
+      src={previewImage}
+      alt="Product Preview"
+      onClick={(e) => e.stopPropagation()}
+      className="
+        max-h-[90vh]
+        max-w-[90vw]
+        rounded-2xl
+        bg-white
+        object-contain
+        shadow-2xl
+      "
+    />
+  </div>
+)}
 
     </div>
   );

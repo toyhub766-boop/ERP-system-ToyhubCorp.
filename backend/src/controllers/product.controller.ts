@@ -34,8 +34,8 @@ let products: any[] = [];
         .sort({ createdAt: -1 });
     } else if (req.user?.role === "INVENTORY") {
       const warehouses = await Warehouse.find({
-        manager: req.user.userId,
-      }).select("_id");
+  managers: req.user.userId,
+}).select("_id");
 
 
       const warehouseIds = warehouses.map((w) => w._id);

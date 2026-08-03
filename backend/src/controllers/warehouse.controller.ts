@@ -22,10 +22,10 @@ let warehouses: any[] = [];
     } else if (req.user?.role === "INVENTORY") {
 
       warehouses = await Warehouse.find({
-        manager: req.user.userId,
-      })
-        .populate("managers", "name")
-        .sort({ createdAt: -1 });
+  managers: req.user.userId,
+})
+  .populate("managers", "name")
+  .sort({ createdAt: -1 });
 
     } else {
 

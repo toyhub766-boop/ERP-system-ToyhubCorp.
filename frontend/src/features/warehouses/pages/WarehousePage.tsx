@@ -220,103 +220,188 @@ return (
 
             <tbody>
 
-              {filteredwarehouses.map((warehouse) => (
+  {filteredwarehouses.map((warehouse) => (
 
-                <tr
-                  key={warehouse._id}
-                  className="border-b last:border-0 hover:bg-slate-50 transition"
-                >
+    <tr
+      key={warehouse._id}
+      className="
+        border-b
+        last:border-0
+        hover:bg-slate-50
+        transition
+      "
+    >
 
-                  <td className="px-6 py-5 font-semibold text-slate-800">
-                    {warehouse.name}
-                  </td>
+      {/* Warehouse */}
 
-                  <td className="px-6 py-5 text-slate-600">
-                    {warehouse.location}
-                  </td>
+      <td className="px-6 py-6">
 
-                  <td className="px-6 py-5 text-slate-600">
-  {warehouse.managers?.length
-  ? warehouse.managers.map((m) => m.name).join(", ")
-  : "-"}
-</td>
+        <div>
 
-                  <td className="px-6 py-5">
+          <h3 className="font-semibold text-slate-900 text-base">
+            {warehouse.name}
+          </h3>
 
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        warehouse.status === "ACTIVE"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {warehouse.status}
-                    </span>
+          <p className="mt-1 text-xs text-slate-500">
+            Warehouse
+          </p>
 
-                  </td>
+        </div>
 
-                  <td className="px-6 py-5">
+      </td>
 
-                    <div className="flex justify-end gap-2">
+      {/* Location */}
 
-                      <button
-                        onClick={() => {
-                          setEditingWarehouse(warehouse);
+      <td className="px-6 py-6">
 
-                          setNewWarehouse({
-                            name: warehouse.name,
-                            location: warehouse.location,
-                            managers:
-warehouse.managers?.map((m) => m._id) || [],
-                            status: warehouse.status,
-                          });
+        <div>
 
-                          setShowModal(true);
-                        }}
-                        className="
-                          rounded-lg
-                          bg-blue-50
-                          px-3
-                          py-2
-                          text-sm
-                          font-medium
-                          text-blue-700
-                          hover:bg-blue-100
-                        "
-                      >
-                        Edit
-                      </button>
+          <p className="font-medium text-slate-700">
+            {warehouse.location || "-"}
+          </p>
 
-                      <button
-                        onClick={async () => {
-                          if (window.confirm(`Delete ${warehouse.name}?`)) {
-                            await deleteWarehouse(warehouse._id);
-                            fetchwarehouses();
-                          }
-                        }}
-                        className="
-                          rounded-lg
-                          bg-red-50
-                          px-3
-                          py-2
-                          text-sm
-                          font-medium
-                          text-red-700
-                          hover:bg-red-100
-                        "
-                      >
-                        Delete
-                      </button>
+        </div>
 
-                    </div>
+      </td>
 
-                  </td>
+      {/* Managers */}
 
-                </tr>
+      <td className="px-6 py-6">
 
-              ))}
+        {warehouse.managers?.length ? (
 
-            </tbody>
+          <div className="flex flex-wrap gap-2">
+
+            {warehouse.managers.map((manager) => (
+
+              <span
+                key={manager._id}
+                className="
+                  rounded-full
+                  bg-blue-50
+                  px-3
+                  py-1
+                  text-xs
+                  font-medium
+                  text-blue-700
+                "
+              >
+                {manager.name}
+              </span>
+
+            ))}
+
+          </div>
+
+        ) : (
+
+          <span className="text-slate-400">
+            No Managers
+          </span>
+
+        )}
+
+      </td>
+
+      {/* Status */}
+
+      <td className="px-6 py-6">
+
+        <span
+          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+            warehouse.status === "ACTIVE"
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {warehouse.status}
+        </span>
+
+      </td>
+
+      {/* Actions */}
+
+      <td className="px-6 py-6">
+
+        <div className="flex justify-end gap-2">
+
+          <button
+            onClick={() => {
+
+              setEditingWarehouse(warehouse);
+
+              setNewWarehouse({
+                name: warehouse.name,
+                location: warehouse.location,
+                managers:
+                  warehouse.managers?.map((m) => m._id) || [],
+                status: warehouse.status,
+              });
+
+              setShowModal(true);
+
+            }}
+            className="
+              rounded-xl
+              border
+              border-blue-200
+              bg-blue-50
+              px-4
+              py-2
+              text-sm
+              font-medium
+              text-blue-700
+              transition
+              hover:bg-blue-100
+            "
+          >
+            Edit
+          </button>
+
+          <button
+            onClick={async () => {
+
+              if (
+                window.confirm(
+                  `Delete ${warehouse.name}?`
+                )
+              ) {
+
+                await deleteWarehouse(
+                  warehouse._id
+                );
+
+                fetchwarehouses();
+
+              }
+
+            }}
+            className="
+              rounded-xl
+              border
+              border-red-200
+              bg-red-50
+              px-4
+              py-2
+              text-sm
+              font-medium
+              text-red-700
+              transition
+              hover:bg-red-100
+            "
+          >
+            Delete
+          </button>
+
+        </div>
+
+      </td>
+
+    </tr>
+
+  ))}
+
+</tbody>
 
           </table>
 

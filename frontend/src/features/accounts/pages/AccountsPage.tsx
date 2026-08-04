@@ -15,6 +15,8 @@ import {
   deleteTransaction,
 } from "../services/accountTransaction.service";
 
+import AddPartyModal from "../components/AddPartyModal";
+
 const AccountsPage = () => {
   const [parties, setParties] = useState<any[]>([]);
   const [selectedParty, setSelectedParty] = useState<any>(null);
@@ -22,10 +24,10 @@ const AccountsPage = () => {
   const [ledger, setLedger] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [, setPartyModalOpen] =
+  const [partyModalOpen, setPartyModalOpen] =
     useState(false);
 
-  const [, setEditParty] =
+  const [editParty, setEditParty] =
     useState<any>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -247,6 +249,34 @@ const AccountsPage = () => {
           </div>
 
         </div>
+
+        <AddPartyModal
+  open={partyModalOpen}
+  onClose={() => {
+    setPartyModalOpen(false);
+    setEditParty(null);
+  }}
+  editParty={editParty}
+  onSuccess={async () => {
+    await loadParties();
+
+    if (editParty) {
+      const updated = await getParties();
+
+      const selected = updated.find(
+        (p: any) =>
+          p._id === editParty._id
+      );
+
+      if (selected) {
+        setSelectedParty(selected);
+      }
+    }
+
+    setPartyModalOpen(false);
+    setEditParty(null);
+  }}
+/>
 
         <TransactionModal
           open={modalOpen}

@@ -384,24 +384,6 @@ const LedgerPanel = ({
 
               </p>
 
-              <div className="mt-8 flex justify-center gap-4">
-
-                <button
-                  onClick={onMoneyOut}
-                  className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
-                >
-                  YOU GAVE
-                </button>
-
-                <button
-                  onClick={onMoneyIn}
-                  className="rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700"
-                >
-                  YOU GOT
-                </button>
-
-              </div>
-
             </div>
 
           </div>

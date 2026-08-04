@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+node_modules/**/node_modules/
+
 
 # Environment variables
 .env
@@ -36,3 +38,4 @@ android/local.properties
 
 # Generated APKs
 *.apk
+node_modules

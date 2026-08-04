@@ -360,6 +360,8 @@ return (
 
               }}
 
+              onViewReport={() => {}}
+
               onExportPdf={() => {
 
                 if (!selectedParty) return;

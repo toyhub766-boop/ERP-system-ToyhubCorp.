@@ -17,6 +17,8 @@ interface Props {
 
   onDeleteParty: () => void;
 
+  onViewReport: () => void;
+
   onExportPdf: () => void;
 
   onExportExcel: () => void;
@@ -31,6 +33,7 @@ const LedgerPanel = ({
   onDelete,
   onEditParty,
   onDeleteParty,
+  onViewReport,
   onExportPdf,
   onExportExcel,
 }: Props) => {
@@ -320,6 +323,12 @@ const LedgerPanel = ({
               </button>
 
               <div className="relative group">
+
+  <button
+    className="rounded-xl bg-[#17357A] px-5 py-3 font-medium text-white"
+  >
+    View Report
+  </button>
 
   <div className="absolute right-0 mt-2 hidden w-44 rounded-xl border bg-white shadow-xl group-hover:block z-50">
 

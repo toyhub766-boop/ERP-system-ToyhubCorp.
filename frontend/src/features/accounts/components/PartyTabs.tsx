@@ -1,68 +1,63 @@
 interface Props {
-  activeTab: "CUSTOMER" | "SUPPLIER";
+  activeTab:
+    | "CUSTOMER"
+    | "SUPPLIER"
+    | "COMPANY_EXPENSE";
+
   setActiveTab: (
-    tab: "CUSTOMER" | "SUPPLIER"
+    tab:
+      | "CUSTOMER"
+      | "SUPPLIER"
+      | "COMPANY_EXPENSE"
   ) => void;
-
-  search: string;
-
-  setSearch: (value: string) => void;
 }
 
 const PartyTabs = ({
   activeTab,
   setActiveTab,
-  search,
-  setSearch,
 }: Props) => {
+  const tabs = [
+    {
+      label: "Customers",
+      value: "CUSTOMER",
+    },
+    {
+      label: "Suppliers",
+      value: "SUPPLIER",
+    },
+    {
+      label: "Company Expense",
+      value: "COMPANY_EXPENSE",
+    },
+  ];
+
   return (
-    <div className="space-y-5 border-b border-slate-200 p-5">
+    <div className="border-b border-slate-200 bg-white px-4 pt-4">
 
-      {/* Tabs */}
+      <div className="flex gap-2">
 
-      <div className="flex rounded-xl bg-slate-100 p-1">
-  <button
-    onClick={() => setActiveTab("CUSTOMER")}
-    className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
-      activeTab === "CUSTOMER"
-        ? "bg-white shadow text-[#17357A]"
-        : "text-slate-500"
-    }`}
-  >
-    Customers
-  </button>
+        {tabs.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() =>
+              setActiveTab(
+                tab.value as
+                  | "CUSTOMER"
+                  | "SUPPLIER"
+                  | "COMPANY_EXPENSE"
+              )
+            }
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === tab.value
+                ? "bg-[#17357A] text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
 
-  <button
-    onClick={() => setActiveTab("SUPPLIER")}
-    className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
-      activeTab === "SUPPLIER"
-        ? "bg-white shadow text-[#17357A]"
-        : "text-slate-500"
-    }`}
-  >
-    Suppliers
-  </button>
-</div>
-      {/* Search */}
-
-      <input
-        type="text"
-        placeholder="Search party..."
-        value={search}
-        onChange={(e) =>
-          setSearch(e.target.value)
-        }
-        className="
-          w-full
-          rounded-xl
-          border
-          border-slate-300
-          px-4
-          py-3
-          outline-none
-          focus:border-[#17357A]
-        "
-      />
+      </div>
 
     </div>
   );

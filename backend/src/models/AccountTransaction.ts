@@ -1,19 +1,36 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, {
+  Document,
+  Schema,
+} from "mongoose";
 
-export interface IAccountTransaction extends Document {
-  customer: mongoose.Types.ObjectId;
+export interface IAccountTransaction
+  extends Document {
+  party: mongoose.Types.ObjectId;
 
-  transactionType: "MONEY_IN" | "MONEY_OUT";
+  transactionType:
+    | "MONEY_IN"
+    | "MONEY_OUT";
 
   amount: number;
 
-  paymentMethod: "Cash" | "Bank Transfer" | "Cheque" | "UPI";
+  paymentMethod:
+    | "Cash"
+    | "Bank Transfer"
+    | "Cheque"
+    | "UPI"
+    | "Other";
+
+  utrNumber?: string;
+
+  otherReason?: string;
+
+  attachment?: string;
 
   remarks?: string;
 
   balanceAfterTransaction: number;
 
-  createdBy: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
 
   date: Date;
 }
@@ -21,15 +38,18 @@ export interface IAccountTransaction extends Document {
 const accountTransactionSchema =
   new Schema<IAccountTransaction>(
     {
-      customer: {
+      party: {
         type: Schema.Types.ObjectId,
-        ref: "Customer",
+        ref: "AccountParty",
         required: true,
       },
 
       transactionType: {
         type: String,
-        enum: ["MONEY_IN", "MONEY_OUT"],
+        enum: [
+          "MONEY_IN",
+          "MONEY_OUT",
+        ],
         required: true,
       },
 
@@ -43,11 +63,27 @@ const accountTransactionSchema =
         type: String,
         enum: [
           "Cash",
+          "UPI",
           "Bank Transfer",
           "Cheque",
-          "UPI",
+          "Other",
         ],
         default: "Cash",
+      },
+
+      utrNumber: {
+        type: String,
+        default: "",
+      },
+
+      otherReason: {
+        type: String,
+        default: "",
+      },
+
+      attachment: {
+        type: String,
+        default: "",
       },
 
       remarks: {
@@ -63,7 +99,6 @@ const accountTransactionSchema =
       createdBy: {
         type: Schema.Types.ObjectId,
         ref: "User",
-        required: false,
       },
 
       date: {

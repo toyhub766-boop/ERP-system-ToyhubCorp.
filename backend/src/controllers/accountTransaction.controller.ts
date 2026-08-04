@@ -1,104 +1,184 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import mongoose from "mongoose";
+
 import AccountTransaction from "../models/AccountTransaction";
-import Customer from "../models/customer";
+import AccountParty from "../models/AccountParty";
+
+import { recalculatePartyBalance } from "../services/recalculatePartyBalance";
+
+// ==============================
+// GET ALL PARTIES
+// ==============================
 
 export const getParties = async (
   req: Request,
   res: Response
 ) => {
-  const parties = await Customer.find();
+  try {
+    const parties = await AccountParty.find().sort({
+      createdAt: -1,
+    });
 
-  console.log("PARTIES:", parties.length);
-  console.log(parties);
+    return res.json(parties);
 
-  res.json(parties);
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Failed to fetch parties.",
+    });
+
+  }
 };
 
+// ==============================
+// GET PARTY LEDGER
+// ==============================
 
-export const getCustomerLedger = async (
-    req: Request,
-    res: Response
+export const getPartyLedger = async (
+  req: Request,
+  res: Response
 ) => {
-    try {
-        const ledger = await AccountTransaction.find({
-            customer: req.params.customerId,
-        })
-            .populate("createdBy", "name")
-            .sort({
-                date: -1,
-            });
+  try {
 
-        res.json(ledger);
-    } catch (error) {
-        console.error(error);
-
-        res.status(500).json({
-            message: "Failed to fetch ledger.",
+    const ledger =
+      await AccountTransaction.find({
+        party: req.params.partyId,
+      })
+        .populate(
+          "party",
+          "companyName partyType"
+        )
+        .populate(
+          "createdBy",
+          "name"
+        )
+        .sort({
+          date: -1,
         });
-    }
+
+    return res.json(ledger);
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      message:
+        "Failed to fetch ledger.",
+    });
+
+  }
 };
+
+// ==============================
+// CREATE TRANSACTION
+// ==============================
 
 export const createTransaction = async (
   req: AuthRequest,
   res: Response
 ) => {
-  const session = await mongoose.startSession();
+  const session =
+    await mongoose.startSession();
 
   try {
+
     session.startTransaction();
 
     const {
-      customer,
-      transactionType,
-      amount,
-      paymentMethod,
-      remarks,
-    } = req.body;
+  party,
+  transactionType,
+  amount,
+  paymentMethod,
 
-    const customerDoc = await Customer.findById(customer).session(session);
+  utrNumber,
+  otherReason,
 
-    if (!customerDoc) {
+  remarks,
+  date,
+} = req.body;
+
+const file = (req as any).file;
+
+
+    const partyDoc =
+      await AccountParty.findById(
+        party
+      ).session(session);
+
+    if (!partyDoc) {
+
       await session.abortTransaction();
+
       return res.status(404).json({
-        message: "Customer not found.",
+        message: "Party not found.",
       });
+
     }
 
-    const updatedBalance =
-      transactionType === "MONEY_IN"
-        ? customerDoc.currentBalance + Number(amount)
-        : customerDoc.currentBalance - Number(amount);
-
     const transaction = new AccountTransaction({
-      customer,
-      transactionType,
-      amount: Number(amount),
-      paymentMethod,
-      remarks,
-      balanceAfterTransaction: updatedBalance,
-      createdBy: req.user?.userId,
+  party,
+
+  transactionType,
+
+  amount: Number(amount),
+
+  paymentMethod,
+
+  utrNumber: utrNumber || "",
+
+  otherReason: otherReason || "",
+
+  attachment: file ? file.path : "",
+
+  remarks: remarks || "",
+
+  date: date || new Date(),
+
+  balanceAfterTransaction: 0,
+
+  createdBy: req.user?.userId,
+});
+
+    await transaction.save({
+      session,
     });
-
-    await transaction.save({ session });
-
-    customerDoc.currentBalance = updatedBalance;
-    await customerDoc.save({ session });
 
     await session.commitTransaction();
 
-    return res.status(201).json(transaction);
+    await recalculatePartyBalance(
+      party
+    );
+
+    const updated =
+      await AccountTransaction.findById(
+        transaction._id
+      )
+        .populate(
+          "party",
+          "companyName partyType"
+        )
+        .populate(
+          "createdBy",
+          "name"
+        );
+
+    return res.status(201).json(
+      updated
+    );
 
   } catch (error) {
 
     await session.abortTransaction();
 
-    console.error("CREATE TRANSACTION ERROR");
     console.error(error);
 
     return res.status(500).json({
-      message: "Failed to create transaction",
+      message:
+        "Failed to create transaction.",
     });
 
   } finally {
@@ -108,44 +188,85 @@ export const createTransaction = async (
   }
 };
 
+// ==============================
+// UPDATE TRANSACTION
+// ==============================
+
 export const updateTransaction = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
+
     const transaction =
-      await AccountTransaction.findById(req.params.id);
+      await AccountTransaction.findById(
+        req.params.id
+      );
 
     if (!transaction) {
       return res.status(404).json({
-        message: "Transaction not found.",
+        message:
+          "Transaction not found.",
       });
     }
 
-    transaction.transactionType =
-      req.body.transactionType;
+    const file = (req as any).file;
 
-    transaction.amount =
-      Number(req.body.amount);
+transaction.paymentMethod =
+  req.body.paymentMethod;
 
-    transaction.paymentMethod =
-      req.body.paymentMethod;
+transaction.utrNumber =
+  req.body.utrNumber || "";
 
-    transaction.remarks =
-      req.body.remarks;
+transaction.otherReason =
+  req.body.otherReason || "";
+
+if (file) {
+  transaction.attachment = file.path;
+}
+
+transaction.remarks =
+  req.body.remarks || "";
+
+transaction.date =
+  req.body.date || transaction.date;
 
     await transaction.save();
 
-    res.json(transaction);
+    await recalculatePartyBalance(
+      transaction.party.toString()
+    );
+
+    const updated =
+      await AccountTransaction.findById(
+        transaction._id
+      )
+        .populate(
+          "party",
+          "companyName partyType"
+        )
+        .populate(
+          "createdBy",
+          "name"
+        );
+
+    return res.json(updated);
 
   } catch (error) {
+
     console.error(error);
 
-    res.status(500).json({
-      message: "Failed to update transaction.",
+    return res.status(500).json({
+      message:
+        "Failed to update transaction.",
     });
+
   }
 };
+
+// ==============================
+// DELETE TRANSACTION
+// ==============================
 
 export const deleteTransaction = async (
   req: AuthRequest,
@@ -154,20 +275,27 @@ export const deleteTransaction = async (
   try {
 
     const transaction =
-      await AccountTransaction.findById(req.params.id);
+      await AccountTransaction.findById(
+        req.params.id
+      );
 
     if (!transaction) {
       return res.status(404).json({
-        message: "Transaction not found.",
+        message:
+          "Transaction not found.",
       });
     }
 
-    const customerId =
-      transaction.customer.toString();
+    const partyId =
+      transaction.party.toString();
 
     await transaction.deleteOne();
 
-    res.json({
+    await recalculatePartyBalance(
+      partyId
+    );
+
+    return res.json({
       message:
         "Transaction deleted successfully.",
     });
@@ -176,11 +304,10 @@ export const deleteTransaction = async (
 
     console.error(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message:
         "Failed to delete transaction.",
     });
 
   }
 };
-

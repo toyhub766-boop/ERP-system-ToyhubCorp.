@@ -2,9 +2,11 @@ import express from "express";
 
 import authMiddleware from "../middlewares/auth.middleware";
 
+import upload from "../middlewares/upload.middleware";
+
 import {
   getParties,
-  getCustomerLedger,
+  getPartyLedger,
   createTransaction,
   updateTransaction,
   deleteTransaction,
@@ -19,7 +21,7 @@ router.use(authMiddleware);
 router.get("/", async (_req, res) => {
   try {
     const transactions = await AccountTransaction.find()
-      .populate("customer", "companyName")
+      .populate("party", "companyName")
       .sort({ createdAt: -1 });
 
     res.json(transactions);
@@ -36,7 +38,7 @@ router.get("/parties", getParties);
 
 
 // Right Panel
-router.get("/ledger/:customerId", getCustomerLedger);
+router.get("/ledger/:partyId", getPartyLedger);
 
 // Money In / Money Out
 router.post("/transaction", createTransaction);
@@ -44,6 +46,18 @@ router.post("/transaction", createTransaction);
 //Update
 router.put(
   "/transaction/:id",
+  updateTransaction
+);
+
+router.post(
+  "/transaction",
+  upload.single("attachment"),
+  createTransaction
+);
+
+router.put(
+  "/transaction/:id",
+  upload.single("attachment"),
   updateTransaction
 );
 

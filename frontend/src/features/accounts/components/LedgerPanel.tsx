@@ -50,12 +50,6 @@ const LedgerPanel = ({
 
           <div className="text-center">
 
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-5xl">
-
-              📒
-
-            </div>
-
             <h3 className="mt-6 text-2xl font-bold">
 
               No Party Selected
@@ -376,12 +370,6 @@ const LedgerPanel = ({
           <div className="flex h-full items-center justify-center">
 
             <div className="text-center">
-
-              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 text-5xl">
-
-                📒
-
-              </div>
 
               <h3 className="mt-6 text-2xl font-bold">
 

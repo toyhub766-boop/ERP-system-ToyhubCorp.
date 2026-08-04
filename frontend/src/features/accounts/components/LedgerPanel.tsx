@@ -33,7 +33,7 @@ const LedgerPanel = ({
   onDelete,
   onEditParty,
   onDeleteParty,
-  onViewReport,
+  // onViewReport,
   onExportPdf,
   onExportExcel,
 }: Props) => {

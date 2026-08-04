@@ -7,22 +7,39 @@ import PageHeader from "../../../components/ui/PageHeader";
 import PartyList from "../components/PartyList";
 import LedgerPanel from "../components/LedgerPanel";
 import TransactionModal from "../components/TransactionModal";
+import AddPartyModal from "../components/AddPartyModal";
 
-import { getParties } from "../services/accountParty.service";
+import {
+  getParties,
+  deleteParty,
+} from "../services/accountParty.service";
 
 import {
   getPartyLedger,
   deleteTransaction,
 } from "../services/accountTransaction.service";
 
-import AddPartyModal from "../components/AddPartyModal";
+import {
+  exportPartyLedgerPdf,
+} from "../../../utils/exportPartyLedgerPdf";
+
+import {
+  exportPartyLedgerExcel,
+} from "../../../utils/exportPartyLedgerExcel";
 
 const AccountsPage = () => {
-  const [parties, setParties] = useState<any[]>([]);
-  const [selectedParty, setSelectedParty] = useState<any>(null);
 
-  const [ledger, setLedger] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [parties, setParties] =
+    useState<any[]>([]);
+
+  const [selectedParty, setSelectedParty] =
+    useState<any>(null);
+
+  const [ledger, setLedger] =
+    useState<any[]>([]);
+
+  const [loading, setLoading] =
+    useState(false);
 
   const [partyModalOpen, setPartyModalOpen] =
     useState(false);
@@ -30,11 +47,13 @@ const AccountsPage = () => {
   const [editParty, setEditParty] =
     useState<any>(null);
 
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] =
+    useState(false);
 
-  const [transactionType, setTransactionType] = useState<
-    "MONEY_IN" | "MONEY_OUT"
-  >("MONEY_IN");
+  const [transactionType, setTransactionType] =
+    useState<"MONEY_IN" | "MONEY_OUT">(
+      "MONEY_IN"
+    );
 
   const customers = parties.filter(
     (p) => p.partyType === "CUSTOMER"
@@ -50,7 +69,10 @@ const AccountsPage = () => {
 
   const youllGet = parties
     .filter((p) => p.currentBalance > 0)
-    .reduce((sum, p) => sum + p.currentBalance, 0);
+    .reduce(
+      (sum, p) => sum + p.currentBalance,
+      0
+    );
 
   const youllGive = parties
     .filter((p) => p.currentBalance < 0)
@@ -61,237 +83,391 @@ const AccountsPage = () => {
 
   const loadParties = async () => {
     try {
+
       const data = await getParties();
+
       setParties(data);
+
       return data;
-    } catch (err) {
-      console.error(err);
+
+    } catch (error) {
+
+      console.error(error);
+
       return [];
+
     }
   };
 
-  const loadLedger = async (partyId: string) => {
-  console.log("Loading ledger for:", partyId);
+  const loadLedger = async (
+    partyId: string
+  ) => {
 
-  setLoading(true);
+    try {
 
-  const data = await getPartyLedger(partyId);
+      setLoading(true);
 
-  console.log("Ledger:", data);
+      const data =
+        await getPartyLedger(partyId);
 
-  setLedger(data);
+      setLedger(data);
 
-  setLoading(false);
-};
+    } catch (error) {
+
+      console.error(error);
+
+      setLedger([]);
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  };
 
   const refreshAccounts = async () => {
-    const updated = await loadParties();
+
+    const updated =
+      await loadParties();
 
     if (!selectedParty) return;
 
-    const party = updated.find(
-      (p: any) => p._id === selectedParty._id
-    );
-
-    if (party) {
-      setSelectedParty(party);
-
-      const ledger =
-        await getPartyLedger(party._id);
-
-      setLedger(ledger);
-    }
-  };
-
-  const handleDelete = async (
-    id: string
-  ) => {
-    if (
-      !window.confirm(
-        "Delete transaction?"
-      )
-    )
-      return;
-
-    try {
-      await deleteTransaction(id);
-
-      await refreshAccounts();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    loadParties();
-  }, []);
-
-  return (
-    <AdminLayout>
-      <PageContainer className="space-y-6">
-
-        <PageHeader
-          title="Accounts"
-          subtitle="Customer, Supplier & Company Expense Ledger"
-        />
-
-        <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
-
-          <div className="rounded-xl border bg-white p-5">
-            <p className="text-sm text-slate-500">
-              You'll Get
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-green-600">
-              ₹{youllGet}
-            </h2>
-          </div>
-
-          <div className="rounded-xl border bg-white p-5">
-            <p className="text-sm text-slate-500">
-              You'll Give
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-red-600">
-              ₹{youllGive}
-            </h2>
-          </div>
-
-          <div className="rounded-xl border bg-white p-5">
-            <p className="text-sm text-slate-500">
-              Customers
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              {customers.length}
-            </h2>
-          </div>
-
-          <div className="rounded-xl border bg-white p-5">
-            <p className="text-sm text-slate-500">
-              Suppliers
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              {suppliers.length}
-            </h2>
-          </div>
-
-          <div className="rounded-xl border bg-white p-5">
-            <p className="text-sm text-slate-500">
-              Company Expense
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              {companyExpenses.length}
-            </h2>
-          </div>
-
-        </div>
-
-        <div className="grid xl:grid-cols-12 gap-6">
-
-          <div className="xl:col-span-4">
-
-            <div className="h-[74vh] rounded-2xl border bg-white overflow-hidden">
-
-              <PartyList
-                parties={parties}
-                selectedParty={selectedParty}
-                setSelectedParty={(party) => {
-  console.log("Selected:", party.companyName);
-
-  setSelectedParty(party);
-
-  loadLedger(party._id);
-}}
-                onAddParty={() => {
-                  setEditParty(null);
-                  setPartyModalOpen(true);
-                }}
-              />
-
-            </div>
-
-          </div>
-
-          <div className="xl:col-span-8">
-
-            <div className="h-[74vh] rounded-2xl border bg-white overflow-hidden">
-
-              <LedgerPanel
-                selectedParty={selectedParty}
-                ledger={ledger}
-                loading={loading}
-
-                onMoneyIn={() => {
-                  setTransactionType("MONEY_IN");
-                  setModalOpen(true);
-                }}
-
-                onMoneyOut={() => {
-                  setTransactionType("MONEY_OUT");
-                  setModalOpen(true);
-                }}
-
-                onDelete={handleDelete}
-
-                onEditParty={() => {
-                  setEditParty(selectedParty);
-                  setPartyModalOpen(true);
-                }}
-
-                onViewReport={() => {
-                  // Navigate to Reports page
-                  // or open Report Modal later
-                }}
-              />
-
-            </div>
-
-          </div>
-
-        </div>
-
-        <AddPartyModal
-  open={partyModalOpen}
-  onClose={() => {
-    setPartyModalOpen(false);
-    setEditParty(null);
-  }}
-  editParty={editParty}
-  onSuccess={async () => {
-    await loadParties();
-
-    if (editParty) {
-      const updated = await getParties();
-
-      const selected = updated.find(
+    const latest =
+      updated.find(
         (p: any) =>
-          p._id === editParty._id
+          p._id === selectedParty._id
       );
 
-      if (selected) {
-        setSelectedParty(selected);
-      }
+    if (!latest) {
+
+      setSelectedParty(null);
+
+      setLedger([]);
+
+      return;
+
     }
 
-    setPartyModalOpen(false);
-    setEditParty(null);
-  }}
-/>
+    setSelectedParty(latest);
+
+    await loadLedger(latest._id);
+
+  };
+
+  const handleDeleteTransaction =
+    async (id: string) => {
+
+      if (
+        !window.confirm(
+          "Delete this transaction?"
+        )
+      )
+        return;
+
+      try {
+
+        await deleteTransaction(id);
+
+        await refreshAccounts();
+
+      } catch (error) {
+
+        console.error(error);
+
+      }
+
+    };
+
+  const handleDeleteParty =
+    async () => {
+
+      if (!selectedParty) return;
+
+      if (
+        !window.confirm(
+          "Delete this party?"
+        )
+      )
+        return;
+
+      try {
+
+        await deleteParty(
+          selectedParty._id
+        );
+
+        await loadParties();
+
+        setSelectedParty(null);
+
+        setLedger([]);
+
+      } catch (error: any) {
+
+        alert(
+          error?.response?.data
+            ?.message ??
+            "Failed to delete party."
+        );
+
+      }
+
+    };
+
+    useEffect(() => {
+  loadParties();
+}, []);
+
+return (
+  <AdminLayout>
+
+    <PageContainer className="space-y-6">
+
+      <PageHeader
+        title="Accounts"
+        subtitle="Customer, Supplier & Company Expense Ledger"
+      />
+
+      {/* ================= SUMMARY ================= */}
+
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+
+        <div className="rounded-xl border bg-white p-5">
+          <p className="text-sm text-slate-500">
+            You'll Get
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold text-green-600">
+            ₹{youllGet}
+          </h2>
+        </div>
+
+        <div className="rounded-xl border bg-white p-5">
+          <p className="text-sm text-slate-500">
+            You'll Give
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold text-red-600">
+            ₹{youllGive}
+          </h2>
+        </div>
+
+        <div className="rounded-xl border bg-white p-5">
+          <p className="text-sm text-slate-500">
+            Customers
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold">
+            {customers.length}
+          </h2>
+        </div>
+
+        <div className="rounded-xl border bg-white p-5">
+          <p className="text-sm text-slate-500">
+            Suppliers
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold">
+            {suppliers.length}
+          </h2>
+        </div>
+
+        <div className="rounded-xl border bg-white p-5">
+          <p className="text-sm text-slate-500">
+            Company Expense
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold">
+            {companyExpenses.length}
+          </h2>
+        </div>
+
+      </div>
+
+      {/* ================= CONTENT ================= */}
+
+      <div className="grid gap-6 xl:grid-cols-12">
+
+        {/* LEFT */}
+
+        <div className="xl:col-span-4">
+
+          <div className="h-[74vh] overflow-hidden rounded-2xl border bg-white">
+
+            <PartyList
+              parties={parties}
+              selectedParty={selectedParty}
+              setSelectedParty={async (party) => {
+
+                setSelectedParty(party);
+
+                await loadLedger(party._id);
+
+              }}
+              onAddParty={() => {
+
+                setEditParty(null);
+
+                setPartyModalOpen(true);
+
+              }}
+            />
+
+          </div>
+
+        </div>
+
+        {/* RIGHT */}
+
+        <div className="xl:col-span-8">
+
+          <div className="h-[74vh] overflow-hidden rounded-2xl border bg-white">
+
+            <LedgerPanel
+
+              selectedParty={selectedParty}
+
+              ledger={ledger}
+
+              loading={loading}
+
+              onMoneyIn={() => {
+
+                setTransactionType("MONEY_IN");
+
+                setModalOpen(true);
+
+              }}
+
+              onMoneyOut={() => {
+
+                setTransactionType("MONEY_OUT");
+
+                setModalOpen(true);
+
+              }}
+
+              onDelete={handleDeleteTransaction}
+
+              onDeleteParty={handleDeleteParty}
+
+              onEditParty={() => {
+
+                setEditParty(selectedParty);
+
+                setPartyModalOpen(true);
+
+              }}
+
+              onExportPdf={() => {
+
+                if (!selectedParty) return;
+
+                exportPartyLedgerPdf(
+                  selectedParty,
+                  ledger
+                );
+
+              }}
+
+              onExportExcel={() => {
+
+                if (!selectedParty) return;
+
+                exportPartyLedgerExcel(
+                  selectedParty,
+                  ledger
+                );
+
+              }}
+
+            />
+
+          </div>
+
+        </div>
+
+      </div>
+
+              {/* ================= ADD / EDIT PARTY ================= */}
+
+        <AddPartyModal
+          open={partyModalOpen}
+          editParty={editParty}
+          onClose={() => {
+
+            setPartyModalOpen(false);
+
+            setEditParty(null);
+
+          }}
+          onSuccess={async () => {
+
+            const updated =
+              await loadParties();
+
+            if (editParty) {
+
+              const latest =
+                updated.find(
+                  (p: any) =>
+                    p._id === editParty._id
+                );
+
+              if (latest) {
+
+                setSelectedParty(latest);
+
+                await loadLedger(
+                  latest._id
+                );
+
+              }
+
+            }
+
+            setPartyModalOpen(false);
+
+            setEditParty(null);
+
+          }}
+        />
+
+        {/* ================= MONEY IN / MONEY OUT ================= */}
 
         <TransactionModal
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          partyId={selectedParty?._id || ""}
-          transactionType={transactionType}
-          onSuccess={refreshAccounts}
+
+          onClose={() => {
+
+            setModalOpen(false);
+
+          }}
+
+          partyId={
+            selectedParty?._id || ""
+          }
+
+          transactionType={
+            transactionType
+          }
+
+          onSuccess={async () => {
+
+            await refreshAccounts();
+
+            setModalOpen(false);
+
+          }}
         />
 
       </PageContainer>
+
     </AdminLayout>
+
   );
+
 };
 
 export default AccountsPage;

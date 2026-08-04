@@ -183,18 +183,18 @@ const AppRoutes = () => {
         />
 
         <Route
-  path="/admin/hr"
-  element={
-    <ProtectedRoute
-      allowedRoles={[
-        "ATTENDANCE/HR",
-        "FOUNDER",
-      ]}
-    >
-      <AttendanceHRPage />
-    </ProtectedRoute>
-  }
-/>
+          path="/admin/hr"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ATTENDANCE/HR",
+                "FOUNDER",
+              ]}
+            >
+              <AttendanceHRPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/admin/tasks"
@@ -206,9 +206,9 @@ const AppRoutes = () => {
         />
 
         <Route
-  path="/admin/reports"
-  element={<ReportsPage />}
-/>
+          path="/admin/reports"
+          element={<ReportsPage />}
+        />
 
         {/* Staff */}
         <Route
@@ -307,6 +307,11 @@ const AppRoutes = () => {
               <AccountantPage />
             </ProtectedRoute>
           }
+        />
+
+        <Route
+          path="/admin/reports"
+          element={<ReportsPage />}
         />
 
 

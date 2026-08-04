@@ -16,6 +16,10 @@ import {
 
 import { exportPdf } from "../../../utils/exportPdf";
 import { exportExcel } from "../../../utils/exportExcel";
+
+import { exportAccountsPdf } from "../../../utils/exportAccountsPdf";
+import { exportAccountsExcel } from "../../../utils/exportAccountsExcel";
+
 import { exportAttendancePdf } from "../../../utils/exportAttendancePdf";
 import { exportAttendanceExcel } from "../../../utils/exportAttendanceExcel";
 
@@ -143,8 +147,18 @@ const ReportsPage = () => {
           <ReportCard
             title="Accounts Report"
             description="Customer ledger, balances and transaction history."
-            onPdf={() => exportPdf(accounts, "accounts")}
-            onExcel={() => exportExcel(accounts, "accounts")}
+            onPdf={() =>
+              exportAccountsPdf(
+                accounts,
+                "Accounts Report"
+              )
+            }
+            onExcel={() =>
+              exportAccountsExcel(
+                accounts,
+                "Accounts Report"
+              )
+            }
           />
 
         </div>

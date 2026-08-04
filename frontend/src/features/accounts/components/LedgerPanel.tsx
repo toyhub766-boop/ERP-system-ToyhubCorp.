@@ -15,7 +15,11 @@ interface Props {
 
   onEditParty: () => void;
 
-  onViewReport: () => void;
+  onDeleteParty: () => void;
+
+  onExportPdf: () => void;
+
+  onExportExcel: () => void;
 }
 
 const LedgerPanel = ({
@@ -26,7 +30,9 @@ const LedgerPanel = ({
   onMoneyOut,
   onDelete,
   onEditParty,
-  onViewReport,
+  onDeleteParty,
+  onExportPdf,
+  onExportExcel,
 }: Props) => {
 
   if (!selectedParty) {
@@ -108,10 +114,10 @@ const LedgerPanel = ({
 
               <span
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${selectedParty.status === "Active"
-                    ?
-                    "bg-green-100 text-green-700"
-                    :
-                    "bg-red-100 text-red-700"
+                  ?
+                  "bg-green-100 text-green-700"
+                  :
+                  "bg-red-100 text-red-700"
                   }`}
               >
 
@@ -263,10 +269,10 @@ const LedgerPanel = ({
 
             <h2
               className={`mt-2 text-5xl font-bold ${balance >= 0
-                  ?
-                  "text-green-600"
-                  :
-                  "text-red-600"
+                ?
+                "text-green-600"
+                :
+                "text-red-600"
                 }`}
             >
 
@@ -276,10 +282,10 @@ const LedgerPanel = ({
 
             <p
               className={`mt-2 font-semibold ${balance >= 0
-                  ?
-                  "text-green-600"
-                  :
-                  "text-red-600"
+                ?
+                "text-green-600"
+                :
+                "text-red-600"
                 }`}
             >
 
@@ -307,13 +313,33 @@ const LedgerPanel = ({
               </button>
 
               <button
-                onClick={onViewReport}
-                className="rounded-xl bg-[#17357A] px-5 py-3 font-medium text-white"
+                onClick={onDeleteParty}
+                className="rounded-xl bg-red-600 px-5 py-3 font-medium text-white hover:bg-red-700"
               >
-
-                View Report
-
+                Delete Party
               </button>
+
+              <div className="relative group">
+
+  <div className="absolute right-0 mt-2 hidden w-44 rounded-xl border bg-white shadow-xl group-hover:block z-50">
+
+    <button
+      onClick={onExportPdf}
+      className="block w-full px-4 py-3 text-left hover:bg-slate-100"
+    >
+      Export PDF
+    </button>
+
+    <button
+      onClick={onExportExcel}
+      className="block w-full px-4 py-3 text-left hover:bg-slate-100"
+    >
+      Export Excel
+    </button>
+
+  </div>
+
+</div>
 
             </div>
 
@@ -434,8 +460,8 @@ const LedgerPanel = ({
 
             <h2
               className={`text-2xl font-bold ${balance >= 0
-                  ? "text-green-600"
-                  : "text-red-600"
+                ? "text-green-600"
+                : "text-red-600"
                 }`}
             >
               ₹{Math.abs(balance)}

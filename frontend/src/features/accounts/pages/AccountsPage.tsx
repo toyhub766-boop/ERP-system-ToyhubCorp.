@@ -22,10 +22,10 @@ const AccountsPage = () => {
   const [ledger, setLedger] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [partyModalOpen, setPartyModalOpen] =
+  const [, setPartyModalOpen] =
     useState(false);
 
-  const [EditParty, setEditParty] =
+  const [, setEditParty] =
     useState<any>(null);
 
   const [modalOpen, setModalOpen] = useState(false);

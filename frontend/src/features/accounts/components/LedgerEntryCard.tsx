@@ -1,142 +1,92 @@
 interface Props {
   transaction: any;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const LedgerEntryCard = ({
   transaction,
   onDelete,
 }: Props) => {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  const isMoneyIn =
+    transaction.transactionType === "MONEY_IN";
 
-      <div className="flex justify-between">
+  return (
+    <div className="border-b border-slate-200 px-6 py-5 hover:bg-slate-50 transition">
+
+      <div className="flex items-start justify-between">
 
         <div>
 
           <p className="text-xs text-slate-500">
             {new Date(
-              transaction.date
-            ).toLocaleDateString()}
+              transaction.createdAt
+            ).toLocaleString()}
           </p>
 
-          <h3 className="mt-2 text-lg font-semibold">
+          <p className="mt-1 text-sm text-slate-500">
+            Balance :
+            <span className="ml-1 font-semibold text-slate-700">
+              ₹
+              {transaction.balanceAfterTransaction?.toLocaleString()}
+            </span>
+          </p>
 
-            {transaction.transactionType ===
-            "MONEY_IN"
-              ? "Money Received"
-              : "Money Paid"}
+          <p className="mt-3 font-medium text-slate-900">
+            {transaction.remarks || "No Remarks"}
+          </p>
 
-          </h3>
+          <span
+            className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+              isMoneyIn
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {isMoneyIn
+              ? "Money In"
+              : "Money Out"}
+          </span>
 
-          <div className="mt-4 space-y-2 text-sm">
-
-            <p>
-
-              <strong>
-                Payment :
-              </strong>{" "}
-
-              {transaction.paymentMethod}
-
-            </p>
-
-            {transaction.utrNumber && (
-
-              <p>
-
-                <strong>
-                  UTR :
-                </strong>{" "}
-
-                {transaction.utrNumber}
-
-              </p>
-
-            )}
-
-            {transaction.otherReason && (
-
-              <p>
-
-                <strong>
-                  Reason :
-                </strong>{" "}
-
-                {transaction.otherReason}
-
-              </p>
-
-            )}
-
-            {transaction.remarks && (
-
-              <p>
-
-                <strong>
-                  Remarks :
-                </strong>{" "}
-
-                {transaction.remarks}
-
-              </p>
-
-            )}
-
-            {transaction.attachment && (
-
-              <a
-                href={transaction.attachment}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-block rounded-lg bg-blue-100 px-3 py-2 text-blue-700"
-              >
-                View Slip
-              </a>
-
-            )}
-
-          </div>
+          {transaction.attachment && (
+            <a
+              href={transaction.attachment}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-block rounded-lg bg-blue-100 px-3 py-2 text-blue-700"
+            >
+              View Slip
+            </a>
+          )}
 
         </div>
 
         <div className="text-right">
 
-          <h2
-            className={`text-3xl font-bold ${
-              transaction.transactionType ===
-              "MONEY_IN"
+          <p
+            className={`text-2xl font-bold ${
+              isMoneyIn
                 ? "text-green-600"
                 : "text-red-600"
             }`}
           >
-            {transaction.transactionType ===
-            "MONEY_IN"
-              ? "+"
-              : "-"}
-
-            ₹{transaction.amount}
-          </h2>
-
-          <p className="mt-3 text-sm text-slate-500">
-            Balance
+            {isMoneyIn ? "+" : "-"}₹
+            {transaction.amount.toLocaleString()}
           </p>
 
-          <p className="font-semibold">
-            ₹
-            {
-              transaction.balanceAfterTransaction
-            }
+          <p className="mt-2 text-xs text-slate-500">
+            {transaction.paymentMethod}
           </p>
 
-          <button
-            onClick={() =>
-              onDelete(transaction._id)
-            }
-            className="mt-5 rounded-lg bg-red-600 px-4 py-2 text-white"
-          >
-            Delete
-          </button>
+          {onDelete && (
+            <button
+              onClick={() =>
+                onDelete(transaction._id)
+              }
+              className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+            >
+              Delete
+            </button>
+          )}
 
         </div>
 

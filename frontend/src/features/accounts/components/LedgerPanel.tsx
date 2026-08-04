@@ -2,21 +2,17 @@ import LedgerEntryCard from "./LedgerEntryCard";
 
 interface Props {
   selectedParty: any;
-
   ledger: any[];
-
   loading: boolean;
 
   onMoneyIn: () => void;
-
   onMoneyOut: () => void;
 
   onDelete: (id: string) => void;
 
-  onEditParty: () => void;
-
   onDeleteParty: () => void;
 
+  onEditParty: () => void;
   onViewReport: () => void;
 
   onExportPdf: () => void;

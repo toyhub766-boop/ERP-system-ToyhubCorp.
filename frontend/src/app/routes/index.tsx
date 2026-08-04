@@ -60,6 +60,8 @@ import AttendanceHRPage from "../../features/hr/pages/HRPage";
 
 import ReportsPage from "../../features/reports/pages/ReportsPage";
 
+import ReminderPage from "../../features/reminders/pages/ReminderPage";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -313,6 +315,11 @@ const AppRoutes = () => {
           path="/admin/reports"
           element={<ReportsPage />}
         />
+
+        <Route
+  path="/admin/reminders"
+  element={<ReminderPage />}
+/>
 
 
       </Routes>

@@ -12,12 +12,18 @@ import {
   FiLayers,
   FiMenu,
   FiDollarSign,
+  FiBell,
 } from "react-icons/fi";
 
 import logo from "../../assets/images/logo.png";
 
 const menuItems = [
   { label: "Dashboard", icon: <FiHome />, path: "/admin/dashboard" },
+  {
+  label: "Reminders",
+  path: "/admin/reminders",
+  icon: <FiBell />,
+},
   { label: "Categories", icon: <FiLayers />, path: "/admin/categories" },
   { label: "Inventory", icon: <FiBox />, path: "/admin/inventory" },
   { label: "BOM Management", icon: <FiSettings />, path: "/admin/bom" },
@@ -126,10 +132,9 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
                 font-medium
                 transition-all
                 duration-200
-                ${
-                  isActive
-                    ? "bg-white/10 text-[#FF8A1F]"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white"
+                ${isActive
+                  ? "bg-white/10 text-[#FF8A1F]"
+                  : "text-slate-300 hover:bg-white/5 hover:text-white"
                 }
               `
               }

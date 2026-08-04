@@ -36,6 +36,8 @@ import taskRoutes from "./routes/task.routes";
 
 import accountPartyRoutes from "./routes/accountParty.routes";
 
+import reminderRoutes from "./routes/reminder.routes";
+
 const app = express();
 
 app.use(cors());
@@ -80,5 +82,6 @@ app.use("/api/tasks", taskRoutes);
 
 app.use("/api/accounts/party", accountPartyRoutes);
 
+app.use("/api/reminders", reminderRoutes);
 
 export default app;

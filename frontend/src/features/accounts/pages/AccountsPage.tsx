@@ -71,18 +71,18 @@ const AccountsPage = () => {
   };
 
   const loadLedger = async (partyId: string) => {
-    try {
-      setLoading(true);
+  console.log("Loading ledger for:", partyId);
 
-      const data = await getPartyLedger(partyId);
+  setLoading(true);
 
-      setLedger(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const data = await getPartyLedger(partyId);
+
+  console.log("Ledger:", data);
+
+  setLedger(data);
+
+  setLoading(false);
+};
 
   const refreshAccounts = async () => {
     const updated = await loadParties();
@@ -199,9 +199,12 @@ const AccountsPage = () => {
                 parties={parties}
                 selectedParty={selectedParty}
                 setSelectedParty={(party) => {
-                  setSelectedParty(party);
-                  loadLedger(party._id);
-                }}
+  console.log("Selected:", party.companyName);
+
+  setSelectedParty(party);
+
+  loadLedger(party._id);
+}}
                 onAddParty={() => {
                   setEditParty(null);
                   setPartyModalOpen(true);

@@ -40,25 +40,16 @@ router.get("/parties", getParties);
 // Right Panel
 router.get("/ledger/:partyId", getPartyLedger);
 
-// Money In / Money Out
-router.post("/transaction", createTransaction);
-
-//Update
-router.put(
-  "/transaction/:id",
-  updateTransaction
-);
-
 router.post(
   "/transaction",
-  upload.single("attachment"),
-  createTransaction
+  // upload.single("attachment"),
+  // createTransaction
 );
 
 router.put(
   "/transaction/:id",
-  upload.single("attachment"),
-  updateTransaction
+  // upload.single("attachment"),
+  // updateTransaction
 );
 
 //Delete

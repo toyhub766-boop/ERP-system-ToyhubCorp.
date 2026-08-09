@@ -8,15 +8,16 @@ interface Props {
   onMoneyIn: () => void;
   onMoneyOut: () => void;
 
-  onDelete: (id: string) => void;
+  // Optional because AccountantPage cannot delete
+  onDelete?: (id: string) => void;
 
-  onDeleteParty: () => void;
+  // Optional because AccountantPage cannot delete party
+  onDeleteParty?: () => void;
 
   onEditParty: () => void;
   onViewReport: () => void;
 
   onExportPdf: () => void;
-
   onExportExcel: () => void;
 }
 
@@ -24,16 +25,19 @@ const LedgerPanel = ({
   selectedParty,
   ledger,
   loading,
+
   onMoneyIn,
   onMoneyOut,
+
   onDelete,
-  onEditParty,
   onDeleteParty,
-  // onViewReport,
+
+  onEditParty,
+
+
   onExportPdf,
   onExportExcel,
 }: Props) => {
-
   if (!selectedParty) {
     return (
       <div className="flex h-full flex-col">

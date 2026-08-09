@@ -12,21 +12,14 @@ import AddPartyModal from "../../accounts/components/AddPartyModal";
 
 import {
   getParties,
-  deleteParty,
 } from "../../accounts/services/accountParty.service";
 
 import {
   getPartyLedger,
-  deleteTransaction,
 } from "../../accounts/services/accountTransaction.service";
 
-import {
-  exportPartyLedgerPdf,
-} from "../../../utils/exportPartyLedgerPdf";
-
-import {
-  exportPartyLedgerExcel,
-} from "../../../utils/exportPartyLedgerExcel";
+import { exportPartyLedgerPdf } from "../../../utils/exportPartyLedgerPdf";
+import { exportPartyLedgerExcel } from "../../../utils/exportPartyLedgerExcel";
 
 const AccountsPage = () => {
 
@@ -156,66 +149,6 @@ const AccountsPage = () => {
 
   };
 
-  const handleDeleteTransaction =
-    async (id: string) => {
-
-      if (
-        !window.confirm(
-          "Delete this transaction?"
-        )
-      )
-        return;
-
-      try {
-
-        await deleteTransaction(id);
-
-        await refreshAccounts();
-
-      } catch (error) {
-
-        console.error(error);
-
-      }
-
-    };
-
-  const handleDeleteParty =
-    async () => {
-
-      if (!selectedParty) return;
-
-      if (
-        !window.confirm(
-          "Delete this party?"
-        )
-      )
-        return;
-
-      try {
-
-        await deleteParty(
-          selectedParty._id
-        );
-
-        await loadParties();
-
-        setSelectedParty(null);
-
-        setLedger([]);
-
-      } catch (error: any) {
-
-        alert(
-          error?.response?.data
-            ?.message ??
-            "Failed to delete party."
-        );
-
-      }
-
-    };
-
     useEffect(() => {
   loadParties();
 }, []);
@@ -325,68 +258,46 @@ return (
 
           <div className="h-[74vh] overflow-hidden rounded-2xl border bg-white">
 
-            <LedgerPanel
+  <LedgerPanel
+  selectedParty={selectedParty}
+  ledger={ledger}
+  loading={loading}
 
-              selectedParty={selectedParty}
+  onMoneyIn={() => {
+    setTransactionType("MONEY_IN");
+    setModalOpen(true);
+  }}
 
-              ledger={ledger}
+  onMoneyOut={() => {
+    setTransactionType("MONEY_OUT");
+    setModalOpen(true);
+  }}
 
-              loading={loading}
+  onEditParty={() => {
+    setEditParty(selectedParty);
+    setPartyModalOpen(true);
+  }}
 
-              onMoneyIn={() => {
+  onViewReport={() => {}}
 
-                setTransactionType("MONEY_IN");
+  onExportPdf={() => {
+    if (!selectedParty) return;
 
-                setModalOpen(true);
+    exportPartyLedgerPdf(
+      selectedParty,
+      ledger
+    );
+  }}
 
-              }}
+  onExportExcel={() => {
+    if (!selectedParty) return;
 
-              onMoneyOut={() => {
-
-                setTransactionType("MONEY_OUT");
-
-                setModalOpen(true);
-
-              }}
-
-              onDelete={handleDeleteTransaction}
-
-              onDeleteParty={handleDeleteParty}
-
-              onEditParty={() => {
-
-                setEditParty(selectedParty);
-
-                setPartyModalOpen(true);
-
-              }}
-
-              onViewReport={() => {}}
-
-              onExportPdf={() => {
-
-                if (!selectedParty) return;
-
-                exportPartyLedgerPdf(
-                  selectedParty,
-                  ledger
-                );
-
-              }}
-
-              onExportExcel={() => {
-
-                if (!selectedParty) return;
-
-                exportPartyLedgerExcel(
-                  selectedParty,
-                  ledger
-                );
-
-              }}
-
-            />
-
+    exportPartyLedgerExcel(
+      selectedParty,
+      ledger
+    );
+  }}
+/>
           </div>
 
         </div>

@@ -155,29 +155,24 @@ const AccountsPage = () => {
 
   };
 
-  const handleDeleteTransaction =
-    async (id: string) => {
+  const handleDeleteTransaction = async (
+  transactionId: string
+) => {
+  if (!window.confirm("Delete this transaction?")) {
+    return;
+  }
 
-      if (
-        !window.confirm(
-          "Delete this transaction?"
-        )
-      )
-        return;
+  try {
+    await deleteTransaction(transactionId);
 
-      try {
-
-        await deleteTransaction(id);
-
-        await refreshAccounts();
-
-      } catch (error) {
-
-        console.error(error);
-
-      }
-
-    };
+    await refreshAccounts();
+  } catch (err: any) {
+    alert(
+      err?.response?.data?.message ??
+        "Failed to delete transaction."
+    );
+  }
+};
 
   const handleDeleteParty =
     async () => {
@@ -325,66 +320,49 @@ return (
           <div className="h-[74vh] overflow-hidden rounded-2xl border bg-white">
 
             <LedgerPanel
+  selectedParty={selectedParty}
+  ledger={ledger}
+  loading={loading}
 
-              selectedParty={selectedParty}
+  onMoneyIn={() => {
+    setTransactionType("MONEY_IN");
+    setModalOpen(true);
+  }}
 
-              ledger={ledger}
+  onMoneyOut={() => {
+    setTransactionType("MONEY_OUT");
+    setModalOpen(true);
+  }}
 
-              loading={loading}
+  onDelete={handleDeleteTransaction}
 
-              onMoneyIn={() => {
+  onDeleteParty={handleDeleteParty}
 
-                setTransactionType("MONEY_IN");
+  onEditParty={() => {
+    setEditParty(selectedParty);
+    setPartyModalOpen(true);
+  }}
 
-                setModalOpen(true);
+  onViewReport={() => {}}
 
-              }}
+  onExportPdf={() => {
+    if (!selectedParty) return;
 
-              onMoneyOut={() => {
+    exportPartyLedgerPdf(
+      selectedParty,
+      ledger
+    );
+  }}
 
-                setTransactionType("MONEY_OUT");
+  onExportExcel={() => {
+    if (!selectedParty) return;
 
-                setModalOpen(true);
-
-              }}
-
-              onDelete={handleDeleteTransaction}
-
-              onDeleteParty={handleDeleteParty}
-
-              onEditParty={() => {
-
-                setEditParty(selectedParty);
-
-                setPartyModalOpen(true);
-
-              }}
-
-              onViewReport={() => {}}
-
-              onExportPdf={() => {
-
-                if (!selectedParty) return;
-
-                exportPartyLedgerPdf(
-                  selectedParty,
-                  ledger
-                );
-
-              }}
-
-              onExportExcel={() => {
-
-                if (!selectedParty) return;
-
-                exportPartyLedgerExcel(
-                  selectedParty,
-                  ledger
-                );
-
-              }}
-
-            />
+    exportPartyLedgerExcel(
+      selectedParty,
+      ledger
+    );
+  }}
+/>
 
           </div>
 

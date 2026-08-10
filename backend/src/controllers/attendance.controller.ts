@@ -41,43 +41,88 @@ export const createAttendance = async (
 ) => {
   try {
     const {
-  attendanceType,
-  employee,
-  labour,
-  date,
-  checkIn,
-  checkOut,
-} = req.body;
+      attendanceType,
+      employee,
+      labour,
+      date,
+      checkIn,
+      checkOut,
+      status,
+      tasksAssigned,
+      tasksCompleted,
+      remarks,
+    } = req.body;
 
-if (attendanceType === "EMPLOYEE" && !employee) {
-  return res.status(400).json({
-    message: "Employee is required.",
-  });
-}
+    if (
+      attendanceType === "EMPLOYEE" &&
+      !employee
+    ) {
+      return res.status(400).json({
+        message: "Employee is required.",
+      });
+    }
 
-if (attendanceType === "LABOUR" && !labour) {
-  return res.status(400).json({
-    message: "Labour is required.",
-  });
-}
+    if (
+      attendanceType === "LABOUR" &&
+      !labour
+    ) {
+      return res.status(400).json({
+        message: "Labour is required.",
+      });
+    }
 
-if (!date || !checkIn || !checkOut) {
-  return res.status(400).json({
-    message: "Date, check-in and check-out are required.",
-  });
-}
-    const attendance = await Attendance.create(req.body);
+    if (
+      !date ||
+      !checkIn ||
+      !checkOut
+    ) {
+      return res.status(400).json({
+        message:
+          "Date, check-in and check-out are required.",
+      });
+    }
+
+    const file = (req as any).file;
+
+    const attendance =
+      await Attendance.create({
+        attendanceType,
+        employee:
+          attendanceType === "EMPLOYEE"
+            ? employee
+            : null,
+        labour:
+          attendanceType === "LABOUR"
+            ? labour
+            : null,
+        date,
+        checkIn,
+        checkOut,
+        status,
+        tasksAssigned:
+          Number(tasksAssigned) || 0,
+        tasksCompleted:
+          Number(tasksCompleted) || 0,
+        remarks: remarks || "",
+        photo: file
+          ? file.path
+          : "",
+      });
 
     res.status(201).json(attendance);
-  } catch (error: any) {
-  console.error("Attendance Create Error:");
-  console.error(error);
 
-  res.status(500).json({
-    message: error.message,
-    error,
-  });
-}
+  } catch (error: any) {
+    console.error(
+      "Attendance Create Error:",
+      error
+    );
+
+    res.status(500).json({
+      message:
+        error.message ||
+        "Failed to create attendance.",
+    });
+  }
 };
 
 // UPDATE
@@ -86,10 +131,20 @@ export const updateAttendance = async (
   res: Response
 ) => {
   try {
+    const updateData: any = {
+      ...req.body,
+    };
+
+    const file = (req as any).file;
+
+    if (file) {
+      updateData.photo = file.path;
+    }
+
     const attendance =
       await Attendance.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        updateData,
         {
           new: true,
           runValidators: true,
@@ -103,11 +158,13 @@ export const updateAttendance = async (
     }
 
     res.json(attendance);
+
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
-      message: "Failed to update attendance.",
+      message:
+        "Failed to update attendance.",
     });
   }
 };

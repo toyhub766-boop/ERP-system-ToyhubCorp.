@@ -4,6 +4,8 @@ import LoginSelectorPage from "../../features/auth/pages/LoginSelectorPage";
 import AdminLoginPage from "../../features/auth/pages/AdminLoginPage";
 import StaffLoginPage from "../../features/auth/pages/StaffLoginPage";
 
+import SessionRestorer from "../../features/auth/components/SessionRestorer";
+
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
 
 import UsersPage from "../../features/users/pages/UsersPage";
@@ -65,6 +67,7 @@ import ReminderPage from "../../features/reminders/pages/ReminderPage";
 const AppRoutes = () => {
   return (
     <BrowserRouter>
+    <SessionRestorer />
       <Routes>
         {/* Login Flow */}
         <Route path="/" element={<Navigate to="/login" />} />
@@ -309,11 +312,6 @@ const AppRoutes = () => {
               <AccountantPage />
             </ProtectedRoute>
           }
-        />
-
-        <Route
-          path="/admin/reports"
-          element={<ReportsPage />}
         />
 
         <Route

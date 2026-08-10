@@ -7,6 +7,7 @@ import {
   FiLogOut,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
+import { logoutUser } from "../../../features/auth/services/logout";
 
 interface Props {
   children: ReactNode;
@@ -17,12 +18,13 @@ const AccountantLayout = ({ children }: Props) => {
 
   const [open, setOpen] = useState(false);
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+  await logoutUser();
 
-    navigate("/login");
-  };
+  navigate("/login", {
+    replace: true,
+  });
+};
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -57,7 +59,7 @@ const AccountantLayout = ({ children }: Props) => {
           </div>
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="
             hidden
             md:flex
@@ -157,7 +159,7 @@ const AccountantLayout = ({ children }: Props) => {
         <div className="absolute bottom-0 left-0 w-full p-4 border-t">
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="
             w-full
             flex

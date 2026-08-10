@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../../../assets/images/logo.png";
 import { loginUser } from "../services/auth.service";
 import { Eye, EyeOff } from "lucide-react";
+import { saveSession } from "../services/authStorage";
 
 const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -33,15 +34,10 @@ const AdminLoginPage = () => {
         return;
       }
 
-      localStorage.setItem(
-        "token",
-        data.token
-      );
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user)
-      );
+      await saveSession(
+  data.token,
+  data.user
+);
 
       setError("");
 

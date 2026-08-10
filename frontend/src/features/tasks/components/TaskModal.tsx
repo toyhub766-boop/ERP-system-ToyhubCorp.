@@ -1,13 +1,41 @@
 import { useEffect, useState } from "react";
-import api from "../../../services/api/axios";
+import {
+  FiCheck,
+  FiPlus,
+  FiTrash2,
+  FiX,
+} from "react-icons/fi";
+
 import {
   createTask,
   updateTask,
 } from "../services/task.service";
 
+interface ChecklistItem {
+  _id?: string;
+  text: string;
+  completed: boolean;
+}
+
+interface Task {
+  _id?: string;
+  title: string;
+  description?: string;
+  assignedTo?: any;
+  priority: "Low" | "Medium" | "High";
+  dueDate?: string;
+  remarks?: string;
+  completed: boolean;
+  checklist: ChecklistItem[];
+}
+
 interface Props {
   open: boolean;
-  task?: any;
+  task?: Task | null;
+
+  // Selected user comes from the parent workspace.
+  assignedTo: string;
+
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -15,286 +43,485 @@ interface Props {
 const TaskModal = ({
   open,
   task,
+  assignedTo,
   onClose,
   onSuccess,
 }: Props) => {
-  const [users, setUsers] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] =
+    useState("");
 
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    assignedTo: "",
-    assignedBy: JSON.parse(
-      localStorage.getItem("user") || "{}"
-    ).id,
-    priority: "Medium",
-    status: "Pending",
-    dueDate: "",
-    remarks: "",
-  });
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    if (task) {
-      setForm({
-        title: task.title,
-        description: task.description || "",
-        assignedTo: task.assignedTo?._id,
-        assignedBy: task.assignedBy?._id,
-        priority: task.priority,
-        status: task.status,
-        dueDate: task.dueDate?.substring(0, 10) || "",
-        remarks: task.remarks || "",
-      });
-    }
-  }, [task]);
-
-  const fetchUsers = async () => {
-    const { data } = await api.get(
-      "/users/attendance-users"
+  const [priority, setPriority] =
+    useState<"Low" | "Medium" | "High">(
+      "Medium"
     );
 
-    setUsers(data);
+  const [dueDate, setDueDate] =
+    useState("");
+
+  const [remarks, setRemarks] =
+    useState("");
+
+  const [completed, setCompleted] =
+    useState(false);
+
+  const [checklist, setChecklist] =
+    useState<ChecklistItem[]>([]);
+
+  const [newChecklistItem, setNewChecklistItem] =
+    useState("");
+
+  useEffect(() => {
+    if (!task) {
+      setTitle("");
+      setDescription("");
+      setPriority("Medium");
+      setDueDate("");
+      setRemarks("");
+      setCompleted(false);
+      setChecklist([]);
+
+      return;
+    }
+
+    setTitle(task.title || "");
+    setDescription(task.description || "");
+    setPriority(task.priority || "Medium");
+
+    setDueDate(
+      task.dueDate
+        ? task.dueDate.substring(0, 10)
+        : ""
+    );
+
+    setRemarks(task.remarks || "");
+    setCompleted(task.completed || false);
+
+    setChecklist(
+      task.checklist || []
+    );
+  }, [task, open]);
+
+  const addChecklistItem = () => {
+    const text =
+      newChecklistItem.trim();
+
+    if (!text) return;
+
+    setChecklist((previous) => [
+      ...previous,
+      {
+        text,
+        completed: false,
+      },
+    ]);
+
+    setNewChecklistItem("");
+  };
+
+  const toggleChecklistItem = (
+    index: number
+  ) => {
+    setChecklist((previous) =>
+      previous.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              completed:
+                !item.completed,
+            }
+          : item
+      )
+    );
+  };
+
+  const removeChecklistItem = (
+    index: number
+  ) => {
+    setChecklist((previous) =>
+      previous.filter(
+        (_, i) => i !== index
+      )
+    );
   };
 
   const handleSubmit = async () => {
-    console.log(form);
-    if (!form.title)
-      return alert("Task title required");
-
-    if (!form.assignedTo)
-      return alert("Assign a user");
-
-    if (task) {
-      await updateTask(task._id, form);
-    } else {
-      await createTask(form);
+    if (!title.trim()) {
+      alert("Task title is required.");
+      return;
     }
 
+    if (!assignedTo) {
+      alert("No user selected.");
+      return;
+    }
 
-    onSuccess();
-    onClose();
+    const payload = {
+      title: title.trim(),
+      description,
+      assignedTo,
+      priority,
+      dueDate: dueDate || null,
+      remarks,
+      completed,
+      checklist,
+    };
+
+    try {
+      if (task?._id) {
+        await updateTask(
+          task._id,
+          payload
+        );
+      } else {
+        await createTask(payload);
+      }
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        "Failed to save task."
+      );
+    }
   };
 
   if (!open) return null;
 
   return (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
 
-    <div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl">
+      <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
 
-      {/* Header */}
+        {/* Header */}
 
-      <div className="border-b border-slate-200 px-8 py-6">
+        <div className="flex items-start justify-between border-b border-slate-200 px-7 py-6">
 
-        <h2 className="text-2xl font-bold text-slate-900">
-          {task ? "Edit Task" : "Assign Task"}
-        </h2>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {task
+                ? "Edit Task"
+                : "Add Task"}
+            </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Assign work, manage priorities and track employee progress.
-        </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Create and manage work for the selected user.
+            </p>
+          </div>
 
-      </div>
-
-      {/* Body */}
-
-      <div className="space-y-6 p-8">
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Task Title
-          </label>
-
-          <input
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
-            placeholder="Enter task title"
-            value={form.title}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                title: e.target.value,
-              })
-            }
-          />
-
-        </div>
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Description
-          </label>
-
-          <textarea
-            rows={4}
-            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
-            placeholder="Task description..."
-            value={form.description}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                description: e.target.value,
-              })
-            }
-          />
-
-        </div>
-
-        <div>
-
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Assign Employee
-          </label>
-
-          <select
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
-            value={form.assignedTo}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                assignedTo: e.target.value,
-              })
-            }
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           >
-            <option value="">
-              Select Employee
-            </option>
-
-            {users.map((u) => (
-              <option
-                key={u._id}
-                value={u._id}
-              >
-                {u.name} • {u.role}
-              </option>
-            ))}
-
-          </select>
+            <FiX size={20} />
+          </button>
 
         </div>
 
-        <div className="grid grid-cols-3 gap-5">
+        {/* Body */}
 
-          <div>
+        <div className="max-h-[70vh] space-y-6 overflow-y-auto px-7 py-6">
 
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Priority
-            </label>
+          {/* Task completion */}
 
-            <select
-              className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              value={form.priority}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  priority: e.target.value,
-                })
+          <div
+            className={`flex items-center justify-between rounded-2xl border p-4 ${
+              completed
+                ? "border-green-200 bg-green-50"
+                : "border-slate-200 bg-slate-50"
+            }`}
+          >
+
+            <div>
+              <p className="font-semibold text-slate-900">
+                Task completed
+              </p>
+
+              <p className="text-sm text-slate-500">
+                Marking this complete will count it toward the user's performance score.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCompleted(
+                  !completed
+                )
               }
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 transition ${
+                completed
+                  ? "border-green-600 bg-green-600 text-white"
+                  : "border-slate-300 bg-white"
+              }`}
             >
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-            </select>
+              {completed && (
+                <FiCheck size={17} />
+              )}
+            </button>
 
           </div>
 
-          <div>
-
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Status
-            </label>
-
-            <select
-              className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              value={form.status}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  status: e.target.value,
-                })
-              }
-            >
-              <option>Pending</option>
-              <option>In Progress</option>
-              <option>Completed</option>
-            </select>
-
-          </div>
+          {/* Title */}
 
           <div>
-
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Due Date
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Task Title
             </label>
 
             <input
-              type="date"
-              className="w-full rounded-xl border border-slate-300 px-4 py-3"
-              value={form.dueDate}
+              value={title}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  dueDate: e.target.value,
-                })
+                setTitle(e.target.value)
               }
+              placeholder="What needs to be done?"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A] focus:ring-2 focus:ring-[#17357A]/10"
             />
+          </div>
 
+          {/* Description */}
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Description
+            </label>
+
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) =>
+                setDescription(
+                  e.target.value
+                )
+              }
+              placeholder="Add more details..."
+              className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A] focus:ring-2 focus:ring-[#17357A]/10"
+            />
+          </div>
+
+          {/* Checklist */}
+
+          <div>
+
+            <div className="mb-3 flex items-center justify-between">
+
+              <div>
+                <label className="text-sm font-semibold text-slate-700">
+                  Checklist
+                </label>
+
+                <p className="text-xs text-slate-400">
+                  Break the task into smaller steps.
+                </p>
+              </div>
+
+            </div>
+
+            <div className="space-y-2">
+
+              {checklist.map(
+                (item, index) => (
+                  <div
+                    key={
+                      item._id ||
+                      index
+                    }
+                    className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
+                  >
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleChecklistItem(
+                          index
+                        )
+                      }
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                        item.completed
+                          ? "border-[#17357A] bg-[#17357A] text-white"
+                          : "border-slate-300"
+                      }`}
+                    >
+                      {item.completed && (
+                        <FiCheck
+                          size={13}
+                        />
+                      )}
+                    </button>
+
+                    <span
+                      className={`flex-1 text-sm ${
+                        item.completed
+                          ? "text-slate-400 line-through"
+                          : "text-slate-700"
+                      }`}
+                    >
+                      {item.text}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeChecklistItem(
+                          index
+                        )
+                      }
+                      className="text-slate-400 hover:text-red-600"
+                    >
+                      <FiTrash2
+                        size={16}
+                      />
+                    </button>
+
+                  </div>
+                )
+              )}
+
+              {/* Add checklist item */}
+
+              <div className="flex gap-2">
+
+                <input
+                  value={
+                    newChecklistItem
+                  }
+                  onChange={(e) =>
+                    setNewChecklistItem(
+                      e.target.value
+                    )
+                  }
+                  onKeyDown={(e) => {
+                    if (
+                      e.key ===
+                      "Enter"
+                    ) {
+                      e.preventDefault();
+                      addChecklistItem();
+                    }
+                  }}
+                  placeholder="Add checklist item..."
+                  className="flex-1 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#17357A]"
+                />
+
+                <button
+                  type="button"
+                  onClick={
+                    addChecklistItem
+                  }
+                  className="flex items-center gap-1 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  <FiPlus />
+                  Add
+                </button>
+
+              </div>
+
+            </div>
+          </div>
+
+          {/* Priority + Due date */}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Priority
+              </label>
+
+              <select
+                value={priority}
+                onChange={(e) =>
+                  setPriority(
+                    e.target.value as
+                      | "Low"
+                      | "Medium"
+                      | "High"
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none"
+              >
+                <option value="Low">
+                  Low
+                </option>
+
+                <option value="Medium">
+                  Medium
+                </option>
+
+                <option value="High">
+                  High
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Due Date
+              </label>
+
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) =>
+                  setDueDate(
+                    e.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none"
+              />
+            </div>
+
+          </div>
+
+          {/* Remarks */}
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Remarks
+            </label>
+
+            <textarea
+              rows={3}
+              value={remarks}
+              onChange={(e) =>
+                setRemarks(
+                  e.target.value
+                )
+              }
+              placeholder="Additional remarks..."
+              className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none"
+            />
           </div>
 
         </div>
 
-        <div>
+        {/* Footer */}
 
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Remarks
-          </label>
+        <div className="flex justify-end gap-3 border-t border-slate-200 px-7 py-5">
 
-          <textarea
-            rows={3}
-            className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#17357A]"
-            placeholder="Additional remarks..."
-            value={form.remarks}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                remarks: e.target.value,
-              })
-            }
-          />
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-slate-300 px-5 py-2.5 font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={handleSubmit}
+            className="rounded-xl bg-[#17357A] px-6 py-2.5 font-semibold text-white hover:bg-[#21469E]"
+          >
+            {task
+              ? "Save Changes"
+              : "Create Task"}
+          </button>
 
         </div>
 
       </div>
-
-      {/* Footer */}
-
-      <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-6">
-
-        <button
-          onClick={onClose}
-          className="rounded-xl border border-slate-300 px-6 py-3 font-medium transition hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-
-        <button
-          onClick={handleSubmit}
-          className="rounded-xl bg-[#17357A] px-6 py-3 font-medium text-white transition hover:bg-[#21469E]"
-        >
-          {task ? "Update Task" : "Assign Task"}
-        </button>
-
-      </div>
-
     </div>
-
-  </div>
-);
+  );
 };
 
 export default TaskModal;

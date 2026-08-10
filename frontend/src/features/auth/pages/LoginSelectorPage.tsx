@@ -118,7 +118,7 @@ const LoginSelectorPage = () => {
         </p>
 
         <p className="text-xs text-blue-100/60">
-          Powered by HoneyFootNotes
+          Developed by HoneyFootnotes*
         </p>
 
       </div>

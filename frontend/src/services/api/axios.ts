@@ -1,20 +1,24 @@
 import axios from "axios";
 
+import { getSession } from "../../features/auth/services/authStorage";
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
 api.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("token");
+  async (config) => {
+    const session = await getSession();
 
-    if (token) {
+    if (session?.token) {
       config.headers.Authorization =
-        `Bearer ${token}`;
+        `Bearer ${session.token}`;
     }
 
     return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
 );
 

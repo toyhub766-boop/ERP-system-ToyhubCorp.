@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
+import api from "../../../services/api/axios";
+
+import HRLayout from "../layouts/HRLayout";
+
+import UserChecklistWorkspace from "../components/UserChecklistWorkspace";
+
+import AttendanceModal from "../../attendance/components/AttendanceModal";
+import LabourModal from "../../labour/components/LabourModal";
+
 import {
   getAttendance,
   deleteAttendance,
@@ -10,229 +19,627 @@ import {
   deleteLabour,
 } from "../../labour/services/labour.service";
 
-import AttendanceModal from "../../attendance/components/AttendanceModal";
-import LabourModal from "../../labour/components/LabourModal";
-
-import HRLayout from "../layouts/HRLayout";
-
 import {
+  FiPlus,
   FiEdit2,
   FiTrash2,
-  FiPlus,
   FiDownload,
   FiFileText,
+  FiUsers,
+  FiCheckCircle,
+  FiClock,
+  FiAlertCircle,
+  FiClipboard,
 } from "react-icons/fi";
-
-import {
-  getTasks,
-  deleteTask,
-} from "../../tasks/services/task.service";
-
-import TaskModal from "../../tasks/components/TaskModal";
 
 import { exportAttendanceExcel } from "../../../utils/exportAttendanceExcel";
 import { exportAttendancePdf } from "../../../utils/exportAttendancePdf";
 
-const AttendanceHRPage = () => {
-  const [tab, setTab] = useState<"EMPLOYEE" | "LABOUR">(
-    "EMPLOYEE"
-  );
+type MainTab =
+  | "EMPLOYEE"
+  | "LABOUR"
+  | "TASKS";
 
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [labours, setLabours] = useState<any[]>([]);
+interface User {
+  _id: string;
+  name: string;
+  role: string;
+  employeeId?: string;
+}
 
-  const [search, setSearch] = useState("");
+const HRPage = () => {
+  /* =========================================================
+     TAB
+  ========================================================= */
+
+  const [activeTab, setActiveTab] =
+    useState<MainTab>("EMPLOYEE");
+
+  /* =========================================================
+     DATA
+  ========================================================= */
+
+  const [attendance, setAttendance] =
+    useState<any[]>([]);
+
+  const [labours, setLabours] =
+    useState<any[]>([]);
+
+  const [users, setUsers] =
+    useState<User[]>([]);
+
+  /* =========================================================
+     SEARCH / FILTER
+  ========================================================= */
+
+  const [search, setSearch] =
+    useState("");
+
   const [statusFilter, setStatusFilter] =
     useState("All");
 
-  const [showAttendanceModal, setShowAttendanceModal] =
-    useState(false);
+  /* =========================================================
+     ATTENDANCE MODAL
+  ========================================================= */
 
-  const [showLabourModal, setShowLabourModal] =
-    useState(false);
+  const [
+    showAttendanceModal,
+    setShowAttendanceModal,
+  ] = useState(false);
 
-  const [editingAttendance, setEditingAttendance] =
-    useState<any>(null);
+  const [
+    editingAttendance,
+    setEditingAttendance,
+  ] = useState<any>(null);
 
-  const [editingLabour, setEditingLabour] =
-    useState<any>(null);
+  /* =========================================================
+     LABOUR MODAL
+  ========================================================= */
 
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [
+    showLabourModal,
+    setShowLabourModal,
+  ] = useState(false);
 
-  const [taskSearch, setTaskSearch] =
-    useState("");
+  const [
+    editingLabour,
+    setEditingLabour,
+  ] = useState<any>(null);
 
-  const [showTaskModal, setShowTaskModal] =
-    useState(false);
-
-  const [editingTask, setEditingTask] =
-    useState<any>(null);
+  /* =========================================================
+     LOAD ATTENDANCE
+  ========================================================= */
 
   const loadAttendance = async () => {
     try {
       const data = await getAttendance();
+
       setAttendance(data);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(
+        "Failed to load attendance:",
+        error
+      );
     }
   };
+
+  /* =========================================================
+     LOAD LABOUR
+  ========================================================= */
 
   const loadLabours = async () => {
     try {
       const data = await getLabours();
+
       setLabours(data);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(
+        "Failed to load labour:",
+        error
+      );
     }
   };
 
-  const loadTasks = async () => {
+  /* =========================================================
+     LOAD USERS
+  ========================================================= */
+
+  const loadUsers = async () => {
     try {
-      const data = await getTasks();
-      setTasks(data);
-    } catch (err) {
-      console.error(err);
+      const { data } =
+        await api.get(
+          "/users/attendance-users"
+        );
+
+      setUsers(data);
+    } catch (error) {
+      console.error(
+        "Failed to load users:",
+        error
+      );
     }
   };
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
+  /* =========================================================
+     INITIAL LOAD
+  ========================================================= */
 
   useEffect(() => {
     loadAttendance();
     loadLabours();
+    loadUsers();
   }, []);
 
-  const filteredAttendance = useMemo(() => {
-    return attendance.filter((record: any) => {
-      const name =
-        record.employee?.name ||
-        record.labour?.name ||
-        "";
+  /* =========================================================
+     EMPLOYEE ATTENDANCE
+  ========================================================= */
 
-      const matchesSearch = name
-        .toLowerCase()
-        .includes(search.toLowerCase());
+  const employeeAttendance =
+    useMemo(() => {
+      return attendance.filter(
+        (record: any) =>
+          record.attendanceType ===
+            "EMPLOYEE" ||
+          !!record.employee
+      );
+    }, [attendance]);
 
-      const matchesStatus =
-        statusFilter === "All" ||
-        record.status === statusFilter;
+  /* =========================================================
+     FILTER EMPLOYEE ATTENDANCE
+  ========================================================= */
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [attendance, search, statusFilter]);
+  const filteredAttendance =
+    useMemo(() => {
+      return employeeAttendance.filter(
+        (record: any) => {
+          const employeeName =
+            record.employee?.name ||
+            "";
 
-  const filteredLabours = useMemo(() => {
-    return labours.filter((labour: any) =>
-      labour.name
-        .toLowerCase()
-        .includes(search.toLowerCase())
+          const role =
+            record.employee?.role ||
+            "";
+
+          const employeeId =
+            record.employee?.employeeId ||
+            "";
+
+          const searchableText =
+            `
+              ${employeeName}
+              ${role}
+              ${employeeId}
+            `.toLowerCase();
+
+          const matchesSearch =
+            searchableText.includes(
+              search.toLowerCase()
+            );
+
+          const matchesStatus =
+            statusFilter === "All" ||
+            record.status ===
+              statusFilter;
+
+          return (
+            matchesSearch &&
+            matchesStatus
+          );
+        }
+      );
+    }, [
+      employeeAttendance,
+      search,
+      statusFilter,
+    ]);
+
+  /* =========================================================
+     FILTER LABOUR
+  ========================================================= */
+
+  const filteredLabours =
+    useMemo(() => {
+      return labours.filter(
+        (labour: any) => {
+          const searchableText = `
+            ${labour.name || ""}
+            ${labour.department || ""}
+            ${labour.phone || ""}
+          `.toLowerCase();
+
+          return searchableText.includes(
+            search.toLowerCase()
+          );
+        }
+      );
+    }, [labours, search]);
+
+  /* =========================================================
+     EMPLOYEE STATS
+  ========================================================= */
+
+  const employeeStats =
+    useMemo(() => {
+      const present =
+        employeeAttendance.filter(
+          (record: any) =>
+            record.status ===
+            "Present"
+        ).length;
+
+      const absent =
+        employeeAttendance.filter(
+          (record: any) =>
+            record.status ===
+            "Absent"
+        ).length;
+
+      const leave =
+        employeeAttendance.filter(
+          (record: any) =>
+            record.status ===
+            "Leave"
+        ).length;
+
+      const halfDay =
+        employeeAttendance.filter(
+          (record: any) =>
+            record.status ===
+            "Half Day"
+        ).length;
+
+      return {
+        total: employeeAttendance.length,
+        present,
+        absent,
+        leave,
+        halfDay,
+      };
+    }, [employeeAttendance]);
+
+  /* =========================================================
+     TAB CHANGE
+  ========================================================= */
+
+  const handleTabChange = (
+    tab: MainTab
+  ) => {
+    setActiveTab(tab);
+
+    setSearch("");
+
+    setStatusFilter("All");
+  };
+
+  /* =========================================================
+     DELETE ATTENDANCE
+  ========================================================= */
+
+  const handleDeleteAttendance =
+    async (id: string) => {
+      const confirmed =
+        window.confirm(
+          "Delete this attendance record?"
+        );
+
+      if (!confirmed) return;
+
+      try {
+        await deleteAttendance(id);
+
+        await loadAttendance();
+      } catch (error) {
+        console.error(
+          "Failed to delete attendance:",
+          error
+        );
+      }
+    };
+
+  /* =========================================================
+     DELETE LABOUR
+  ========================================================= */
+
+  const handleDeleteLabour =
+    async (id: string) => {
+      const confirmed =
+        window.confirm(
+          "Delete this labour record?"
+        );
+
+      if (!confirmed) return;
+
+      try {
+        await deleteLabour(id);
+
+        await loadLabours();
+      } catch (error) {
+        console.error(
+          "Failed to delete labour:",
+          error
+        );
+      }
+    };
+
+  /* =========================================================
+     EXPORT EXCEL
+  ========================================================= */
+
+const handleExcelExport = () => {
+  if (activeTab === "EMPLOYEE") {
+    exportAttendanceExcel(
+      filteredAttendance,
+      "Employee_Attendance_Report"
     );
-  }, [labours, search]);
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task: any) =>
-      (task.title || "")
-        .toLowerCase()
-        .includes(taskSearch.toLowerCase())
+    return;
+  }
+
+  if (activeTab === "LABOUR") {
+    exportAttendanceExcel(
+      filteredLabours,
+      "Labour_Attendance_Report"
     );
-  }, [tasks, taskSearch]);
+  }
+};
+
+const handlePdfExport = () => {
+  if (activeTab === "EMPLOYEE") {
+    exportAttendancePdf(
+      filteredAttendance,
+      "Employee Attendance Report"
+    );
+
+    return;
+  }
+
+  if (activeTab === "LABOUR") {
+    exportAttendancePdf(
+      filteredLabours,
+      "Labour Attendance Report"
+    );
+  }
+};
 
   return (
     <HRLayout>
-    <div className="space-y-8">
+      <div className="min-h-full bg-slate-50 p-6">
 
-      {/* ===================== PAGE HEADER ===================== */}
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
-      <div className="rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
+        <section className="mb-6">
 
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 
-          {/* Left */}
+            <div>
 
-          <div>
+              <p className="text-sm font-medium text-slate-500">
+                HR &gt; Attendance
+              </p>
 
-            <p className="text-sm text-slate-500">
-              Admin &gt; Attendance
-            </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                HR & Attendance
+              </h1>
 
-            <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-900">
-              Attendance Management
-            </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Manage employee attendance,
+                labour records and employee
+                task performance.
+              </p>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Manage employee attendance, labour records and daily task assignments.
-            </p>
+            </div>
+
+            {/* PRIMARY ACTION */}
+
+            {activeTab ===
+              "EMPLOYEE" && (
+              <button
+                onClick={() => {
+                  setEditingAttendance(
+                    null
+                  );
+
+                  setShowAttendanceModal(
+                    true
+                  );
+                }}
+                className="
+                  inline-flex
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-[#172B6B]
+                  px-5
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-white
+                  shadow-sm
+                  transition
+                  hover:bg-[#20398F]
+                "
+              >
+                <FiPlus size={17} />
+                Add Attendance
+              </button>
+            )}
+
+            {activeTab ===
+              "LABOUR" && (
+              <button
+                onClick={() => {
+                  setEditingLabour(null);
+
+                  setShowLabourModal(
+                    true
+                  );
+                }}
+                className="
+                  inline-flex
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-[#172B6B]
+                  px-5
+                  py-3
+                  text-sm
+                  font-semibold
+                  text-white
+                  shadow-sm
+                  transition
+                  hover:bg-[#20398F]
+                "
+              >
+                <FiPlus size={17} />
+                Add Labour
+              </button>
+            )}
 
           </div>
 
-          {/* Right */}
+        </section>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+        {/* =====================================================
+            KPI CARDS
+        ===================================================== */}
 
-            <button
-              onClick={() =>
-                tab === "EMPLOYEE"
-                  ? setShowAttendanceModal(true)
-                  : setShowLabourModal(true)
-              }
-              className="
-                inline-flex
-                items-center
-                justify-center
-                gap-2
-                rounded-2xl
-                bg-[#172B6B]
-                px-6
-                py-3
-                text-sm
-                font-semibold
-                text-white
-                transition
-                hover:bg-[#20398F]
-              "
-            >
-              <FiPlus size={18} />
+        <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
 
-              {tab === "EMPLOYEE"
-                ? "Add Attendance"
-                : "Add Labour"}
-            </button>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-sm text-slate-500">
+                  Employee Records
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {employeeStats.total}
+                </p>
+
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <FiUsers size={20} />
+              </div>
+
+            </div>
 
           </div>
 
-        </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
-      </div>
+            <div className="flex items-center justify-between">
 
-      {/* ===================== ATTENDANCE CARD ===================== */}
+              <div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <p className="text-sm text-slate-500">
+                  Present
+                </p>
 
-        {/* Top */}
+                <p className="mt-2 text-2xl font-bold text-green-600">
+                  {employeeStats.present}
+                </p>
 
-        <div className="border-b border-slate-200 px-6 py-6">
+              </div>
 
-          <div className="flex flex-col gap-6">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-50 text-green-600">
+                <FiCheckCircle size={20} />
+              </div>
 
-            {/* Tabs */}
+            </div>
 
-            <div className="flex flex-wrap gap-3">
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-sm text-slate-500">
+                  Absent
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-red-600">
+                  {employeeStats.absent}
+                </p>
+
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                <FiAlertCircle size={20} />
+              </div>
+
+            </div>
+
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-sm text-slate-500">
+                  Leave / Half Day
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-orange-600">
+                  {employeeStats.leave +
+                    employeeStats.halfDay}
+                </p>
+
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                <FiClock size={20} />
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* =====================================================
+            MAIN CONTENT
+        ===================================================== */}
+
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+
+          {/* ===================================================
+              TABS
+          =================================================== */}
+
+          <div className="border-b border-slate-200 px-6 pt-5">
+
+            <div className="flex flex-wrap gap-2">
 
               <button
-                onClick={() => setTab("EMPLOYEE")}
+                onClick={() =>
+                  handleTabChange(
+                    "EMPLOYEE"
+                  )
+                }
                 className={`
                   rounded-xl
                   px-5
-                  py-2.5
+                  py-3
                   text-sm
                   font-semibold
                   transition
                   ${
-                    tab === "EMPLOYEE"
-                      ? "bg-[#172B6B] text-white shadow"
-                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    activeTab ===
+                    "EMPLOYEE"
+                      ? "bg-[#172B6B] text-white"
+                      : "text-slate-600 hover:bg-slate-100"
                   }
                 `}
               >
@@ -240,71 +647,112 @@ const AttendanceHRPage = () => {
               </button>
 
               <button
-                onClick={() => setTab("LABOUR")}
+                onClick={() =>
+                  handleTabChange(
+                    "LABOUR"
+                  )
+                }
                 className={`
                   rounded-xl
                   px-5
-                  py-2.5
+                  py-3
                   text-sm
                   font-semibold
                   transition
                   ${
-                    tab === "LABOUR"
-                      ? "bg-[#172B6B] text-white shadow"
-                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    activeTab ===
+                    "LABOUR"
+                      ? "bg-[#172B6B] text-white"
+                      : "text-slate-600 hover:bg-slate-100"
                   }
                 `}
               >
-                Labour Management
+                Labour Attendance
+              </button>
+
+              <button
+                onClick={() =>
+                  handleTabChange(
+                    "TASKS"
+                  )
+                }
+                className={`
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-xl
+                  px-5
+                  py-3
+                  text-sm
+                  font-semibold
+                  transition
+                  ${
+                    activeTab ===
+                    "TASKS"
+                      ? "bg-[#172B6B] text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }
+                `}
+              >
+                <FiClipboard
+                  size={16}
+                />
+
+                Tasks & Checklists
               </button>
 
             </div>
 
-            {/* Toolbar */}
+          </div>
 
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          {/* ===================================================
+              EMPLOYEE TOOLBAR
+          =================================================== */}
 
-              {/* Left */}
+          {activeTab ===
+            "EMPLOYEE" && (
+            <div className="border-b border-slate-200 p-6">
 
-              <div className="flex flex-1 flex-col gap-4 md:flex-row">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
 
-                <input
-                  placeholder={
-                    tab === "EMPLOYEE"
-                      ? "Search employee..."
-                      : "Search labour..."
-                  }
-                  value={search}
-                  onChange={(e) =>
-                    setSearch(e.target.value)
-                  }
-                  className="
-                    h-12
-                    w-full
-                    rounded-xl
-                    border
-                    border-slate-300
-                    bg-white
-                    px-4
-                    text-sm
-                    outline-none
-                    transition
-                    focus:border-[#172B6B]
-                    focus:ring-4
-                    focus:ring-blue-100
-                    md:max-w-md
-                  "
-                />
+                <div className="flex flex-col gap-3 md:flex-row">
 
-                {tab === "EMPLOYEE" && (
+                  <input
+                    value={search}
+                    onChange={(e) =>
+                      setSearch(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Search employee, role or ID..."
+                    className="
+                      h-11
+                      w-full
+                      rounded-xl
+                      border
+                      border-slate-300
+                      px-4
+                      text-sm
+                      outline-none
+                      transition
+                      focus:border-[#172B6B]
+                      focus:ring-4
+                      focus:ring-blue-50
+                      md:w-[320px]
+                    "
+                  />
 
                   <select
-                    value={statusFilter}
+                    value={
+                      statusFilter
+                    }
                     onChange={(e) =>
-                      setStatusFilter(e.target.value)
+                      setStatusFilter(
+                        e.target.value
+                      )
                     }
                     className="
-                      h-12
+                      h-11
                       rounded-xl
                       border
                       border-slate-300
@@ -312,710 +760,821 @@ const AttendanceHRPage = () => {
                       px-4
                       text-sm
                       outline-none
-                      transition
                       focus:border-[#172B6B]
-                      focus:ring-4
-                      focus:ring-blue-100
                     "
                   >
-                    <option>All</option>
-                    <option>Present</option>
-                    <option>Absent</option>
-                    <option>Half Day</option>
-                    <option>Leave</option>
+                    <option value="All">
+                      All Status
+                    </option>
+
+                    <option value="Present">
+                      Present
+                    </option>
+
+                    <option value="Absent">
+                      Absent
+                    </option>
+
+                    <option value="Half Day">
+                      Half Day
+                    </option>
+
+                    <option value="Leave">
+                      Leave
+                    </option>
                   </select>
 
-                )}
-
-              </div>
-
-              {/* Right */}
-
-              <div className="flex flex-wrap gap-3">
-
-                <button
-                  onClick={() =>
-                    exportAttendanceExcel(
-                      tab === "EMPLOYEE"
-                        ? filteredAttendance
-                        : filteredLabours,
-                      tab === "EMPLOYEE"
-                        ? "attendance"
-                        : "labours"
-                    )
-                  }
-                  className="
-                    inline-flex
-                    h-12
-                    items-center
-                    gap-2
-                    rounded-xl
-                    border
-                    border-slate-300
-                    bg-white
-                    px-5
-                    text-sm
-                    font-medium
-                    transition
-                    hover:bg-slate-50
-                  "
-                >
-                  <FiDownload />
-                  Excel
-                </button>
-
-                <button
-                  onClick={() =>
-                    exportAttendancePdf(
-                      tab === "EMPLOYEE"
-                        ? filteredAttendance
-                        : filteredLabours,
-                      tab === "EMPLOYEE"
-                        ? "attendance"
-                        : "labours"
-                    )
-                  }
-                  className="
-                    inline-flex
-                    h-12
-                    items-center
-                    gap-2
-                    rounded-xl
-                    border
-                    border-slate-300
-                    bg-white
-                    px-5
-                    text-sm
-                    font-medium
-                    transition
-                    hover:bg-slate-50
-                  "
-                >
-                  <FiFileText />
-                  PDF
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        {/* ===================== TABLE ===================== */}
-
-        <div className="overflow-x-auto">
-
-          <table className="min-w-[1200px] w-full">
-
-             <thead className="bg-slate-50">
-
-  {tab === "EMPLOYEE" ? (
-
-    <tr className="border-b border-slate-200">
-
-      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-        Employee
-      </th>
-
-      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-        Role / Department
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Date
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Check In
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Check Out
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Assigned
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Completed
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Score
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Status
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Actions
-      </th>
-
-    </tr>
-
-  ) : (
-
-    <tr className="border-b border-slate-200">
-
-      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-        Name
-      </th>
-
-      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-        Department
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Daily Wage
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Phone
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Status
-      </th>
-
-      <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-        Actions
-      </th>
-
-    </tr>
-
-  )}
-
-</thead>
-
-<tbody>
-
-  {tab === "EMPLOYEE" ? (
-
-    filteredAttendance.length === 0 ? (
-
-      <tr>
-
-        <td
-          colSpan={10}
-          className="py-16 text-center text-slate-500"
-        >
-          No attendance records found.
-        </td>
-
-      </tr>
-
-    ) : (
-
-      filteredAttendance.map((record: any) => (
-
-        <tr
-          key={record._id}
-          className="border-b border-slate-100 transition hover:bg-slate-50"
-        >
-
-          <td className="px-6 py-5">
-
-            <div className="font-semibold text-slate-800">
-              {record.attendanceType === "EMPLOYEE"
-                ? record.employee?.name || "-"
-                : record.labour?.name || "-"}
-            </div>
-
-          </td>
-
-          <td className="px-6 py-5 text-slate-600">
-
-            {record.attendanceType === "EMPLOYEE"
-              ? record.employee?.role || "-"
-              : record.labour?.department || "-"}
-
-          </td>
-
-          <td className="px-6 py-5 text-center">
-
-            {new Date(record.date).toLocaleDateString()}
-
-          </td>
-
-          <td className="px-6 py-5 text-center">
-            {record.checkIn || "-"}
-          </td>
-
-          <td className="px-6 py-5 text-center">
-            {record.checkOut || "-"}
-          </td>
-
-          <td className="px-6 py-5 text-center">
-            {record.tasksAssigned}
-          </td>
-
-          <td className="px-6 py-5 text-center">
-            {record.tasksCompleted}
-          </td>
-
-          <td className="px-6 py-5 text-center">
-
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                record.score >= 90
-                  ? "bg-green-100 text-green-700"
-                  : record.score >= 70
-                  ? "bg-yellow-100 text-yellow-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {record.score}%
-            </span>
-
-          </td>
-
-          <td className="px-6 py-5 text-center">
-
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                record.status === "Present"
-                  ? "bg-green-100 text-green-700"
-                  : record.status === "Half Day"
-                  ? "bg-yellow-100 text-yellow-700"
-                  : record.status === "Leave"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {record.status}
-            </span>
-
-          </td>
-
-          <td className="px-6 py-5">
-
-            <div className="flex justify-center gap-3">
-
-              <button
-                onClick={() => {
-                  setEditingAttendance(record);
-                  setShowAttendanceModal(true);
-                }}
-                className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
-              >
-                <FiEdit2 />
-              </button>
-
-              <button
-                onClick={async () => {
-                  if (!window.confirm("Delete attendance?")) return;
-
-                  await deleteAttendance(record._id);
-
-                  loadAttendance();
-                }}
-                className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
-              >
-                <FiTrash2 />
-              </button>
-
-            </div>
-
-          </td>
-
-        </tr>
-
-      ))
-
-    )
-
-  ) : (
-
-    filteredLabours.length === 0 ? (
-
-      <tr>
-
-        <td
-          colSpan={6}
-          className="py-16 text-center text-slate-500"
-        >
-          No labour records found.
-        </td>
-
-      </tr>
-
-    ) : (
-
-      filteredLabours.map((labour: any) => (
-
-        <tr
-          key={labour._id}
-          className="border-b border-slate-100 transition hover:bg-slate-50"
-        >
-
-          <td className="px-6 py-5 font-semibold">
-            {labour.name}
-          </td>
-
-          <td className="px-6 py-5">
-            {labour.department}
-          </td>
-
-          <td className="px-6 py-5 text-center">
-            ₹{labour.dailyWage}
-          </td>
-
-          <td className="px-6 py-5 text-center">
-            {labour.phone || "-"}
-          </td>
-
-          <td className="px-6 py-5 text-center">
-
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                labour.status === "ACTIVE"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {labour.status}
-            </span>
-
-          </td>
-
-          <td className="px-6 py-5">
-
-            <div className="flex justify-center gap-3">
-
-              <button
-                onClick={() => {
-                  setEditingLabour(labour);
-                  setShowLabourModal(true);
-                }}
-                className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
-              >
-                <FiEdit2 />
-              </button>
-
-              <button
-                onClick={async () => {
-                  if (!window.confirm("Delete labour?")) return;
-
-                  await deleteLabour(labour._id);
-
-                  loadLabours();
-                }}
-                className="rounded-lg p-2 text-red-600 hover:bg-red-50"
-              >
-                <FiTrash2 />
-              </button>
-
-            </div>
-
-          </td>
-
-        </tr>
-
-      ))
-
-    )
-
-  )}
-
-</tbody>
-
-</table>
-
-</div>
-
-</div> 
-
-
-<div className="h-16" />
-
-      {/* ===================== TODAY'S TASK ASSIGNMENT ===================== */}
-
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-
-        {/* Header */}
-
-        <div className="border-b border-slate-200 px-6 py-6">
-
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-
-            <div>
-
-              <h2 className="text-2xl font-bold text-slate-900">
-                Today's Task Assignment
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Assign, track and manage employee tasks for today.
-              </p>
-
-            </div>
-
-            <button
-              onClick={() => {
-                setEditingTask(null);
-                setShowTaskModal(true);
-              }}
-              className="
-                inline-flex
-                h-12
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-[#172B6B]
-                px-6
-                text-sm
-                font-semibold
-                text-white
-                transition
-                hover:bg-[#20398F]
-              "
-            >
-              <FiPlus />
-              Assign Task
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* Toolbar */}
-
-        <div className="border-b border-slate-200 px-6 py-5">
-
-          <input
-            placeholder="Search tasks..."
-            value={taskSearch}
-            onChange={(e) =>
-              setTaskSearch(e.target.value)
-            }
-            className="
-              h-12
-              w-full
-              rounded-xl
-              border
-              border-slate-300
-              bg-white
-              px-4
-              text-sm
-              outline-none
-              transition
-              focus:border-[#172B6B]
-              focus:ring-4
-              focus:ring-blue-100
-              md:max-w-md
-            "
-          />
-
-        </div>
-
-        {/* Table */}
-
-        <div className="overflow-x-auto">
-
-          <table className="min-w-[950px] w-full">
-
-            <thead className="bg-slate-50">
-
-              <tr className="border-b border-slate-200">
-
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-                  Task
-                </th>
-
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
-                  Assigned To
-                </th>
-
-                <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-                  Priority
-                </th>
-
-                <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-                  Status
-                </th>
-
-                <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-                  Due Date
-                </th>
-
-                <th className="px-6 py-4 text-center text-sm font-semibold text-slate-700">
-                  Actions
-                </th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              {filteredTasks.length > 0 ? (
-
-                filteredTasks.map((task: any) => (
-
-                  <tr
-                    key={task._id}
-                    className="border-b border-slate-100 transition hover:bg-slate-50"
+                </div>
+
+                <div className="flex gap-3">
+
+                  <button
+                    onClick={
+                      handleExcelExport
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-slate-300
+                      px-4
+                      py-2.5
+                      text-sm
+                      font-medium
+                      text-slate-700
+                      hover:bg-slate-50
+                    "
                   >
+                    <FiDownload
+                      size={16}
+                    />
 
-                    <td className="px-6 py-5">
+                    Excel
+                  </button>
 
-                      <div className="font-semibold text-slate-800">
-                        {task.title}
-                      </div>
+                  <button
+                    onClick={
+                      handlePdfExport
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-slate-300
+                      px-4
+                      py-2.5
+                      text-sm
+                      font-medium
+                      text-slate-700
+                      hover:bg-slate-50
+                    "
+                  >
+                    <FiFileText
+                      size={16}
+                    />
 
-                    </td>
+                    PDF
+                  </button>
 
-                    <td className="px-6 py-5">
+                </div>
 
-                      {task.assignedTo?.name || "-"}
+              </div>
 
-                    </td>
+            </div>
+          )}
 
-                    <td className="px-6 py-5 text-center">
+          {/* ===================================================
+              LABOUR TOOLBAR
+          =================================================== */}
 
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          task.priority === "High"
-                            ? "bg-red-100 text-red-700"
-                            : task.priority === "Medium"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {task.priority}
-                      </span>
+          {activeTab ===
+            "LABOUR" && (
+            <div className="border-b border-slate-200 p-6">
 
-                    </td>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-                    <td className="px-6 py-5 text-center">
+                <input
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Search labour, department or phone..."
+                  className="
+                    h-11
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-300
+                    px-4
+                    text-sm
+                    outline-none
+                    transition
+                    focus:border-[#172B6B]
+                    focus:ring-4
+                    focus:ring-blue-50
+                    sm:w-[360px]
+                  "
+                />
 
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          task.status === "Completed"
-                            ? "bg-green-100 text-green-700"
-                            : task.status === "In Progress"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {task.status}
-                      </span>
+                <div className="flex gap-3">
 
-                    </td>
+                  <button
+                    onClick={
+                      handleExcelExport
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-slate-300
+                      px-4
+                      py-2.5
+                      text-sm
+                      font-medium
+                      text-slate-700
+                      hover:bg-slate-50
+                    "
+                  >
+                    <FiDownload
+                      size={16}
+                    />
 
-                    <td className="px-6 py-5 text-center">
+                    Excel
+                  </button>
 
-                      {task.dueDate
-                        ? new Date(task.dueDate).toLocaleDateString()
-                        : "-"}
+                  <button
+                    onClick={
+                      handlePdfExport
+                    }
+                    className="
+                      inline-flex
+                      items-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-slate-300
+                      px-4
+                      py-2.5
+                      text-sm
+                      font-medium
+                      text-slate-700
+                      hover:bg-slate-50
+                    "
+                  >
+                    <FiFileText
+                      size={16}
+                    />
 
-                    </td>
+                    PDF
+                  </button>
 
-                    <td className="px-6 py-5">
+                </div>
 
-                      <div className="flex justify-center gap-3">
+              </div>
 
-                        <button
-                          className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
-                          onClick={() => {
-                            setEditingTask(task);
-                            setShowTaskModal(true);
-                          }}
-                        >
-                          <FiEdit2 />
-                        </button>
+            </div>
+          )}
 
-                        <button
-                          className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
-                          onClick={async () => {
+          {/* ===================================================
+              EMPLOYEE ATTENDANCE TABLE
+          =================================================== */}
 
-                            if (!window.confirm("Delete task?"))
-                              return;
+          {activeTab ===
+            "EMPLOYEE" && (
+            <div className="overflow-x-auto">
 
-                            await deleteTask(task._id);
+              <table className="min-w-[1200px] w-full">
 
-                            loadTasks();
+                <thead className="bg-slate-50">
 
-                          }}
-                        >
-                          <FiTrash2 />
-                        </button>
+                  <tr className="border-b border-slate-200">
 
-                      </div>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Employee
+                    </th>
 
-                    </td>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Role
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Date
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Check In
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Check Out
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Tasks
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Completed
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Score
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Status
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
 
                   </tr>
 
-                ))
+                </thead>
 
-              ) : (
+                <tbody>
 
-                <tr>
+                  {filteredAttendance.length ===
+                  0 ? (
+                    <tr>
 
-                  <td
-                    colSpan={6}
-                    className="py-16 text-center text-slate-500"
-                  >
+                      <td
+                        colSpan={10}
+                        className="py-16 text-center text-sm text-slate-500"
+                      >
+                        No attendance records
+                        found.
+                      </td>
 
-                    No tasks assigned for today.
+                    </tr>
+                  ) : (
+                    filteredAttendance.map(
+                      (record: any) => {
 
-                  </td>
+                        const score =
+                          Number(
+                            record.score
+                          ) || 0;
 
-                </tr>
+                        return (
+                          <tr
+                            key={
+                              record._id
+                            }
+                            className="
+                              border-b
+                              border-slate-100
+                              transition
+                              hover:bg-slate-50
+                            "
+                          >
 
-              )}
+                            {/* EMPLOYEE */}
 
-            </tbody>
+                            <td className="px-6 py-5">
 
-          </table>
+                              <div className="flex items-center gap-3">
 
-        </div>
+                                <div className="
+                                  flex
+                                  h-10
+                                  w-10
+                                  shrink-0
+                                  items-center
+                                  justify-center
+                                  rounded-full
+                                  bg-slate-100
+                                  text-sm
+                                  font-bold
+                                  text-slate-600
+                                ">
+                                  {(
+                                    record
+                                      .employee
+                                      ?.name ||
+                                    "-"
+                                  )
+                                    .charAt(
+                                      0
+                                    )
+                                    .toUpperCase()}
+                                </div>
+
+                                <div>
+
+                                  <p className="font-semibold text-slate-800">
+                                    {record
+                                      .employee
+                                      ?.name ||
+                                      "-"}
+                                  </p>
+
+                                  <p className="text-xs text-slate-500">
+                                    {record
+                                      .employee
+                                      ?.employeeId ||
+                                      "-"}
+                                  </p>
+
+                                </div>
+
+                              </div>
+
+                            </td>
+
+                            {/* ROLE */}
+
+                            <td className="px-6 py-5 text-sm text-slate-600">
+                              {record
+                                .employee
+                                ?.role ||
+                                "-"}
+                            </td>
+
+                            {/* DATE */}
+
+                            <td className="px-6 py-5 text-center text-sm text-slate-600">
+                              {record.date
+                                ? new Date(
+                                    record.date
+                                  ).toLocaleDateString(
+                                    "en-IN"
+                                  )
+                                : "-"}
+                            </td>
+
+                            {/* CHECK IN */}
+
+                            <td className="px-6 py-5 text-center text-sm font-medium text-slate-700">
+                              {record.checkIn ||
+                                "-"}
+                            </td>
+
+                            {/* CHECK OUT */}
+
+                            <td className="px-6 py-5 text-center text-sm font-medium text-slate-700">
+                              {record.checkOut ||
+                                "-"}
+                            </td>
+
+                            {/* TASKS */}
+
+                            <td className="px-6 py-5 text-center text-sm font-semibold text-slate-700">
+                              {record.tasksAssigned ??
+                                0}
+                            </td>
+
+                            {/* COMPLETED */}
+
+                            <td className="px-6 py-5 text-center text-sm font-semibold text-slate-700">
+                              {record.tasksCompleted ??
+                                0}
+                            </td>
+
+                            {/* SCORE */}
+
+                            <td className="px-6 py-5 text-center">
+
+                              <span
+                                className={`
+                                  inline-flex
+                                  min-w-[58px]
+                                  justify-center
+                                  rounded-full
+                                  px-3
+                                  py-1.5
+                                  text-xs
+                                  font-semibold
+                                  ${
+                                    score >=
+                                    90
+                                      ? "bg-green-100 text-green-700"
+                                      : score >=
+                                        70
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-red-100 text-red-700"
+                                  }
+                                `}
+                              >
+                                {score}%
+                              </span>
+
+                            </td>
+
+                            {/* STATUS */}
+
+                            <td className="px-6 py-5 text-center">
+
+                              <span
+                                className={`
+                                  inline-flex
+                                  rounded-full
+                                  px-3
+                                  py-1.5
+                                  text-xs
+                                  font-semibold
+                                  ${
+                                    record.status ===
+                                    "Present"
+                                      ? "bg-green-100 text-green-700"
+                                      : record.status ===
+                                        "Half Day"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : record.status ===
+                                        "Leave"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-red-100 text-red-700"
+                                  }
+                                `}
+                              >
+                                {
+                                  record.status
+                                }
+                              </span>
+
+                            </td>
+
+                            {/* ACTIONS */}
+
+                            <td className="px-6 py-5">
+
+                              <div className="flex justify-center gap-2">
+
+                                <button
+                                  title="Edit attendance"
+                                  onClick={() => {
+                                    setEditingAttendance(
+                                      record
+                                    );
+
+                                    setShowAttendanceModal(
+                                      true
+                                    );
+                                  }}
+                                  className="
+                                    rounded-lg
+                                    p-2
+                                    text-blue-600
+                                    transition
+                                    hover:bg-blue-50
+                                  "
+                                >
+                                  <FiEdit2
+                                    size={17}
+                                  />
+                                </button>
+
+                                <button
+                                  title="Delete attendance"
+                                  onClick={() =>
+                                    handleDeleteAttendance(
+                                      record._id
+                                    )
+                                  }
+                                  className="
+                                    rounded-lg
+                                    p-2
+                                    text-red-600
+                                    transition
+                                    hover:bg-red-50
+                                  "
+                                >
+                                  <FiTrash2
+                                    size={17}
+                                  />
+                                </button>
+
+                              </div>
+
+                            </td>
+
+                          </tr>
+                        );
+                      }
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+          )}
+
+          {/* ===================================================
+              LABOUR TABLE
+          =================================================== */}
+
+          {activeTab ===
+            "LABOUR" && (
+            <div className="overflow-x-auto">
+
+              <table className="min-w-[900px] w-full">
+
+                <thead className="bg-slate-50">
+
+                  <tr className="border-b border-slate-200">
+
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Labour
+                    </th>
+
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Department
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Daily Wage
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Phone
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Status
+                    </th>
+
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {filteredLabours.length ===
+                  0 ? (
+                    <tr>
+
+                      <td
+                        colSpan={6}
+                        className="py-16 text-center text-sm text-slate-500"
+                      >
+                        No labour records
+                        found.
+                      </td>
+
+                    </tr>
+                  ) : (
+                    filteredLabours.map(
+                      (labour: any) => (
+                        <tr
+                          key={
+                            labour._id
+                          }
+                          className="
+                            border-b
+                            border-slate-100
+                            transition
+                            hover:bg-slate-50
+                          "
+                        >
+
+                          {/* NAME */}
+
+                          <td className="px-6 py-5">
+
+                            <div className="flex items-center gap-3">
+
+                              <div className="
+                                flex
+                                h-10
+                                w-10
+                                items-center
+                                justify-center
+                                rounded-full
+                                bg-slate-100
+                                text-sm
+                                font-bold
+                                text-slate-600
+                              ">
+                                {(
+                                  labour.name ||
+                                  "-"
+                                )
+                                  .charAt(
+                                    0
+                                  )
+                                  .toUpperCase()}
+                              </div>
+
+                              <span className="font-semibold text-slate-800">
+                                {labour.name ||
+                                  "-"}
+                              </span>
+
+                            </div>
+
+                          </td>
+
+                          {/* DEPARTMENT */}
+
+                          <td className="px-6 py-5 text-sm text-slate-600">
+                            {labour.department ||
+                              "-"}
+                          </td>
+
+                          {/* WAGE */}
+
+                          <td className="px-6 py-5 text-center text-sm font-semibold text-slate-700">
+                            ₹
+                            {Number(
+                              labour.dailyWage ||
+                                0
+                            ).toLocaleString(
+                              "en-IN"
+                            )}
+                          </td>
+
+                          {/* PHONE */}
+
+                          <td className="px-6 py-5 text-center text-sm text-slate-600">
+                            {labour.phone ||
+                              "-"}
+                          </td>
+
+                          {/* STATUS */}
+
+                          <td className="px-6 py-5 text-center">
+
+                            <span
+                              className={`
+                                inline-flex
+                                rounded-full
+                                px-3
+                                py-1.5
+                                text-xs
+                                font-semibold
+                                ${
+                                  labour.status ===
+                                  "ACTIVE"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"
+                                }
+                              `}
+                            >
+                              {labour.status ||
+                                "-"}
+                            </span>
+
+                          </td>
+
+                          {/* ACTIONS */}
+
+                          <td className="px-6 py-5">
+
+                            <div className="flex justify-center gap-2">
+
+                              <button
+                                title="Edit labour"
+                                onClick={() => {
+                                  setEditingLabour(
+                                    labour
+                                  );
+
+                                  setShowLabourModal(
+                                    true
+                                  );
+                                }}
+                                className="
+                                  rounded-lg
+                                  p-2
+                                  text-blue-600
+                                  transition
+                                  hover:bg-blue-50
+                                "
+                              >
+                                <FiEdit2
+                                  size={17}
+                                />
+                              </button>
+
+                              <button
+                                title="Delete labour"
+                                onClick={() =>
+                                  handleDeleteLabour(
+                                    labour._id
+                                  )
+                                }
+                                className="
+                                  rounded-lg
+                                  p-2
+                                  text-red-600
+                                  transition
+                                  hover:bg-red-50
+                                "
+                              >
+                                <FiTrash2
+                                  size={17}
+                                />
+                              </button>
+
+                            </div>
+
+                          </td>
+
+                        </tr>
+                      )
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+          )}
+
+          {/* ===================================================
+              TASKS / CHECKLISTS
+          =================================================== */}
+
+          {activeTab ===
+            "TASKS" && (
+
+            <div className="p-6">
+
+              <UserChecklistWorkspace
+                users={users}
+              />
+
+            </div>
+
+          )}
+
+        </section>
+
+        {/* =====================================================
+            ATTENDANCE MODAL
+        ===================================================== */}
+
+        <AttendanceModal
+          open={
+            showAttendanceModal
+          }
+          attendance={
+            editingAttendance
+          }
+          onClose={() => {
+            setShowAttendanceModal(
+              false
+            );
+
+            setEditingAttendance(
+              null
+            );
+          }}
+          onSuccess={async () => {
+            await loadAttendance();
+
+            setShowAttendanceModal(
+              false
+            );
+
+            setEditingAttendance(
+              null
+            );
+          }}
+        />
+
+        {/* =====================================================
+            LABOUR MODAL
+        ===================================================== */}
+
+        <LabourModal
+          open={showLabourModal}
+          labour={editingLabour}
+          onClose={() => {
+            setShowLabourModal(false);
+
+            setEditingLabour(null);
+          }}
+          onSuccess={async () => {
+            await loadLabours();
+
+            setShowLabourModal(
+              false
+            );
+
+            setEditingLabour(null);
+          }}
+        />
 
       </div>
-
-      {/* ===================== MODALS ===================== */}
-
-      <AttendanceModal
-        open={showAttendanceModal}
-        attendance={editingAttendance}
-        onClose={() => {
-          setShowAttendanceModal(false);
-          setEditingAttendance(null);
-        }}
-        onSuccess={loadAttendance}
-      />
-
-      <TaskModal
-        open={showTaskModal}
-        task={editingTask}
-        onClose={() => {
-          setShowTaskModal(false);
-          setEditingTask(null);
-        }}
-        onSuccess={loadTasks}
-      />
-
-      <LabourModal
-        open={showLabourModal}
-        labour={editingLabour}
-        onClose={() => {
-          setShowLabourModal(false);
-          setEditingLabour(null);
-        }}
-        onSuccess={loadLabours}
-      />
-
-    </div>
-
     </HRLayout>
-
-);
+  );
 };
 
-export default AttendanceHRPage;
+export default HRPage;

@@ -1,5 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IChecklistItem {
+  text: string;
+  completed: boolean;
+}
+
 export interface ITask extends Document {
   title: string;
   description?: string;
@@ -9,21 +14,45 @@ export interface ITask extends Document {
 
   priority: "Low" | "Medium" | "High";
 
-  status: "Pending" | "In Progress" | "Completed";
-
   dueDate?: Date;
 
   remarks?: string;
+
+  completed: boolean;
+
+  checklist: IChecklistItem[];
 }
+
+const checklistItemSchema = new Schema(
+  {
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    completed: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    _id: true,
+  }
+);
 
 const taskSchema = new Schema(
   {
     title: {
       type: String,
       required: true,
+      trim: true,
     },
 
-    description: String,
+    description: {
+      type: String,
+      default: "",
+    },
 
     assignedTo: {
       type: Schema.Types.ObjectId,
@@ -43,26 +72,29 @@ const taskSchema = new Schema(
       default: "Medium",
     },
 
-    status: {
-      type: String,
-      enum: [
-        "Pending",
-        "In Progress",
-        "Completed",
-      ],
-      default: "Pending",
+    dueDate: {
+      type: Date,
+      default: null,
     },
 
-    dueDate: Date,
+    remarks: {
+      type: String,
+      default: "",
+    },
 
-    remarks: String,
+    completed: {
+      type: Boolean,
+      default: false,
+    },
+
+    checklist: {
+      type: [checklistItemSchema],
+      default: [],
+    },
   },
   {
     timestamps: true,
   }
 );
 
-export default mongoose.model(
-  "Task",
-  taskSchema
-);
+export default mongoose.model("Task", taskSchema);

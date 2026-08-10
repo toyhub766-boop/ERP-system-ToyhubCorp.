@@ -9,15 +9,25 @@ import {
   deleteAttendance,
 } from "../controllers/attendance.controller";
 
+import upload from "../middlewares/upload.middleware";
+
 const router = express.Router();
 
 router.use(authMiddleware);
 
 router.get("/", getAttendance);
 
-router.post("/", createAttendance);
+router.post(
+  "/",
+  upload.single("photo"),
+  createAttendance
+);
 
-router.put("/:id", updateAttendance);
+router.put(
+  "/:id",
+  upload.single("photo"),
+  updateAttendance
+);
 
 router.delete("/:id", deleteAttendance);
 

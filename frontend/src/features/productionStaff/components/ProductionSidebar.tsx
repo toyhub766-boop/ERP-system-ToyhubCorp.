@@ -9,6 +9,8 @@ import {
 } from "react-icons/fi";
 import { FaIndustry } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
+
+import { logoutUser } from "../../../features/auth/services/logout";
 const links = [
   {
     name: "Dashboard",
@@ -36,11 +38,13 @@ const ProductionSidebar = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
+  const handleLogout = async () => {
+  await logoutUser();
+
+  navigate("/login", {
+    replace: true,
+  });
+};
 
   return (
     <>

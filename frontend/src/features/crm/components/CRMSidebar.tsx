@@ -7,6 +7,7 @@ import {
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
+import { logoutUser } from "../../../features/auth/services/logout";
 const links = [
   {
     name: "Dashboard",
@@ -20,12 +21,13 @@ const CRMSidebar = () => {
 
   const [open, setOpen] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+  await logoutUser();
 
-    navigate("/login");
-  };
+  navigate("/login", {
+    replace: true,
+  });
+};
 
   return (
     <>

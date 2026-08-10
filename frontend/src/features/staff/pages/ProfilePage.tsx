@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 
 import BottomNavigation from "../components/BottomNavigation";
+import { logoutUser } from "../../../features/auth/services/logout";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -9,12 +10,13 @@ const ProfilePage = () => {
     localStorage.getItem("user") || "{}"
   );
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+  await logoutUser();
 
-    navigate("/login");
-  };
+  navigate("/login", {
+    replace: true,
+  });
+};
 
  return (
   <div className="min-h-screen bg-slate-100 pb-24">
@@ -102,7 +104,7 @@ const ProfilePage = () => {
       {/* Logout */}
 
       <button
-        onClick={logout}
+        onClick={handleLogout}
         className="
           mt-6
           w-full

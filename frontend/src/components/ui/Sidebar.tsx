@@ -17,6 +17,8 @@ import {
 
 import logo from "../../assets/images/logo.png";
 
+import { logoutUser } from "../../features/auth/services/logout";
+
 const menuItems = [
   { label: "Dashboard", icon: <FiHome />, path: "/admin/dashboard" },
   {
@@ -47,12 +49,10 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
+  const handleLogout = async () => {
+  await logoutUser();
+  navigate("/login", { replace: true });
+};
   return (
     <aside
       className={`

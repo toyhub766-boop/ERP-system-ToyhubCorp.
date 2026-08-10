@@ -19,6 +19,8 @@ export interface IAttendance extends Document {
   tasksCompleted: number;
 
   remarks?: string;
+
+  photo?: string;
 }
 
 const attendanceSchema = new Schema<IAttendance>(
@@ -75,10 +77,17 @@ const attendanceSchema = new Schema<IAttendance>(
       type: String,
       default: "",
     },
+
+    photo: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
   }
+
+
 );
 
 export default mongoose.model<IAttendance>(

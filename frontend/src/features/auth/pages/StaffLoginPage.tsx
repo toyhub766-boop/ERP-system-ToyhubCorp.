@@ -5,6 +5,7 @@ import logo from "../../../assets/images/logo.png";
 import { loginUser } from "../services/auth.service";
 
 import { Eye, EyeOff } from "lucide-react";
+import { saveSession } from "../services/authStorage";
 
 const StaffLoginPage = () => {
   const navigate = useNavigate();
@@ -35,16 +36,10 @@ const handleLogin = async (
       return;
     }
 
-    localStorage.setItem(
-      "token",
-      data.token
-    );
-console.log(data.user);
-    localStorage.setItem(
-      "user",
-      JSON.stringify(data.user)
-
-    );
+await saveSession(
+  data.token,
+  data.user
+);
 
     setError("");
 

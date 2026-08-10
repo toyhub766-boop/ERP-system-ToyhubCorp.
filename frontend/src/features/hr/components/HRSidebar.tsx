@@ -7,6 +7,8 @@ import {
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
+import { logoutUser } from "../../auth/services/logout";
+
 const menuItems = [
   {
     label: "Dashboard",
@@ -20,12 +22,13 @@ const HRSidebar = () => {
 
   const [open, setOpen] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+  await logoutUser();
 
-    navigate("/login");
-  };
+  navigate("/login", {
+    replace: true,
+  });
+};
 
   return (
     <>

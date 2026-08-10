@@ -1,9 +1,15 @@
 import BOM from "../models/BOM";
 import Product from "../models/Product";
 
+interface MaterialSelection {
+  requiredMaterial: string;
+  selectedMaterial: string;
+}
+
 export const calculateMaterialAvailability = async (
   bomId: string,
-  quantity: number
+  quantity: number,
+  materialSelections: MaterialSelection[] = []
 ) => {
   const bom = await BOM.findById(bomId)
     .populate("materials.product");
@@ -12,37 +18,87 @@ export const calculateMaterialAvailability = async (
     throw new Error("BOM not found");
   }
 
-  const materials = [];
+  const materials: any[] = [];
 
-  let maximumProducible = Number.MAX_SAFE_INTEGER;
+  let maximumProducible =
+    Number.MAX_SAFE_INTEGER;
 
   let bottleneck = "";
 
   for (const item of bom.materials as any[]) {
+    /*
+     * By default, use the material defined
+     * in the BOM.
+     */
+    let product = item.product;
 
-    const product = item.product;
+    /*
+     * If an alternative material was selected
+     * for this BOM material, use that product
+     * for availability calculation.
+     */
+    const selection =
+      materialSelections.find(
+        (selection) =>
+          String(
+            selection.requiredMaterial
+          ) === String(item.product._id)
+      );
+
+    if (selection?.selectedMaterial) {
+      const selectedProduct =
+        await Product.findById(
+          selection.selectedMaterial
+        );
+
+      if (selectedProduct) {
+        product = selectedProduct;
+      }
+    }
 
     const required =
       item.quantity * quantity;
 
     const available =
-      product.currentStock;
+      Number(product.currentStock || 0);
 
     const shortage =
-      Math.max(required - available, 0);
-
-    const possible =
-      Math.floor(
-        available / item.quantity
+      Math.max(
+        required - available,
+        0
       );
 
-    if (possible < maximumProducible) {
-      maximumProducible = possible;
-      bottleneck = product.name;
+    const possible =
+      item.quantity > 0
+        ? Math.floor(
+            available /
+              item.quantity
+          )
+        : 0;
+
+    if (
+      possible <
+      maximumProducible
+    ) {
+      maximumProducible =
+        possible;
+
+      bottleneck =
+        product.name;
     }
 
     materials.push({
-      product: product.name,
+      product:
+        product.name,
+
+      productId:
+        product._id,
+
+      requiredMaterial:
+        item.product.name,
+
+      requiredMaterialId:
+        item.product._id,
 
       required,
 
@@ -52,7 +108,21 @@ export const calculateMaterialAvailability = async (
 
       sufficient:
         available >= required,
+
+      selected:
+        Boolean(selection),
     });
+  }
+
+  /*
+   * If the BOM has no materials,
+   * avoid returning MAX_SAFE_INTEGER.
+   */
+  if (
+    maximumProducible ===
+    Number.MAX_SAFE_INTEGER
+  ) {
+    maximumProducible = 0;
   }
 
   return {

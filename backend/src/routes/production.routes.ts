@@ -3,12 +3,12 @@ import { Router } from "express";
 import authMiddleware from "../middlewares/auth.middleware";
 import roleMiddleware from "../middlewares/role.middleware";
 
-
 import {
   createProduction,
   getProductions,
   getProductionById,
   updateProduction,
+  updateProductionItem,
   getMaterialConsumption,
   deleteProduction,
   calculateProduction,
@@ -25,8 +25,10 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware(["FOUNDER",
-  "PRODUCTION",]),
+  roleMiddleware([
+    "FOUNDER",
+    "PRODUCTION",
+  ]),
   createProduction
 );
 
@@ -45,9 +47,21 @@ router.get(
 router.put(
   "/:id",
   authMiddleware,
-  roleMiddleware(["FOUNDER",
-  "PRODUCTION",]),
+  roleMiddleware([
+    "FOUNDER",
+    "PRODUCTION",
+  ]),
   updateProduction
+);
+
+router.put(
+  "/:id/items/:itemId",
+  authMiddleware,
+  roleMiddleware([
+    "FOUNDER",
+    "PRODUCTION",
+  ]),
+  updateProductionItem
 );
 
 router.get(
@@ -59,8 +73,10 @@ router.get(
 router.delete(
   "/:id",
   authMiddleware,
-  roleMiddleware(["FOUNDER",
-  "PRODUCTION",]),
+  roleMiddleware([
+    "FOUNDER",
+    "PRODUCTION",
+  ]),
   deleteProduction
 );
 

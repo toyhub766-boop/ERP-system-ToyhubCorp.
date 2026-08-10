@@ -1,87 +1,130 @@
-import { useEffect, useState } from "react";
-import { getBOMs } from "../../bom/services/bom.service";
+import { useEffect, useMemo, useState } from "react";
+
 import AdminLayout from "../../../app/layouts/AdminLayout";
+
+import { getBOMs } from "../../bom/services/bom.service";
+
 import {
   getProductions,
-  calculateProduction,
   createProduction,
   updateProduction,
+  deleteProduction,
+  calculateProduction,
   getMaterialConsumption,
 } from "../services/production.services";
 
+import {
+  getProductionClients,
+  createProductionClient,
+} from "../services/productionClient.service";
+
+import ProductionCreateModal from "../components/ProductionCreateModal";
+import ProductionProgressModal from "../components/ProductionProgressModal";
+import ProductionCompletionModal from "../components/ProductionCompletionModal";
+import ProductionEditModal from "../components/ProductionEditModal";
+
+import { exportCapacityExcel } from "../../../utils/exportCapacityExcel";
+import { exportCapacityPdf } from "../../../utils/exportCapacityPdf";
+import { exportProductionReceiptPdf } from "../../../utils/exportProductionReceiptPdf";
+
 const ProductionPage = () => {
-  const [productions, setProductions] = useState<any[]>([]);
+  const [productions, setProductions] =
+    useState<any[]>([]);
 
-  const [selectedProduction, setSelectedProduction] = useState<any>(null);
+  const [clients, setClients] =
+    useState<any[]>([]);
 
-  const [loading, setLoading] = useState(false);
+  const [boms, setBoms] =
+    useState<any[]>([]);
 
-  const [availability, setAvailability] = useState<any>(null);
+  const [selectedProduction, setSelectedProduction] =
+    useState<any>(null);
 
-  const [materialConsumption, setMaterialConsumption] = useState<any[]>([]);
+  const [selectedItemIndex, setSelectedItemIndex] =
+    useState(0);
 
-  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [boms, setBoms] = useState<any[]>([]);
+  const [activeTab, setActiveTab] =
+    useState<"orders" | "calculator">(
+      "orders"
+    );
 
-  const [selectedBOM, setSelectedBOM] = useState("");
+  const [showCreateModal, setShowCreateModal] =
+    useState(false);
 
-  const [quantity, setQuantity] = useState(1);
+  const [showProgressModal, setShowProgressModal] =
+    useState(false);
 
-  const [team, setTeam] = useState("");
+  const [showCompletionModal, setShowCompletionModal] =
+    useState(false);
 
-  const [targetDate, setTargetDate] = useState("");
+  const [calculatorBOM, setCalculatorBOM] =
+    useState("");
 
-  const [notes, setNotes] = useState("");
+  const [calculatorQuantity, setCalculatorQuantity] =
+    useState(1);
 
-  const [activeTab, setActiveTab] = useState<"orders" | "calculator">("orders");
+  const [calculatorResult, setCalculatorResult] =
+    useState<any>(null);
 
-  const [calculatorBOM, setCalculatorBOM] = useState("");
+  const [, setMaterialConsumption] =
+    useState<any[]>([]);
 
-  const [calculatorQuantity, setCalculatorQuantity] = useState(1);
+  const [showEditModal, setShowEditModal] =
+    useState(false);
 
-  const [calculatorResult, setCalculatorResult] = useState<any>(null);
-
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
-
-  const [actualQuantity, setActualQuantity] = useState(0);
-
-  const [completionRemarks, setCompletionRemarks] = useState("");
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD DATA
+  |--------------------------------------------------------------------------
+  */
 
   const loadData = async () => {
     try {
       setLoading(true);
 
-      const [productionData, bomData] = await Promise.all([
+      const [
+        productionData,
+        bomData,
+        clientData,
+      ] = await Promise.all([
         getProductions(),
         getBOMs(),
+        getProductionClients(),
       ]);
 
       setProductions(productionData);
       setBoms(bomData);
+      setClients(clientData);
 
       if (productionData.length > 0) {
-        setSelectedProduction(productionData[0]);
-        await loadAvailability(productionData[0]);
+        setSelectedProduction(
+          (current: any) => {
+            if (!current) {
+              return productionData[0];
+            }
+
+            return (
+              productionData.find(
+                (item: any) =>
+                  item._id === current._id
+              ) ||
+              productionData[0]
+            );
+          }
+        );
+      } else {
+        setSelectedProduction(null);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAvailability = async (production: any) => {
-    try {
-      const result = await calculateProduction({
-        bom: production.bom._id,
-        quantity: production.quantity,
-      });
-
-      setAvailability(result);
-      const consumption = await getMaterialConsumption(production._id);
-
-      setMaterialConsumption(consumption);
     } catch (error) {
       console.error(error);
+      alert(
+        "Failed to load production data."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,1217 +132,1407 @@ const ProductionPage = () => {
     loadData();
   }, []);
 
-  const handleCreateProduction = async () => {
-    if (!selectedBOM) {
-      alert("Select a BOM");
-      return;
-    }
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD MATERIAL CONSUMPTION
+  |--------------------------------------------------------------------------
+  */
 
-    if (quantity <= 0) {
-      alert("Enter valid quantity");
-      return;
-    }
-
+  const loadConsumption = async (
+    productionId: string
+  ) => {
     try {
-      await createProduction({
-        bom: selectedBOM,
+      const data =
+        await getMaterialConsumption(
+          productionId
+        );
 
-        quantity,
-
-        team,
-
-        targetDate,
-
-        notes,
-      });
-
-      setShowModal(false);
-
-      setSelectedBOM("");
-
-      setQuantity(1);
-
-      setTeam("");
-
-      setTargetDate("");
-
-      setNotes("");
-
-      loadData();
+      setMaterialConsumption(data);
     } catch (error) {
       console.error(error);
+      setMaterialConsumption([]);
     }
   };
 
-  const handleStatusUpdate = async (status: string) => {
-    if (!selectedProduction) return;
+  useEffect(() => {
+    if (!selectedProduction?._id) {
+      setMaterialConsumption([]);
+      return;
+    }
 
-    try {
-      await updateProduction(selectedProduction._id, {
-        ...selectedProduction,
-        status,
-        bom: selectedProduction.bom._id,
-      });
+    loadConsumption(
+      selectedProduction._id
+    );
+  }, [
+    selectedProduction?._id,
+  ]);
 
-      const productionData = await getProductions();
+  /*
+  |--------------------------------------------------------------------------
+  | SELECTED ITEM
+  |--------------------------------------------------------------------------
+  */
 
-      setProductions(productionData);
+  const selectedItem =
+    selectedProduction?.items?.[
+    selectedItemIndex
+    ] || null;
 
-      const updated = productionData.find(
-        (p: any) => p._id === selectedProduction._id,
+  /*
+  |--------------------------------------------------------------------------
+  | CAPACITY FOR SELECTED ITEM
+  |--------------------------------------------------------------------------
+  */
+
+  const [selectedAvailability, setSelectedAvailability] =
+    useState<any>(null);
+
+  useEffect(() => {
+    const calculate = async () => {
+      if (
+        !selectedItem?.bom ||
+        !selectedItem?.quantity
+      ) {
+        setSelectedAvailability(null);
+        return;
+      }
+
+      try {
+        const result =
+          await calculateProduction({
+            bom:
+              selectedItem.bom._id ||
+              selectedItem.bom,
+
+            quantity:
+              Number(
+                selectedItem.quantity
+              ),
+
+            materialSelections:
+              selectedItem.materialSelections ||
+              [],
+          });
+
+        setSelectedAvailability(
+          result
+        );
+      } catch (error) {
+        console.error(error);
+        setSelectedAvailability(null);
+      }
+    };
+
+    calculate();
+  }, [
+    selectedProduction?._id,
+    selectedItemIndex,
+    selectedItem?.bom,
+    selectedItem?.quantity,
+    selectedItem?.materialSelections,
+  ]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | CREATE
+  |--------------------------------------------------------------------------
+  */
+
+  const handleCreate = async (
+    data: any
+  ) => {
+    await createProduction(data);
+    await loadData();
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | CREATE CLIENT
+  |--------------------------------------------------------------------------
+  */
+
+  const handleCreateClient = async (
+    data: any
+  ) => {
+    const created =
+      await createProductionClient(
+        data
       );
 
-      if (updated) {
-        setSelectedProduction(updated);
-        await loadAvailability(updated);
-      }
+    setClients((current) => [
+      created,
+      ...current,
+    ]);
+
+    return created;
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | REFRESH AFTER MODAL
+  |--------------------------------------------------------------------------
+  */
+
+  const refreshSelectedProduction =
+    async () => {
+      await loadData();
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | DELETE
+  |--------------------------------------------------------------------------
+  */
+
+  const handleDelete = async () => {
+    if (!selectedProduction) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Delete ${selectedProduction.orderNumber}?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteProduction(
+        selectedProduction._id
+      );
+
+      setSelectedProduction(null);
+
+      await loadData();
     } catch (error) {
       console.error(error);
+
+      alert(
+        "Failed to delete production order."
+      );
     }
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | QUICK EDIT
+  |--------------------------------------------------------------------------
+  |
+  | Keeps the deadline-friendly version simple.
+  | Full item editing will be handled through
+  | the production modal in the next polish pass.
+  */
+
+  const handleEdit = () => {
+    if (!selectedProduction) return;
+
+    setShowEditModal(true);
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | CAPACITY CALCULATOR
+  |--------------------------------------------------------------------------
+  */
 
   const handleCalculate = async () => {
-    try {
-      const result = await calculateProduction({
-        bom: calculatorBOM,
-        quantity: calculatorQuantity,
-      });
-
-      setCalculatorResult(result);
-    } catch (error) {
-      console.error(error);
+    if (!calculatorBOM) {
+      alert("Select a BOM.");
+      return;
     }
-  };
 
-  const handleCompleteProduction = async () => {
-    if (!selectedProduction) return;
+    if (
+      !calculatorQuantity ||
+      calculatorQuantity <= 0
+    ) {
+      alert(
+        "Enter a valid quantity."
+      );
 
-    if (actualQuantity <= 0) {
-      alert("Enter actual produced quantity");
       return;
     }
 
     try {
-      await updateProduction(selectedProduction._id, {
-        ...selectedProduction,
-        bom: selectedProduction.bom._id,
-        status: "Completed",
-        actualQuantity,
-        completedAt: new Date().toISOString(),
-        remarks: completionRemarks,
-      });
+      const result =
+        await calculateProduction({
+          bom: calculatorBOM,
+          quantity:
+            Number(
+              calculatorQuantity
+            ),
+        });
 
-      setShowCompletionModal(false);
-
-      setActualQuantity(0);
-
-      setCompletionRemarks("");
-
-      const productionData = await getProductions();
-
-      setProductions(productionData);
-
-      const updated = productionData.find(
-        (p: any) => p._id === selectedProduction._id,
+      setCalculatorResult(
+        result
       );
-
-      if (updated) {
-        setSelectedProduction(updated);
-        await loadAvailability(updated);
-      }
     } catch (error) {
       console.error(error);
+
+      alert(
+        "Failed to calculate production capacity."
+      );
     }
   };
 
- return (
-  <AdminLayout>
-    <div className="bg-slate-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+  /*
+  |--------------------------------------------------------------------------
+  | EXPORT CAPACITY
+  |--------------------------------------------------------------------------
+  */
 
-        {/* Header */}
+  const handleExportExcel = () => {
+    if (!calculatorResult) {
+      alert("Calculate capacity first.");
+      return;
+    }
 
-        <div className="flex items-start justify-between">
+    const selectedBOM = boms.find(
+      (bom: any) =>
+        bom._id === calculatorBOM
+    );
+
+    exportCapacityExcel(
+      calculatorResult,
+      selectedBOM?.finishedProduct?.name ||
+      "Production",
+      Number(calculatorQuantity),
+      "Production_Capacity"
+    );
+  };
+
+  const handleExportPdf = () => {
+    if (!calculatorResult) {
+      alert("Calculate capacity first.");
+      return;
+    }
+
+    const selectedBOM = boms.find(
+      (bom: any) =>
+        bom._id === calculatorBOM
+    );
+
+    exportCapacityPdf(
+      calculatorResult,
+      selectedBOM?.finishedProduct?.name ||
+      "Production",
+      Number(calculatorQuantity),
+      "Production Capacity Report"
+    );
+  };
+
+  const handleExportReceipt = () => {
+    if (!selectedProduction) {
+      alert("Select a production order first.");
+      return;
+    }
+
+    exportProductionReceiptPdf(
+      selectedProduction
+    );
+  };
+  /*
+  |--------------------------------------------------------------------------
+  | STATS
+  |--------------------------------------------------------------------------
+  */
+
+  const stats = useMemo(
+    () => ({
+      total:
+        productions.length,
+
+      active:
+        productions.filter(
+          (production) =>
+            production.status ===
+            "Started" ||
+            production.status ===
+            "In Progress"
+        ).length,
+
+      completed:
+        productions.filter(
+          (production) =>
+            production.status ===
+            "Completed"
+        ).length,
+
+      drafts:
+        productions.filter(
+          (production) =>
+            production.status ===
+            "Draft"
+        ).length,
+    }),
+    [productions]
+  );
+
+  /*
+  |--------------------------------------------------------------------------
+  | STATUS CLASS
+  |--------------------------------------------------------------------------
+  */
+
+  const getStatusClass = (
+    status: string
+  ) => {
+    switch (status) {
+      case "Completed":
+        return "bg-green-100 text-green-700";
+
+      case "In Progress":
+      case "Started":
+        return "bg-blue-100 text-blue-700";
+
+      case "Approved":
+        return "bg-purple-100 text-purple-700";
+
+      case "Cancelled":
+        return "bg-red-100 text-red-700";
+
+      default:
+        return "bg-orange-100 text-orange-700";
+    }
+  };
+
+  return (
+    <AdminLayout>
+      <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+
+        {/* HEADER */}
+
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
           <div>
+            <p className="text-sm text-slate-500">
+              Admin &gt; Production
+            </p>
 
-            <h1 className="text-3xl font-bold text-slate-900">
+            <h1 className="mt-1 text-3xl font-bold text-slate-900">
               Production Management
             </h1>
 
-            <p className="text-slate-500 mt-1">
-              Production orders, batch tracking and capacity planning
+            <p className="mt-1 text-sm text-slate-500">
+              Orders, production planning,
+              capacity and completion tracking
             </p>
-
           </div>
 
           <button
-            onClick={() => setShowModal(true)}
-            className="
-              px-5
-              py-3
-              rounded-xl
-              bg-[#17357A]
-              text-white
-              font-medium
-              hover:bg-[#20459a]
-              transition
-            "
+            onClick={() =>
+              setShowCreateModal(true)
+            }
+            className="rounded-xl bg-[#17357A] px-5 py-3 font-semibold text-white shadow-sm hover:bg-[#102b68]"
           >
-            + New Order
+            + New Production Order
           </button>
-
         </div>
 
-        {/* Tabs */}
+        {/* TABS */}
 
-        <div className="flex gap-3">
+        <div className="mb-5 flex gap-2 rounded-xl border bg-white p-1 shadow-sm">
 
           <button
-            onClick={() => setActiveTab("orders")}
-            className={`
-              px-5
-              py-2.5
-              rounded-xl
-              font-medium
-              transition
-              ${
-                activeTab === "orders"
-                  ? "bg-[#17357A] text-white"
-                  : "bg-white border border-slate-200 hover:bg-slate-50"
-              }
-            `}
+            onClick={() =>
+              setActiveTab("orders")
+            }
+            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${activeTab === "orders"
+              ? "bg-[#17357A] text-white"
+              : "text-slate-600 hover:bg-slate-50"
+              }`}
           >
-            📦 Production Orders
+            Production Orders
           </button>
 
           <button
-            onClick={() => setActiveTab("calculator")}
-            className={`
-              px-5
-              py-2.5
-              rounded-xl
-              font-medium
-              transition
-              ${
-                activeTab === "calculator"
-                  ? "bg-[#17357A] text-white"
-                  : "bg-white border border-slate-200 hover:bg-slate-50"
-              }
-            `}
+            onClick={() =>
+              setActiveTab(
+                "calculator"
+              )
+            }
+            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${activeTab ===
+              "calculator"
+              ? "bg-[#17357A] text-white"
+              : "text-slate-600 hover:bg-slate-50"
+              }`}
           >
-            🧮 Capacity Calculator
+            Capacity Calculator
           </button>
-
         </div>
 
-        {/* Stats */}
+        {/* STATS */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">
               Total Orders
             </p>
 
-            <h2 className="text-3xl font-bold mt-2">
-              {productions.length}
-            </h2>
-
+            <p className="mt-2 text-3xl font-bold">
+              {stats.total}
+            </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">
-              Active Orders
+              Active
             </p>
 
-            <h2 className="text-3xl font-bold text-blue-700 mt-2">
-              {
-                productions.filter(
-                  (p) => p.status === "In Progress"
-                ).length
-              }
-            </h2>
-
+            <p className="mt-2 text-3xl font-bold text-blue-700">
+              {stats.active}
+            </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">
               Completed
             </p>
 
-            <h2 className="text-3xl font-bold text-green-600 mt-2">
-              {
-                productions.filter(
-                  (p) => p.status === "Completed"
-                ).length
-              }
-            </h2>
-
+            <p className="mt-2 text-3xl font-bold text-green-600">
+              {stats.completed}
+            </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">
               Draft Orders
             </p>
 
-            <h2 className="text-3xl font-bold text-orange-600 mt-2">
-              {
-                productions.filter(
-                  (p) => p.status === "Draft"
-                ).length
-              }
-            </h2>
-
+            <p className="mt-2 text-3xl font-bold text-orange-600">
+              {stats.drafts}
+            </p>
           </div>
-
         </div>
 
-        {activeTab === "orders" ? (
+        {/* ================================================================= */}
+        {/* ORDERS */}
+        {/* ================================================================= */}
 
-          <div className="grid xl:grid-cols-5 gap-6">
+        {activeTab === "orders" && (
+          <div className="grid gap-5 xl:grid-cols-[280px_1fr_360px]">
 
-            {/* Orders */}
+            {/* ORDER LIST */}
 
-            <div className="xl:col-span-3">
+            <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
 
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-
-                <div className="flex items-center justify-between mb-6">
-
-                  <h2 className="text-xl font-semibold">
-                    Production Orders
+              <div className="border-b p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold">
+                    Orders
                   </h2>
 
-                  <span className="text-sm text-slate-500">
-                    {productions.length} Orders
+                  <span className="text-xs text-slate-500">
+                    {productions.length}
                   </span>
-
                 </div>
-
-                <div className="space-y-4">
-
-
-{loading ? (
-  <p className="text-slate-500">
-    Loading...
-  </p>
-) : productions.length === 0 ? (
-  <div className="rounded-xl border border-dashed border-slate-300 py-16 text-center text-slate-500">
-    No production orders found.
-  </div>
-) : (
-  productions.map((production) => (
-    <div
-      key={production._id}
-      onClick={() => {
-        setSelectedProduction(production);
-        loadAvailability(production);
-      }}
-      className={`
-        rounded-2xl
-        border
-        p-5
-        cursor-pointer
-        transition-all
-        ${
-          selectedProduction?._id === production._id
-            ? "border-[#17357A] bg-blue-50"
-            : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
-        }
-      `}
-    >
-      <div className="flex items-start justify-between">
-
-        <div>
-
-          <p className="text-sm font-medium text-[#17357A]">
-            {production.orderNumber}
-          </p>
-
-          <h3 className="text-lg font-semibold mt-1">
-            {production.finishedProduct?.name}
-          </h3>
-
-        </div>
-
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium">
-          {production.status}
-        </span>
-
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-4 text-sm">
-
-        <div>
-
-          <p className="text-slate-500">
-            Quantity
-          </p>
-
-          <p className="font-semibold mt-1">
-            {production.quantity} units
-          </p>
-
-        </div>
-
-        <div>
-
-          <p className="text-slate-500">
-            Team
-          </p>
-
-          <p className="font-semibold mt-1">
-            {production.team}
-          </p>
-
-        </div>
-
-      </div>
-
-      <div className="mt-4 border-t pt-4 text-sm text-slate-500">
-
-        Target:
-        {" "}
-        {new Date(
-          production.targetDate
-        ).toLocaleDateString()}
-
-      </div>
-
-    </div>
-  ))
-)}
-
-                </div>
-
               </div>
 
-            </div>
+              <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
 
-            {/* Details */}
-
-            <div className="xl:col-span-2">
-
-              <div className="sticky top-24 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-
-                {!selectedProduction ? (
-
-                  <div className="py-20 text-center text-slate-500">
-                    Select a production order
+                {loading ? (
+                  <div className="p-6 text-sm text-slate-500">
+                    Loading...
                   </div>
-
+                ) : productions.length ===
+                  0 ? (
+                  <div className="p-6 text-sm text-slate-500">
+                    No production orders.
+                  </div>
                 ) : (
-
-                  <>
-
-                    <div className="flex items-start justify-between">
-
-                      <div>
-
-                        <h2 className="text-2xl font-bold">
-                          {selectedProduction.finishedProduct?.name}
-                        </h2>
-
-                        <p className="text-slate-500 mt-1">
-                          {selectedProduction.orderNumber}
-                        </p>
-
-                      </div>
-
-                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                        {selectedProduction.status}
-                      </span>
-
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-5 mt-8">
-
-                      <div>
-
-                        <p className="text-sm text-slate-500">
-                          Quantity
-                        </p>
-
-                        <p className="font-semibold mt-1">
-                          {selectedProduction.quantity}
-                        </p>
-
-                      </div>
-
-                      <div>
-
-                        <p className="text-sm text-slate-500">
-                          Team
-                        </p>
-
-                        <p className="font-semibold mt-1">
-                          {selectedProduction.team}
-                        </p>
-
-                      </div>
-
-                      <div>
-
-                        <p className="text-sm text-slate-500">
-                          Status
-                        </p>
-
-                        <p className="font-semibold mt-1">
-                          {selectedProduction.status}
-                        </p>
-
-                      </div>
-
-                      <div>
-
-                        <p className="text-sm text-slate-500">
-                          Target Date
-                        </p>
-
-                        <p className="font-semibold mt-1">
-                          {new Date(
-                            selectedProduction.targetDate
-                          ).toLocaleDateString()}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                    {selectedProduction.notes && (
-
-                      <div className="mt-8 rounded-xl bg-slate-50 p-4">
-
-                        <p className="text-sm font-medium text-slate-500">
-                          Notes
-                        </p>
-
-                        <p className="mt-2">
-                          {selectedProduction.notes}
-                        </p>
-
-                      </div>
-
-                    )}
-
-                    {selectedProduction.status === "Completed" && (
-
-                      <div className="mt-8 rounded-xl border border-green-200 bg-green-50 p-5">
-
-                        <h3 className="font-semibold mb-4">
-                          Production Entry
-                        </h3>
-
-                        <div className="grid grid-cols-2 gap-4">
-
-                          <div>
-
-                            <p className="text-sm text-slate-500">
-                              Actual Quantity
-                            </p>
-
-                            <p className="font-semibold mt-1">
-                              {selectedProduction.actualQuantity}
-                            </p>
-
-                          </div>
-
-                          <div>
-
-                            <p className="text-sm text-slate-500">
-                              Completed On
-                            </p>
-
-                            <p className="font-semibold mt-1">
-                              {selectedProduction.completedAt
-                                ? new Date(
-                                    selectedProduction.completedAt
-                                  ).toLocaleDateString()
-                                : "-"}
-                            </p>
-
-                          </div>
-
-                        </div>
-
-                        {selectedProduction.remarks && (
-
-                          <div className="mt-4">
-
-                            <p className="text-sm text-slate-500">
-                              Remarks
-                            </p>
-
-                            <p className="mt-1">
-                              {selectedProduction.remarks}
-                            </p>
-
-                          </div>
-
-                        )}
-
-                      </div>
-
-                    )}
-
-                    {materialConsumption.length > 0 && (
-
-                      <div className="mt-8 rounded-2xl border border-slate-200 p-5">
-
-                        <h3 className="text-lg font-semibold mb-5">
-                          Material Consumption
-                        </h3>
-
-                        <div className="space-y-3">
-
-                          {materialConsumption.map((item: any) => (
-
-                            <div
-                              key={item._id}
-                              className="flex items-center justify-between border-b border-slate-100 pb-3"
-                            >
-
-                              <div>
-
-                                <p className="font-medium">
-                                  {item.material?.name}
-                                </p>
-
-                                <p className="text-sm text-slate-500">
-                                  {item.material?.unit || ""}
-                                </p>
-
-                              </div>
-
-                              <p className="font-semibold">
-                                {item.requiredQuantity}
+                  productions.map(
+                    (production) => {
+                      const isSelected =
+                        selectedProduction?._id ===
+                        production._id;
+
+                      const client =
+                        production.client;
+
+                      return (
+                        <button
+                          key={
+                            production._id
+                          }
+                          onClick={() => {
+                            setSelectedProduction(
+                              production
+                            );
+
+                            setSelectedItemIndex(
+                              0
+                            );
+                          }}
+                          className={`w-full border-b p-4 text-left transition ${isSelected
+                            ? "bg-blue-50"
+                            : "hover:bg-slate-50"
+                            }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+
+                            <div>
+                              <p className="font-bold text-slate-900">
+                                {
+                                  production.orderNumber
+                                }
                               </p>
 
+                              <p className="mt-1 text-sm text-slate-600">
+                                {client?.name ||
+                                  "No client"}
+                              </p>
                             </div>
 
-                          ))}
+                            <span
+                              className={`rounded-full px-2 py-1 text-[10px] font-semibold ${getStatusClass(
+                                production.status
+                              )}`}
+                            >
+                              {
+                                production.status
+                              }
+                            </span>
+                          </div>
 
-                        </div>
+                          <div className="mt-3 flex justify-between text-xs text-slate-500">
+                            <span>
+                              {
+                                production
+                                  .items
+                                  ?.length
+                              }{" "}
+                              product
+                              {production
+                                .items
+                                ?.length ===
+                                1
+                                ? ""
+                                : "s"}
+                            </span>
 
+                            <span>
+                              {production.targetDate
+                                ? new Date(
+                                  production.targetDate
+                                ).toLocaleDateString(
+                                  "en-IN"
+                                )
+                                : "-"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    }
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* ORDER INFORMATION */}
+
+            <div className="min-w-0 rounded-2xl border bg-white shadow-sm">
+
+              {!selectedProduction ? (
+                <div className="flex min-h-[500px] items-center justify-center p-8 text-slate-500">
+                  Select an order.
+                </div>
+              ) : (
+                <>
+                  <div className="border-b p-5">
+
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-slate-400">
+                          Production Order
+                        </p>
+
+                        <h2 className="mt-1 text-2xl font-bold">
+                          {
+                            selectedProduction.orderNumber
+                          }
+                        </h2>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          Created{" "}
+                          {selectedProduction.createdAt
+                            ? new Date(
+                              selectedProduction.createdAt
+                            ).toLocaleDateString(
+                              "en-IN"
+                            )
+                            : "-"}
+                        </p>
                       </div>
 
-                    )}
-                    
-                    
-                    
-                                      <div className="mt-8">
+                      <span
+                        className={`w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${getStatusClass(
+                          selectedProduction.status
+                        )}`}
+                      >
+                        {
+                          selectedProduction.status
+                        }
+                      </span>
+                    </div>
+                  </div>
 
-                      {selectedProduction.status === "Draft" && (
+                  <div className="grid gap-4 border-b p-5 md:grid-cols-2">
 
-                        <button
-                          onClick={() => handleStatusUpdate("Approved")}
-                          className="w-full rounded-xl bg-[#17357A] py-3 font-medium text-white transition hover:bg-[#20459a]"
-                        >
-                          Approve Order
-                        </button>
+                    <div>
+                      <p className="text-xs text-slate-400">
+                        Client
+                      </p>
 
+                      <p className="mt-1 font-semibold">
+                        {
+                          selectedProduction
+                            .client?.name ||
+                          "-"
+                        }
+                      </p>
+
+                      {selectedProduction
+                        .client
+                        ?.contactPerson && (
+                          <p className="text-sm text-slate-500">
+                            {
+                              selectedProduction
+                                .client
+                                .contactPerson
+                            }
+                          </p>
+                        )}
+
+                      {selectedProduction
+                        .client?.phone && (
+                          <p className="text-sm text-slate-500">
+                            {
+                              selectedProduction
+                                .client.phone
+                            }
+                          </p>
+                        )}
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-slate-400">
+                        Production Team
+                      </p>
+
+                      <p className="mt-1 font-semibold">
+                        {
+                          selectedProduction.team ||
+                          "Unassigned"
+                        }
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-slate-400">
+                        Target Date
+                      </p>
+
+                      <p className="mt-1 font-semibold">
+                        {selectedProduction.targetDate
+                          ? new Date(
+                            selectedProduction.targetDate
+                          ).toLocaleDateString(
+                            "en-IN"
+                          )
+                          : "-"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-slate-400">
+                        Transport
+                      </p>
+
+                      <p className="mt-1 font-semibold">
+                        {
+                          selectedProduction.transport ||
+                          "-"
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+
+                    <h3 className="mb-3 font-bold">
+                      Order Summary
+                    </h3>
+
+                    <div className="space-y-2">
+                      {selectedProduction.items?.map(
+                        (
+                          item: any,
+                          index: number
+                        ) => (
+                          <button
+                            key={
+                              item._id ||
+                              index
+                            }
+                            onClick={() =>
+                              setSelectedItemIndex(
+                                index
+                              )
+                            }
+                            className={`flex w-full items-center justify-between rounded-xl border p-3 text-left ${selectedItemIndex ===
+                              index
+                              ? "border-blue-300 bg-blue-50"
+                              : "hover:bg-slate-50"
+                              }`}
+                          >
+                            <div>
+                              <p className="font-semibold">
+                                {item.product
+                                  ?.name ||
+                                  `Product ${index +
+                                  1
+                                  }`}
+                              </p>
+
+                              <p className="text-xs text-slate-500">
+                                Qty:{" "}
+                                {
+                                  item.quantity
+                                }
+                              </p>
+                            </div>
+
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs ${item.completed
+                                ? "bg-green-100 text-green-700"
+                                : "bg-slate-100 text-slate-600"
+                                }`}
+                            >
+                              {item.completed
+                                ? "Completed"
+                                : "Pending"}
+                            </span>
+                          </button>
+                        )
                       )}
+                    </div>
+                  </div>
 
-                      {selectedProduction.status === "Approved" && (
+                  {/* ACTIONS */}
 
-                        <button
-                          onClick={() => handleStatusUpdate("Started")}
-                          className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white transition hover:bg-indigo-700"
-                        >
-                          Start Production
-                        </button>
+                  <div className="flex flex-wrap gap-2 border-t bg-slate-50 p-4">
 
-                      )}
+                    <button
+                      onClick={
+                        handleEdit
+                      }
+                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                    >
+                      Edit
+                    </button>
 
-                      {selectedProduction.status === "Started" && (
-
+                    {selectedProduction
+                      .status !==
+                      "In Progress" &&
+                      selectedProduction
+                        .status !==
+                      "Completed" && (
                         <button
                           onClick={() =>
-                            handleStatusUpdate("In Progress")
+                            setShowProgressModal(
+                              true
+                            )
                           }
-                          className="w-full rounded-xl bg-orange-500 py-3 font-medium text-white transition hover:bg-orange-600"
+                          className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white"
                         >
                           Mark In Progress
                         </button>
-
                       )}
 
-                      {selectedProduction.status === "In Progress" && (
-
+                    {selectedProduction
+                      .status ===
+                      "In Progress" && (
                         <button
-                          onClick={() => {
-                            console.log("Complete clicked");
-                            setShowCompletionModal(true);
-                          }}
-                          className="w-full rounded-xl bg-green-600 py-3 font-medium text-white transition hover:bg-green-700"
+                          onClick={() =>
+                            setShowCompletionModal(
+                              true
+                            )
+                          }
+                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white"
                         >
                           Complete Production
                         </button>
-
                       )}
 
-                      {selectedProduction.status !== "Completed" &&
-                        selectedProduction.status !== "Cancelled" && (
+                    <button
+                      onClick={
+                        handleDelete
+                      }
+                      className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600"
+                    >
+                      Delete
+                    </button>
 
-                          <button
-                            onClick={() =>
-                              handleStatusUpdate("Cancelled")
-                            }
-                            className="mt-3 w-full rounded-xl border border-red-200 bg-red-50 py-3 font-medium text-red-600 transition hover:bg-red-100"
-                          >
-                            Cancel Order
-                          </button>
-
-                        )}
-
-                    </div>
-
-                    <div className="my-8 border-t border-slate-200" />
-
-                    <h3 className="mb-5 text-lg font-semibold">
-                      Material Availability
-                    </h3>
-
-                    {availability && (
-
-                      <div className="mb-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
-
-                        <p className="text-sm text-slate-500">
-                          Maximum Producible
-                        </p>
-
-                        <h2 className="mt-2 text-5xl font-bold">
-                          {availability.maximumProducible}
-                        </h2>
-
-                        <p className="mt-3 text-sm font-medium text-red-600">
-                          Bottleneck: {availability.bottleneck}
-                        </p>
-
-                      </div>
-
-                    )}
-
-                    <div className="space-y-3">
-
-                      {availability?.materials?.map((item: any) => (
-
-                        <div
-                          key={item.product}
-                          className={`rounded-2xl border p-5 ${
-                            item.sufficient
-                              ? "border-green-200 bg-green-50"
-                              : "border-red-200 bg-red-50"
-                          }`}
-                        >
-
-                          <div className="flex items-center justify-between">
-
-                            <h4 className="font-semibold">
-                              {item.product}
-                            </h4>
-
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                item.sufficient
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {item.sufficient
-                                ? "Available"
-                                : "Short"}
-                            </span>
-
-                          </div>
-
-                          <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-
-                            <div>
-
-                              <p className="text-slate-500">
-                                Required
-                              </p>
-
-                              <p className="mt-1 font-semibold">
-                                {item.required}
-                              </p>
-
-                            </div>
-
-                            <div>
-
-                              <p className="text-slate-500">
-                                Available
-                              </p>
-
-                              <p className="mt-1 font-semibold">
-                                {item.available}
-                              </p>
-
-                            </div>
-
-                          </div>
-
-                          {!item.sufficient && (
-
-                            <div className="mt-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-medium text-red-700">
-
-                              Shortage: {item.shortage}
-
-                            </div>
-
-                          )}
-
-                        </div>
-
-                      ))}
-
-                    </div>
-
-                  </>
-
-                )}
-
-              </div>
-
+                    <button
+                      onClick={handleExportReceipt}
+                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                    >
+                      Export Receipt
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
+            {/* PRODUCT DETAILS */}
+
+            <div className="min-w-0 rounded-2xl border bg-white shadow-sm">
+
+              {!selectedItem ? (
+                <div className="p-6 text-sm text-slate-500">
+                  Select a product.
+                </div>
+              ) : (
+                <>
+                  <div className="border-b p-5">
+
+                    <p className="text-xs uppercase tracking-wider text-slate-400">
+                      Selected Product
+                    </p>
+
+                    <h2 className="mt-1 text-xl font-bold">
+                      {
+                        selectedItem
+                          .product?.name
+                      }
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Quantity:{" "}
+                      {
+                        selectedItem.quantity
+                      }
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 p-5">
+
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <p className="text-xs text-slate-400">
+                        BOM
+                      </p>
+
+                      <p className="mt-1 font-semibold">
+                        {selectedItem.bom
+                          ?.finishedProduct
+                          ?.name ||
+                          "Assigned BOM"}
+                      </p>
+                    </div>
+
+                    {/* BOTTLENECK */}
+
+                    <div className="rounded-xl border p-4">
+
+                      <p className="text-xs text-slate-400">
+                        Production Capacity
+                      </p>
+
+                      <p className="mt-1 text-2xl font-bold">
+                        {selectedAvailability
+                          ?.maximumProducible ??
+                          "-"}
+                      </p>
+
+                      <p className="text-xs text-slate-500">
+                        maximum producible
+                      </p>
+
+                      {selectedAvailability
+                        ?.bottleneck && (
+                          <div className="mt-3 rounded-lg bg-orange-50 p-3">
+                            <p className="text-xs text-orange-600">
+                              Bottleneck
+                            </p>
+
+                            <p className="font-semibold text-orange-800">
+                              {
+                                selectedAvailability.bottleneck
+                              }
+                            </p>
+                          </div>
+                        )}
+                    </div>
+
+                    {/* MATERIALS */}
+
+                    <div>
+                      <p className="mb-2 font-semibold">
+                        Material Availability
+                      </p>
+
+                      <div className="space-y-2">
+                        {selectedAvailability
+                          ?.materials
+                          ?.map(
+                            (
+                              material: any,
+                              index: number
+                            ) => (
+                              <div
+                                key={
+                                  index
+                                }
+                                className="rounded-lg border p-3"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-sm font-medium">
+                                    {
+                                      material.product
+                                    }
+                                  </span>
+
+                                  <span
+                                    className={`rounded-full px-2 py-1 text-[10px] font-semibold ${material.sufficient
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-red-100 text-red-700"
+                                      }`}
+                                  >
+                                    {material.sufficient
+                                      ? "Available"
+                                      : "Short"}
+                                  </span>
+                                </div>
+
+                                <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-500">
+                                  <span>
+                                    Required{" "}
+                                    <strong className="text-slate-800">
+                                      {
+                                        material.required
+                                      }
+                                    </strong>
+                                  </span>
+
+                                  <span>
+                                    Available{" "}
+                                    <strong className="text-slate-800">
+                                      {
+                                        material.available
+                                      }
+                                    </strong>
+                                  </span>
+
+                                  <span>
+                                    Short{" "}
+                                    <strong className="text-red-600">
+                                      {
+                                        material.shortage
+                                      }
+                                    </strong>
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          ) || (
+                            <p className="text-sm text-slate-500">
+                              No calculation available.
+                            </p>
+                          )}
+                      </div>
+                    </div>
+
+                    {/* CHECKLIST */}
+
+                    <div>
+                      <p className="mb-2 font-semibold">
+                        Production Checklist
+                      </p>
+
+                      <div className="rounded-xl border p-3 text-sm">
+                        <p>
+                          Preparing:{" "}
+                          <span className="text-slate-500">
+                            {selectedItem
+                              .checklist
+                              ?.preparing
+                              ?.join(
+                                ", "
+                              ) ||
+                              "Nothing recorded"}
+                          </span>
+                        </p>
+
+                        <p className="mt-2">
+                          Leaving:{" "}
+                          <span className="text-slate-500">
+                            {selectedItem
+                              .checklist
+                              ?.leaving
+                              ?.join(
+                                ", "
+                              ) ||
+                              "Nothing recorded"}
+                          </span>
+                        </p>
+
+                        {selectedItem
+                          .checklist
+                          ?.reason && (
+                            <p className="mt-2 text-xs text-orange-600">
+                              Reason:{" "}
+                              {
+                                selectedItem
+                                  .checklist
+                                  .reason
+                              }
+                            </p>
+                          )}
+                      </div>
+                    </div>
+
+                    {/* COMPLETION */}
+
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <div className="flex justify-between text-sm">
+                        <span>
+                          Actual Quantity
+                        </span>
+
+                        <strong>
+                          {selectedItem
+                            .actualQuantity ??
+                            "-"}
+                        </strong>
+                      </div>
+
+                      <div className="mt-2 flex justify-between text-sm">
+                        <span>
+                          Ready for Dispatch
+                        </span>
+
+                        <strong>
+                          {selectedItem
+                            .readyForDispatch
+                            ? "Yes"
+                            : "No"}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+        )}
 
-        ) : (
+        {/* ================================================================= */}
+        {/* CAPACITY CALCULATOR */}
+        {/* ================================================================= */}
 
-          <div className="max-w-4xl">
+        {activeTab ===
+          "calculator" && (
+            <div className="rounded-2xl border bg-white p-6 shadow-sm">
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-
-              <h2 className="text-2xl font-semibold">
+              <h2 className="text-2xl font-bold">
                 Material Capacity Calculator
               </h2>
 
-              <p className="mt-1 text-slate-500">
-                Calculate production feasibility based on current inventory.
+              <p className="mt-1 text-sm text-slate-500">
+                Calculate how much can actually be produced from current stock.
               </p>
 
-              <div className="mt-8 space-y-5">
+              <div className="mt-6 grid gap-4 md:grid-cols-[1fr_180px_auto]">
 
                 <select
-                  className="w-full rounded-xl border border-slate-300 p-3"
-                  value={calculatorBOM}
-                  onChange={(e) =>
-                    setCalculatorBOM(e.target.value)
+                  value={
+                    calculatorBOM
                   }
+                  onChange={(e) =>
+                    setCalculatorBOM(
+                      e.target.value
+                    )
+                  }
+                  className="rounded-lg border px-3 py-2.5"
                 >
                   <option value="">
                     Select BOM
                   </option>
 
-                  {boms.map((bom: any) => (
-
-                    <option
-                      key={bom._id}
-                      value={bom._id}
-                    >
-                      {bom.finishedProduct?.name}
-                    </option>
-
-                  ))}
-
-                </select>
-
-                <input
-                  type="number"
-                  className="w-full rounded-xl border border-slate-300 p-3"
-                  placeholder="Production Quantity"
-                  value={calculatorQuantity}
-                  onChange={(e) =>
-                    setCalculatorQuantity(
-                      Number(e.target.value)
-                    )
-                  }
-                />
-
-                <button
-                  onClick={handleCalculate}
-                  className="w-full rounded-xl bg-[#17357A] py-3 font-medium text-white transition hover:bg-[#20459a]"
-                >
-                  Calculate Production Capacity
-                </button>
-
-              </div>
-
-            </div>
-
-            {calculatorResult && (
-
-              <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-
-                <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-8 text-center">
-
-                  <p className="text-sm text-slate-500">
-                    Maximum Producible Quantity
-                  </p>
-
-                  <h1 className="mt-3 text-6xl font-bold">
-
-                    {calculatorResult.maximumProducible}
-
-                  </h1>
-
-                  <p className="mt-3 text-slate-600">
-
-                    units of{" "}
-
-                    <span className="font-semibold">
-
-                      {
-                        boms.find(
-                          (b: any) =>
-                            b._id === calculatorBOM
-                        )?.finishedProduct?.name
-                      }
-
-                    </span>
-
-                  </p>
-
-                  <p className="mt-4 font-medium text-red-600">
-
-                    Bottleneck: {calculatorResult.bottleneck}
-
-                  </p>
-
-                </div>
-
-                <h3 className="mt-8 mb-5 text-xl font-semibold">
-
-                  Material Breakdown
-
-                </h3>
-
-                <div className="space-y-3">
-
-                  {calculatorResult.materials.map((item: any) => (
-                                  <div
-                    key={item.product}
-                    className={`rounded-2xl border p-5 ${
-                      item.sufficient
-                        ? "border-green-200 bg-green-50"
-                        : "border-red-200 bg-red-50"
-                    }`}
-                  >
-
-                    <div className="flex items-center justify-between">
-
-                      <h4 className="font-semibold">
-                        {item.product}
-                      </h4>
-
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          item.sufficient
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {item.sufficient ? "Available" : "Short"}
-                      </span>
-
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-
-                      <div>
-
-                        <p className="text-slate-500">
-                          Required
-                        </p>
-
-                        <p className="mt-1 font-semibold">
-                          {item.required}
-                        </p>
-
-                      </div>
-
-                      <div>
-
-                        <p className="text-slate-500">
-                          Available
-                        </p>
-
-                        <p className="mt-1 font-semibold">
-                          {item.available}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                    {!item.sufficient && (
-
-                      <div className="mt-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-medium text-red-700">
-
-                        Shortage: {item.shortage}
-
-                      </div>
-
-                    )}
-
-                  </div>
-
-                  ))}
-
-                </div>
-
-              </div>
-
-            )}
-
-          </div>
-
-        )}
-
-        {/* Create Production Modal */}
-
-        {showModal && (
-
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-
-            <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl">
-
-              <div className="border-b border-slate-200 px-8 py-6">
-
-                <h2 className="text-2xl font-bold">
-                  Create Production Order
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Schedule a new production order.
-                </p>
-
-              </div>
-
-              <div className="grid grid-cols-2 gap-5 p-8">
-
-                <div className="col-span-2">
-
-                  <label className="mb-2 block text-sm font-medium">
-                    BOM
-                  </label>
-
-                  <select
-                    className="w-full rounded-xl border border-slate-300 p-3"
-                    value={selectedBOM}
-                    onChange={(e) =>
-                      setSelectedBOM(e.target.value)
-                    }
-                  >
-                    <option value="">
-                      Select BOM
-                    </option>
-
-                    {boms.map((bom) => (
-
+                  {boms.map(
+                    (bom: any) => (
                       <option
                         key={bom._id}
                         value={bom._id}
                       >
-                        {bom.finishedProduct?.name}
+                        {bom.finishedProduct
+                          ?.name ||
+                          "BOM"}
                       </option>
+                    )
+                  )}
+                </select>
 
-                    ))}
-
-                  </select>
-
-                </div>
-
-                <div>
-
-                  <label className="mb-2 block text-sm font-medium">
-                    Quantity
-                  </label>
-
-                  <input
-                    type="number"
-                    className="w-full rounded-xl border border-slate-300 p-3"
-                    value={quantity}
-                    onChange={(e) =>
-                      setQuantity(Number(e.target.value))
-                    }
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="mb-2 block text-sm font-medium">
-                    Team
-                  </label>
-
-                  <input
-                    type="text"
-                    className="w-full rounded-xl border border-slate-300 p-3"
-                    value={team}
-                    onChange={(e) =>
-                      setTeam(e.target.value)
-                    }
-                  />
-
-                </div>
-
-                <div className="col-span-2">
-
-                  <label className="mb-2 block text-sm font-medium">
-                    Target Date
-                  </label>
-
-                  <input
-                    type="date"
-                    className="w-full rounded-xl border border-slate-300 p-3"
-                    value={targetDate}
-                    onChange={(e) =>
-                      setTargetDate(e.target.value)
-                    }
-                  />
-
-                </div>
-
-                <div className="col-span-2">
-
-                  <label className="mb-2 block text-sm font-medium">
-                    Notes
-                  </label>
-
-                  <textarea
-                    rows={4}
-                    className="w-full resize-none rounded-xl border border-slate-300 p-3"
-                    value={notes}
-                    onChange={(e) =>
-                      setNotes(e.target.value)
-                    }
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-6">
-
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-slate-300 px-6 py-3 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={handleCreateProduction}
-                  className="rounded-xl bg-[#17357A] px-6 py-3 font-medium text-white hover:bg-[#20459a]"
-                >
-                  Create Order
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        )}
-
-        {/* Completion Modal */}
-
-        {showCompletionModal && (
-
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-
-            <div className="w-full max-w-xl rounded-3xl bg-white shadow-2xl">
-
-              <div className="border-b border-slate-200 px-8 py-6">
-
-                <h2 className="text-2xl font-bold">
-                  Complete Production
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Record the final production quantity.
-                </p>
-
-              </div>
-
-              <div className="space-y-5 p-8">
-
-                <div>
-
-                  <label className="mb-2 block text-sm font-medium">
-                    Actual Produced Quantity
-                  </label>
-
-                  <input
-                    type="number"
-                    className="w-full rounded-xl border border-slate-300 p-3"
-                    value={actualQuantity}
-                    onChange={(e) =>
-                      setActualQuantity(Number(e.target.value))
-                    }
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="mb-2 block text-sm font-medium">
-                    Remarks
-                  </label>
-
-                  <textarea
-                    rows={4}
-                    className="w-full resize-none rounded-xl border border-slate-300 p-3"
-                    value={completionRemarks}
-                    onChange={(e) =>
-                      setCompletionRemarks(e.target.value)
-                    }
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-6">
-
-                <button
-                  onClick={() =>
-                    setShowCompletionModal(false)
+                <input
+                  type="number"
+                  min="1"
+                  value={
+                    calculatorQuantity
                   }
-                  className="rounded-xl border border-slate-300 px-6 py-3 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
+                  onChange={(e) =>
+                    setCalculatorQuantity(
+                      Number(
+                        e.target.value
+                      )
+                    )
+                  }
+                  className="rounded-lg border px-3 py-2.5"
+                />
 
                 <button
-                  onClick={handleCompleteProduction}
-                  className="rounded-xl bg-green-600 px-6 py-3 font-medium text-white hover:bg-green-700"
+                  onClick={
+                    handleCalculate
+                  }
+                  className="rounded-lg bg-[#17357A] px-5 py-2.5 font-semibold text-white"
                 >
-                  Complete Production
+                  Calculate
                 </button>
-
               </div>
 
+              {calculatorResult && (
+                <div className="mt-6">
+
+                  <div className="grid gap-4 md:grid-cols-2">
+
+                    <div className="rounded-xl border bg-slate-50 p-5">
+                      <p className="text-sm text-slate-500">
+                        Maximum Producible
+                      </p>
+
+                      <p className="mt-1 text-3xl font-bold">
+                        {
+                          calculatorResult.maximumProducible
+                        }
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border bg-orange-50 p-5">
+                      <p className="text-sm text-orange-600">
+                        Bottleneck
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-orange-800">
+                        {
+                          calculatorResult.bottleneck ||
+                          "None"
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 overflow-x-auto rounded-xl border">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left">
+                            Material
+                          </th>
+
+                          <th className="px-4 py-3 text-right">
+                            Required
+                          </th>
+
+                          <th className="px-4 py-3 text-right">
+                            Available
+                          </th>
+
+                          <th className="px-4 py-3 text-right">
+                            Shortage
+                          </th>
+
+                          <th className="px-4 py-3 text-center">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {calculatorResult.materials?.map(
+                          (
+                            material: any,
+                            index: number
+                          ) => (
+                            <tr
+                              key={
+                                index
+                              }
+                              className="border-t"
+                            >
+                              <td className="px-4 py-3">
+                                {
+                                  material.product
+                                }
+                              </td>
+
+                              <td className="px-4 py-3 text-right">
+                                {
+                                  material.required
+                                }
+                              </td>
+
+                              <td className="px-4 py-3 text-right">
+                                {
+                                  material.available
+                                }
+                              </td>
+
+                              <td className="px-4 py-3 text-right">
+                                {
+                                  material.shortage
+                                }
+                              </td>
+
+                              <td className="px-4 py-3 text-center">
+                                <span
+                                  className={`rounded-full px-2 py-1 text-xs ${material.sufficient
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"
+                                    }`}
+                                >
+                                  {material.sufficient
+                                    ? "Sufficient"
+                                    : "Shortage"}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      onClick={
+                        handleExportExcel
+                      }
+                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                    >
+                      Export Excel
+                    </button>
+
+                    <button
+                      onClick={
+                        handleExportPdf
+                      }
+                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                    >
+                      Export PDF
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
+          )}
 
-          </div>
+        {/* MODALS */}
 
-        )}
+        <ProductionCreateModal
+          open={
+            showCreateModal
+          }
+          clients={clients}
+          boms={boms}
+          rawProducts={boms.flatMap(
+            (bom: any) =>
+              (bom.materials || [])
+                .map(
+                  (material: any) =>
+                    material.product
+                )
+                .filter(Boolean)
+          )}
+          onClose={() =>
+            setShowCreateModal(
+              false
+            )
+          }
+          onCreate={
+            handleCreate
+          }
+          onCreateClient={
+            handleCreateClient
+          }
+        />
 
+        <ProductionProgressModal
+          open={
+            showProgressModal
+          }
+          production={
+            selectedProduction
+          }
+          onClose={() =>
+            setShowProgressModal(
+              false
+            )
+          }
+          onSaved={
+            refreshSelectedProduction
+          }
+        />
+
+        <ProductionCompletionModal
+          open={
+            showCompletionModal
+          }
+          production={
+            selectedProduction
+          }
+          onClose={() =>
+            setShowCompletionModal(
+              false
+            )
+          }
+          onSaved={
+            refreshSelectedProduction
+          }
+        />
+
+        <ProductionEditModal
+          open={showEditModal}
+          production={selectedProduction}
+          clients={clients}
+          boms={boms}
+          rawProducts={boms.flatMap(
+            (bom: any) =>
+              (bom.materials || [])
+                .map(
+                  (material: any) =>
+                    material.product
+                )
+                .filter(Boolean)
+          )}
+          onClose={() =>
+            setShowEditModal(false)
+          }
+          onSave={async (data) => {
+            await updateProduction(
+              selectedProduction._id,
+              data
+            );
+
+            setShowEditModal(false);
+
+            await loadData();
+          }}
+        />
       </div>
-    </div>
-  </AdminLayout>
-);  
-                };
+    </AdminLayout>
+  );
+};
 
 export default ProductionPage;

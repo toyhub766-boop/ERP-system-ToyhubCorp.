@@ -10,6 +10,9 @@ import {
 
 import { getProducts } from "../../inventory/services/product.service";
 
+import { exportBOMExcel } from "../../../utils/exportBOMExcel";
+import { exportBOMPdf } from "../../../utils/exportBOMPdf";
+
 const BOMPage = () => {
   const [boms, setBoms] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -174,23 +177,83 @@ const handleDeleteBOM = async (id: string) => {
 
         <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
 
-          <div>
+  <div>
+    <p className="text-sm text-slate-500">
+      Admin &gt; BOM
+    </p>
 
-            <p className="text-sm text-slate-500">
-              Admin &gt; BOM
-            </p>
+    <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-900">
+      Bill of Materials
+    </h1>
 
-            <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-900">
-              Bill of Materials
-            </h1>
+    <p className="mt-2 text-sm text-slate-500">
+      Create and manage manufacturing recipes for finished products.
+    </p>
+  </div>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Create and manage manufacturing recipes for finished products.
-            </p>
+  <div className="flex flex-wrap gap-3">
 
-          </div>
+    <button
+      onClick={() =>
+        exportBOMExcel(
+          boms,
+          "BOM_Report"
+        )
+      }
+      disabled={boms.length === 0}
+      className="
+        inline-flex
+        items-center
+        justify-center
+        rounded-xl
+        border
+        border-slate-300
+        bg-white
+        px-5
+        py-3
+        text-sm
+        font-semibold
+        text-slate-700
+        transition
+        hover:bg-slate-50
+        disabled:cursor-not-allowed
+        disabled:opacity-50
+      "
+    >
+      Export Excel
+    </button>
 
-        </div>
+    <button
+      onClick={() =>
+        exportBOMPdf(
+          boms,
+          "BOM Report"
+        )
+      }
+      disabled={boms.length === 0}
+      className="
+        inline-flex
+        items-center
+        justify-center
+        rounded-xl
+        bg-[#172B6B]
+        px-5
+        py-3
+        text-sm
+        font-semibold
+        text-white
+        transition
+        hover:bg-[#20398F]
+        disabled:cursor-not-allowed
+        disabled:opacity-50
+      "
+    >
+      Export PDF
+    </button>
+
+  </div>
+
+</div>
 
       </div>
 

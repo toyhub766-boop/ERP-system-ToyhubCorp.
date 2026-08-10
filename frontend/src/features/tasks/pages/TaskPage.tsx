@@ -4,7 +4,6 @@ import {
   FiChevronRight,
   FiEdit2,
   FiPlus,
-  FiSearch,
   FiTrash2,
 } from "react-icons/fi";
 
@@ -347,11 +346,6 @@ const TaskPage = () => {
 
               <div className="relative mt-4 max-w-md">
 
-                <FiSearch
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  size={18}
-                />
-
                 <input
                   value={userSearch}
                   onChange={(e) =>
@@ -590,11 +584,6 @@ const TaskPage = () => {
                   </div>
 
                   <div className="relative w-full sm:w-72">
-
-                    <FiSearch
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                      size={17}
-                    />
 
                     <input
                       value={search}

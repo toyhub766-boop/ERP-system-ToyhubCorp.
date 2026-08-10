@@ -1,13 +1,42 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, {
+  Document,
+  Schema,
+} from "mongoose";
+
+export interface IMaterialSelection {
+  requiredMaterial: mongoose.Types.ObjectId;
+  selectedMaterial: mongoose.Types.ObjectId;
+  reason?: string;
+}
+
+export interface IProductionChecklist {
+  preparing: string[];
+  leaving: string[];
+  reason?: string;
+  updatedAt?: Date;
+}
+
+export interface IProductionItem {
+  product: mongoose.Types.ObjectId;
+  bom: mongoose.Types.ObjectId;
+  quantity: number;
+
+  materialSelections: IMaterialSelection[];
+
+  checklist: IProductionChecklist;
+
+  actualQuantity?: number;
+  completed: boolean;
+  readyForDispatch: boolean;
+  remarks?: string;
+}
 
 export interface IProduction extends Document {
   orderNumber: string;
 
-  bom: mongoose.Types.ObjectId;
+  client: mongoose.Types.ObjectId;
 
-  finishedProduct: mongoose.Types.ObjectId;
-
-  quantity: number;
+  items: IProductionItem[];
 
   team: string;
 
@@ -21,93 +50,214 @@ export interface IProduction extends Document {
 
   targetDate: Date;
 
+  transport?: string;
+
   notes?: string;
 
   createdBy: mongoose.Types.ObjectId;
 
-  createdAt: Date;
+  completedAt?: Date;
 
+  createdAt: Date;
   updatedAt: Date;
 }
 
-const ProductionSchema = new Schema(
-  {
-    orderNumber: {
-      type: String,
-      required: true,
-      unique: true,
-    },
+const MaterialSelectionSchema =
+  new Schema(
+    {
+      requiredMaterial: {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
+        required: true,
+      },
 
-    bom: {
-      type: Schema.Types.ObjectId,
-      ref: "BOM",
-      required: true,
-    },
+      selectedMaterial: {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
+        required: true,
+      },
 
-    finishedProduct: {
-      type: Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
+      reason: {
+        type: String,
+        default: "",
+      },
     },
+    {
+      _id: false,
+    }
+  );
 
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
+const ProductionChecklistSchema =
+  new Schema(
+    {
+      preparing: {
+        type: [String],
+        default: [],
+      },
 
-    team: {
-      type: String,
-      default: "Unassigned",
-    },
+      leaving: {
+        type: [String],
+        default: [],
+      },
 
-    status: {
-      type: String,
-      enum: [
-        "Draft",
-        "Approved",
-        "Started",
-        "In Progress",
-        "Completed",
-        "Cancelled",
-      ],
-      default: "Draft",
-    },
+      reason: {
+        type: String,
+        default: "",
+      },
 
-    targetDate: {
-      type: Date,
-      required: true,
+      updatedAt: {
+        type: Date,
+        default: null,
+      },
     },
+    {
+      _id: false,
+    }
+  );
 
-    notes: {
-      type: String,
-      default: "",
-    },
+const ProductionItemSchema =
+  new Schema(
+    {
+      product: {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
+        required: true,
+      },
 
-    actualQuantity: {
-      type: Number,
-      default: null,
-    },
+      bom: {
+        type: Schema.Types.ObjectId,
+        ref: "BOM",
+        required: true,
+      },
 
-    completedAt: {
-      type: Date,
-      default: null,
-    },
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
 
-    remarks: {
-      type: String,
-      default: "",
-    },
+      materialSelections: {
+        type: [
+          MaterialSelectionSchema,
+        ],
+        default: [],
+      },
 
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+      checklist: {
+        type: ProductionChecklistSchema,
+        default: () => ({
+          preparing: [],
+          leaving: [],
+          reason: "",
+        }),
+      },
+
+      actualQuantity: {
+        type: Number,
+        default: null,
+      },
+
+      completed: {
+        type: Boolean,
+        default: false,
+      },
+
+      readyForDispatch: {
+        type: Boolean,
+        default: false,
+      },
+
+      remarks: {
+        type: String,
+        default: "",
+      },
     },
-  },
-  {
-    timestamps: true,
-  },
+    {
+      _id: true,
+    }
+  );
+
+const ProductionSchema =
+  new Schema(
+    {
+      orderNumber: {
+        type: String,
+        required: true,
+        unique: true,
+      },
+
+      client: {
+        type: Schema.Types.ObjectId,
+        ref: "ProductionClient",
+        required: true,
+      },
+
+      items: {
+        type: [
+          ProductionItemSchema,
+        ],
+        required: true,
+        validate: {
+          validator: (
+            value: IProductionItem[]
+          ) =>
+            Array.isArray(value) &&
+            value.length > 0,
+          message:
+            "At least one production item is required",
+        },
+      },
+
+      team: {
+        type: String,
+        default: "Unassigned",
+      },
+
+      status: {
+        type: String,
+        enum: [
+          "Draft",
+          "Approved",
+          "Started",
+          "In Progress",
+          "Completed",
+          "Cancelled",
+        ],
+        default: "Draft",
+      },
+
+      targetDate: {
+        type: Date,
+        required: true,
+      },
+
+      transport: {
+        type: String,
+        default: "",
+      },
+
+      notes: {
+        type: String,
+        default: "",
+      },
+
+      createdBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+
+      completedAt: {
+        type: Date,
+        default: null,
+      },
+    },
+    {
+      timestamps: true,
+    }
+  );
+
+export default mongoose.model<IProduction>(
+  "Production",
+  ProductionSchema
 );
-
-export default mongoose.model<IProduction>("Production", ProductionSchema);

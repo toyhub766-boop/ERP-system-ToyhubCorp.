@@ -10,6 +10,8 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
+  getCustomerDueDates,
+  getCRMDueDates,
 } from "../controllers/accountTransaction.controller";
 
 import AccountTransaction from "../models/AccountTransaction";
@@ -34,8 +36,12 @@ router.get("/", async (_req, res) => {
 });
 
 // Left Panel
-router.get("/parties", getParties);
+router.get(
+  "/crm/due-dates",
+  getCustomerDueDates
+);
 
+router.get("/parties", getParties);
 
 // Right Panel
 router.get("/ledger/:partyId", getPartyLedger);

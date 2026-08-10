@@ -41,3 +41,36 @@ export const deleteCustomer = async (id: string) => {
 
   return data;
 };
+
+export const getSalesPipeline = async () => {
+  const response = await api.get("/customer/pipeline");
+
+  return response.data;
+};
+
+export const updateSalesPipeline = async (
+  customerId: string,
+  data: {
+    stage?: string;
+
+    salespersonName?: string;
+    salespersonPhone?: string;
+
+    assignedDate?: string | null;
+
+    leadSource?: string;
+
+    lastContactDate?: string | null;
+    nextFollowUpDate?: string | null;
+    expectedCloseDate?: string | null;
+
+    pipelineNotes?: string;
+  }
+) => {
+  const response = await api.put(
+    `/customer/${customerId}/pipeline`,
+    data
+  );
+
+  return response.data;
+};

@@ -311,3 +311,199 @@ export const deleteTransaction = async (
 
   }
 };
+
+
+// ==============================
+// CRM CUSTOMER DUE DATES
+// ==============================
+
+export const getCustomerDueDates = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const customers = await AccountParty.find({
+      partyType: "CUSTOMER",
+      status: "Active",
+    })
+      .select(
+        "partyCode companyName contactPerson phone currentBalance customerDetails.dueDate customerDetails.paymentTerms"
+      )
+      .sort({
+        "customerDetails.dueDate": 1,
+      });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const result = customers.map((customer: any) => {
+      const dueDate = customer.customerDetails?.dueDate
+        ? new Date(customer.customerDetails.dueDate)
+        : null;
+
+      if (dueDate) {
+        dueDate.setHours(0, 0, 0, 0);
+      }
+
+      let status = "NO_DUE_DATE";
+
+      if (dueDate) {
+        if (dueDate < today) {
+          status = "OVERDUE";
+        } else if (
+          dueDate.getTime() === today.getTime()
+        ) {
+          status = "DUE_TODAY";
+        } else {
+          status = "UPCOMING";
+        }
+      }
+
+      const daysDifference = dueDate
+        ? Math.ceil(
+            (dueDate.getTime() - today.getTime()) /
+              (1000 * 60 * 60 * 24)
+          )
+        : null;
+
+      return {
+        _id: customer._id,
+        partyCode: customer.partyCode,
+
+        companyName: customer.companyName,
+        contactPerson: customer.contactPerson,
+        phone: customer.phone,
+
+        currentBalance:
+          customer.currentBalance || 0,
+
+        paymentTerms:
+          customer.customerDetails?.paymentTerms || 0,
+
+        dueDate,
+
+        status,
+
+        daysDifference,
+      };
+    });
+
+    return res.json(result);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Failed to fetch customer due dates.",
+    });
+  }
+};
+
+// ==============================
+// CRM CUSTOMER DUES
+// ==============================
+
+export const getCRMDueDates = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const parties = await AccountParty.find({
+      partyType: "CUSTOMER",
+      status: "Active",
+    })
+      .select(
+        "partyCode companyName contactPerson phone currentBalance customerDetails"
+      )
+      .sort({
+        "customerDetails.dueDate": 1,
+      });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dues = parties.map((party: any) => {
+      const rawDueDate =
+        party.customerDetails?.dueDate;
+
+      let dueDate: Date | null =
+        rawDueDate
+          ? new Date(rawDueDate)
+          : null;
+
+      if (dueDate) {
+        dueDate.setHours(0, 0, 0, 0);
+      }
+
+      let status:
+        | "OVERDUE"
+        | "DUE_TODAY"
+        | "UPCOMING"
+        | "NO_DUE_DATE" =
+        "NO_DUE_DATE";
+
+      let daysRemaining:
+        | number
+        | null = null;
+
+      if (dueDate) {
+        daysRemaining = Math.ceil(
+          (dueDate.getTime() -
+            today.getTime()) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        if (daysRemaining < 0) {
+          status = "OVERDUE";
+        } else if (
+          daysRemaining === 0
+        ) {
+          status = "DUE_TODAY";
+        } else {
+          status = "UPCOMING";
+        }
+      }
+
+      return {
+        _id: party._id,
+
+        partyCode:
+          party.partyCode,
+
+        companyName:
+          party.companyName,
+
+        contactPerson:
+          party.contactPerson,
+
+        phone:
+          party.phone,
+
+        outstanding:
+          Number(
+            party.currentBalance || 0
+          ),
+
+        paymentTerms:
+          Number(
+            party.customerDetails
+              ?.paymentTerms || 0
+          ),
+
+        dueDate,
+
+        status,
+
+        daysRemaining,
+      };
+    });
+
+    return res.json(dues);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message:
+        "Failed to fetch CRM due dates.",
+    });
+  }
+};

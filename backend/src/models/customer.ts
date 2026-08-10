@@ -1,59 +1,117 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, {
+  Document,
+  Schema,
+} from "mongoose";
+
+export type CustomerStage =
+  | "LEAD"
+  | "RINGING"
+  | "NEGOTIATION"
+  | "CATALOG_SHARED"
+  | "VERIFICATION"
+  | "ACTIVE_DEALER"
+  | "SUPPLIER"
+  | "DELAYED_PAYMENT"
+  | "CLOSED"
+  | "NO_DEALER";
+
+export type CustomerCategory =
+  | "ONLINE_SELLER"
+  | "CONTAINER_PARTY"
+  | "LOOSE_PARTY"
+  | "CAKE_DOLL"
+  | "TOY_DEALER"
+  | "OTHER";
+
+export interface IStageHistory {
+  stage: CustomerStage;
+  changedAt: Date;
+  changedBy?: mongoose.Types.ObjectId;
+  note?: string;
+}
 
 export interface ICustomer extends Document {
   customerCode: string;
+
   companyName: string;
   contactPerson: string;
+
   phone: string;
   email: string;
+
   address: string;
   city: string;
   state: string;
   pincode: string;
+
   gstNumber: string;
 
   billingName: string;
   station: string;
+
   packingCharges: number;
   transportCharges: number;
   paymentTerms: number;
 
-  stage:
-    | "LEAD"
-    | "RINGING"
-    | "NEGOTIATION"
-    | "CATALOG_SHARED"
-    | "VERIFICATION"
-    | "ACTIVE_DEALER"
-    | "SUPPLIER"
-    | "DELAYED_PAYMENT"
-    | "CLOSED"
-    | "NO_DEALER";
+  stage: CustomerStage;
 
-  category:
-    | "ONLINE_SELLER"
-    | "CONTAINER_PARTY"
-    | "LOOSE_PARTY"
-    | "CAKE_DOLL"
-    | "TOY_DEALER"
-    | "OTHER";
+  category: CustomerCategory;
+
+  /*
+   * Sales pipeline
+   */
+  assignedSalesperson?: string;
+
+  lastContactDate?: Date;
+
+  nextFollowUpDate?: Date;
+
+  nextAction: string;
+
+  negotiationNotes: string;
+
+  stageHistory: IStageHistory[];
 
   specialNotes: {
+    title?: string;
     note: string;
+
+    type:
+      | "GENERAL"
+      | "PAYMENT"
+      | "MEETING"
+      | "FOLLOW_UP"
+      | "COMPLAINT"
+      | "PRODUCT";
+
+    priority:
+      | "LOW"
+      | "MEDIUM"
+      | "HIGH";
+
+    reminderDate?: Date;
+
+    completed: boolean;
+
     addedBy?: mongoose.Types.ObjectId;
+
     createdAt: Date;
   }[];
 
   reminderDate?: Date;
+
   reminderSet: boolean;
 
   status: "Active" | "Inactive";
+
   partyType: "CUSTOMER" | "SUPPLIER";
+
   openingBalance: number;
+
   currentBalance: number;
 }
 
-const customerSchema = new Schema<ICustomer>(
+const customerSchema = new Schema(
   {
     customerCode: {
       type: String,
@@ -148,83 +206,150 @@ const customerSchema = new Schema<ICustomer>(
       default: "LEAD",
     },
 
-    category: {
-  type: String,
-  enum: [
-    "ONLINE_SELLER",
-    "CONTAINER_PARTY",
-    "LOOSE_PARTY",
-    "CAKE_DOLL",
-    "TOY_DEALER",
-    "OTHER",
-  ],
-  default: "OTHER",
-},
+    /*
+     * =========================
+     * SALES PIPELINE
+     * =========================
+     */
 
-specialNotes: [
-  {
-    title: {
+    assignedSalesperson: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    lastContactDate: {
+      type: Date,
+    },
+
+    nextFollowUpDate: {
+      type: Date,
+    },
+
+    nextAction: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    negotiationNotes: {
       type: String,
       default: "",
     },
 
-    note: {
-      type: String,
-      required: true,
-    },
+    stageHistory: [
+      {
+        stage: {
+          type: String,
+          enum: [
+            "LEAD",
+            "RINGING",
+            "NEGOTIATION",
+            "CATALOG_SHARED",
+            "VERIFICATION",
+            "ACTIVE_DEALER",
+            "SUPPLIER",
+            "DELAYED_PAYMENT",
+            "CLOSED",
+            "NO_DEALER",
+          ],
+          required: true,
+        },
 
-    type: {
+        changedAt: {
+          type: Date,
+          default: Date.now,
+        },
+
+        changedBy: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+
+        note: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
+
+    category: {
       type: String,
       enum: [
-        "GENERAL",
-        "PAYMENT",
-        "MEETING",
-        "FOLLOW_UP",
-        "COMPLAINT",
-        "PRODUCT",
+        "ONLINE_SELLER",
+        "CONTAINER_PARTY",
+        "LOOSE_PARTY",
+        "CAKE_DOLL",
+        "TOY_DEALER",
+        "OTHER",
       ],
-      default: "GENERAL",
+      default: "OTHER",
     },
 
-    priority: {
-      type: String,
-      enum: [
-        "LOW",
-        "MEDIUM",
-        "HIGH",
-      ],
-      default: "MEDIUM",
-    },
+    specialNotes: [
+      {
+        title: {
+          type: String,
+          default: "",
+        },
+
+        note: {
+          type: String,
+          required: true,
+        },
+
+        type: {
+          type: String,
+          enum: [
+            "GENERAL",
+            "PAYMENT",
+            "MEETING",
+            "FOLLOW_UP",
+            "COMPLAINT",
+            "PRODUCT",
+          ],
+          default: "GENERAL",
+        },
+
+        priority: {
+          type: String,
+          enum: [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+          ],
+          default: "MEDIUM",
+        },
+
+        reminderDate: {
+          type: Date,
+        },
+
+        completed: {
+          type: Boolean,
+          default: false,
+        },
+
+        addedBy: {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
 
     reminderDate: {
       type: Date,
     },
 
-    completed: {
+    reminderSet: {
       type: Boolean,
       default: false,
     },
-
-    addedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-],
-
-reminderDate: {
-  type: Date,
-},
-
-reminderSet: {
-  type: Boolean,
-  default: false,
-},
 
     status: {
       type: String,
@@ -232,11 +357,12 @@ reminderSet: {
       default: "Active",
     },
 
-
-    //NEW
     partyType: {
       type: String,
-      enum: ["CUSTOMER", "SUPPLIER"],
+      enum: [
+        "CUSTOMER",
+        "SUPPLIER",
+      ],
       default: "CUSTOMER",
     },
 
@@ -255,7 +381,7 @@ reminderSet: {
   }
 );
 
-export default mongoose.model<ICustomer>(
+export default mongoose.model(
   "Customer",
   customerSchema
 );

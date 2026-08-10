@@ -1,7 +1,18 @@
 interface Props {
-  activeTab: "customers" | "orders" | "payments";
+  activeTab:
+    | "customers"
+    | "pipeline"
+    | "dues"
+    | "orders"
+    | "payments";
+
   setActiveTab: (
-    tab: "customers" | "orders" | "payments"
+    tab:
+      | "customers"
+      | "pipeline"
+      | "dues"
+      | "orders"
+      | "payments"
   ) => void;
 }
 
@@ -9,6 +20,14 @@ const tabs = [
   {
     id: "customers",
     label: "Customers",
+  },
+  {
+    id: "pipeline",
+    label: "Sales Pipeline",
+  },
+  {
+    id: "dues",
+    label: "Due Dates",
   },
   {
     id: "orders",
@@ -25,33 +44,31 @@ const CRMTabs = ({
   setActiveTab,
 }: Props) => {
   return (
-  <div className="overflow-x-auto">
-
-    <div className="flex min-w-max gap-2 rounded-2xl bg-slate-100 p-2">
-
+    <div className="flex min-w-max gap-2 overflow-x-auto rounded-2xl bg-slate-100 p-2">
       {tabs.map((tab) => {
-
-        const active = activeTab === tab.id;
+        const active =
+          activeTab === tab.id;
 
         return (
-
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            type="button"
+            onClick={() =>
+              setActiveTab(tab.id)
+            }
             className={`
               flex
               flex-1
               items-center
               justify-center
+              whitespace-nowrap
               rounded-xl
-              px-6
+              px-5
               py-3
               text-sm
               font-semibold
-              whitespace-nowrap
               transition-all
               duration-200
-
               ${
                 active
                   ? "bg-white text-[#172B6B] shadow-sm"
@@ -59,31 +76,12 @@ const CRMTabs = ({
               }
             `}
           >
-
-            {tab.id === "customers" && (
-              <span className="mr-2"></span>
-            )}
-
-            {tab.id === "orders" && (
-              <span className="mr-2"></span>
-            )}
-
-            {tab.id === "payments" && (
-              <span className="mr-2"></span>
-            )}
-
             {tab.label}
-
           </button>
-
         );
-
       })}
-
     </div>
-
-  </div>
-);
+  );
 };
 
 export default CRMTabs;

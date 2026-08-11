@@ -1,3 +1,9 @@
+import { useEffect, useState } from "react";
+
+import {
+  updatePartyDueDate,
+} from "../services/accountParty.service";
+
 interface Props {
   party: any;
   selected: boolean;
@@ -9,138 +15,323 @@ const PartyCard = ({
   selected,
   onClick,
 }: Props) => {
-  const customer =
-    party.customerDetails;
+  const customer = party.customerDetails;
+  const supplier = party.supplierDetails;
 
-  const supplier =
-    party.supplierDetails;
-
-  const dueDate =
+  const existingDueDate =
     customer?.dueDate ||
-    supplier?.dueDate;
+    supplier?.dueDate ||
+    null;
 
-  const balance =
-    party.currentBalance || 0;
+  const balance = party.currentBalance || 0;
+
+  const [editingDueDate, setEditingDueDate] =
+    useState(false);
+
+  const [dueDate, setDueDate] =
+    useState("");
+
+  const [savingDueDate, setSavingDueDate] =
+    useState(false);
+
+  // --------------------------------
+  // Format date for <input type=date>
+  // --------------------------------
+
+  const formatInputDate = (
+    value: string | Date | null
+  ) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    return new Date(
+      date.getTime() -
+        date.getTimezoneOffset() * 60000
+    )
+      .toISOString()
+      .split("T")[0];
+  };
+
+  useEffect(() => {
+    setDueDate(
+      formatInputDate(existingDueDate)
+    );
+  }, [existingDueDate]);
+
+  // --------------------------------
+  // Save Due Date
+  // --------------------------------
+
+  const handleSaveDueDate = async (
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+
+    try {
+      setSavingDueDate(true);
+
+      const updatedParty =
+        await updatePartyDueDate(
+          party._id,
+          dueDate || null
+        );
+
+      if (
+        party.partyType === "CUSTOMER"
+      ) {
+        party.customerDetails =
+          updatedParty.customerDetails;
+      }
+
+      if (
+        party.partyType === "SUPPLIER"
+      ) {
+        party.supplierDetails =
+          updatedParty.supplierDetails;
+      }
+
+      setEditingDueDate(false);
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        "Failed to update due date."
+      );
+    } finally {
+      setSavingDueDate(false);
+    }
+  };
+
+  // --------------------------------
+  // Cancel Due Date
+  // --------------------------------
+
+  const handleCancelDueDate = (
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+
+    setDueDate(
+      formatInputDate(existingDueDate)
+    );
+
+    setEditingDueDate(false);
+  };
+
+  // --------------------------------
+  // Party Type
+  // --------------------------------
+
+  const partyTypeLabel =
+    party.partyType ===
+    "COMPANY_EXPENSE"
+      ? "COMPANY EXPENSE"
+      : party.partyType;
+
+  // --------------------------------
+  // Party Type Styling
+  // --------------------------------
+
+  const partyTypeStyle =
+    party.partyType === "CUSTOMER"
+      ? "text-blue-700"
+      : party.partyType === "SUPPLIER"
+      ? "text-orange-600"
+      : "text-purple-700";
+
+  // --------------------------------
+  // Initial
+  // --------------------------------
+
+  const initial =
+    party.companyName
+      ?.charAt(0)
+      ?.toUpperCase() || "?";
 
   return (
-    <button
+    <div
       onClick={onClick}
-      className={`w-full rounded-2xl border p-4 text-left transition ${
+      className={`cursor-pointer rounded-xl border px-4 py-4 transition-all ${
         selected
-          ? "border-[#17357A] bg-blue-50 shadow-md"
+          ? "border-[#17357A] bg-blue-50 shadow-sm"
           : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
       }`}
     >
-      {/* Top */}
+      {/* ==============================
+          HEADER
+      ============================== */}
 
-      <div className="flex items-start justify-between">
+      <div className="flex items-start gap-3">
+        {/* Avatar */}
 
-        <div>
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-semibold ${
+            selected
+              ? "bg-[#17357A] text-white"
+              : "bg-slate-100 text-slate-700"
+          }`}
+        >
+          {initial}
+        </div>
 
-          <h3 className="font-semibold text-slate-900">
-            {party.companyName}
-          </h3>
+        {/* Name */}
 
-          <p className="mt-1 text-xs text-slate-500">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="truncate text-sm font-bold text-slate-900">
+              {party.companyName}
+            </h3>
+
+            {party.status === "Active" && (
+              <span className="shrink-0 text-[11px] font-medium text-green-600">
+                Active
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1 truncate text-xs text-slate-600">
             {party.contactPerson ||
               "--"}
           </p>
 
-        </div>
+          {/* Transport phone */}
 
-        <span
-          className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-            party.partyType ===
-            "CUSTOMER"
-              ? "bg-blue-100 text-blue-700"
-              : party.partyType ===
-                "SUPPLIER"
-              ? "bg-orange-100 text-orange-700"
-              : "bg-purple-100 text-purple-700"
-          }`}
-        >
-          {party.partyType.replace(
-            "_",
-            " "
+          {customer?.transportPhone && (
+            <p className="mt-1 text-xs text-slate-500">
+              ☎ {customer.transportPhone}
+            </p>
           )}
+        </div>
+      </div>
+
+      {/* ==============================
+          PARTY META
+      ============================== */}
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+        <span className="font-medium text-slate-500">
+          {party.partyCode}
         </span>
 
-      </div>
+        <span className="text-slate-300">
+          •
+        </span>
 
-      {/* Middle */}
-
-      <div className="mt-4 grid grid-cols-2 gap-y-3 text-xs">
-
-        <div>
-
-          <p className="text-slate-400">
-            Phone
-          </p>
-
-          <p className="font-medium">
-            {party.phone || "--"}
-          </p>
-
-        </div>
-
-        <div>
-
-          <p className="text-slate-400">
-            Due Date
-          </p>
-
-          <p className="font-medium">
-
-            {dueDate
-              ? new Date(
-                  dueDate
-                ).toLocaleDateString()
-              : "--"}
-
-          </p>
-
-        </div>
-
-      </div>
-
-      {/* Bottom */}
-
-      <div className="mt-5 flex items-center justify-between border-t pt-4">
-
-        <div>
-
-          <p className="text-xs text-slate-400">
-            Balance
-          </p>
-
-          <h3
-            className={`font-bold ${
-              balance >= 0
-                ? "text-green-600"
-                : "text-red-600"
-            }`}
-          >
-            ₹
-            {Math.abs(balance)}
-          </h3>
-
-        </div>
-
-        <div
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-            balance >= 0
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
+        <span
+          className={`font-semibold ${partyTypeStyle}`}
         >
-          {balance >= 0
-            ? "You'll Get"
-            : "You'll Give"}
-        </div>
-
+          {partyTypeLabel}
+        </span>
       </div>
 
-    </button>
+      {/* ==============================
+          BALANCE + DUE DATE
+      ============================== */}
+
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <div className="grid grid-cols-2 gap-4">
+          {/* Balance */}
+
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+              Outstanding
+            </p>
+
+            <p
+              className={`mt-1 text-base font-bold ${
+                balance >= 0
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
+              ₹
+              {Math.abs(
+                balance
+              ).toLocaleString("en-IN")}
+            </p>
+          </div>
+
+          {/* Due Date */}
+
+          <div
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+              Due Date
+            </p>
+
+            {!editingDueDate ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log("DUE Date CLiced")
+                  setEditingDueDate(true);
+                }}
+                className="mt-1 text-left text-sm font-semibold text-slate-800 transition hover:text-[#17357A]"
+              >
+                {existingDueDate
+                  ? new Date(
+                      existingDueDate
+                    ).toLocaleDateString(
+                      "en-IN"
+                    )
+                  : "Set date"}
+              </button>
+            ) : (
+              <div className="mt-1">
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) =>
+                    setDueDate(
+                      e.target.value
+                    )
+                  }
+                  onClick={(e) =>
+                    e.stopPropagation()
+                  }
+                  className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#17357A] focus:ring-1 focus:ring-[#17357A]/20"
+                />
+
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={
+                      savingDueDate
+                    }
+                    onClick={
+                      handleSaveDueDate
+                    }
+                    className="rounded-md bg-[#17357A] px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-[#10295d] disabled:opacity-50"
+                  >
+                    {savingDueDate
+                      ? "..."
+                      : "Save"}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      savingDueDate
+                    }
+                    onClick={
+                      handleCancelDueDate
+                    }
+                    className="rounded-md border border-slate-200 px-2.5 py-1 text-[10px] font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

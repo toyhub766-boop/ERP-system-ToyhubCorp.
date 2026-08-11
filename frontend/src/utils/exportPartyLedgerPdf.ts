@@ -1,6 +1,8 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import logo from "../assets/images/logo.png";
+
 const blue: [number, number, number] = [
   23,
   53,
@@ -25,23 +27,71 @@ const slate: [number, number, number] = [
   105,
 ];
 
-const formatCurrency = (value: number) => {
-  const amount = Number(value || 0);
+const lightSlate: [number, number, number] = [
+  248,
+  250,
+  252,
+];
 
-  return `₹${Math.abs(amount).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+const formatAmount = (value: any) => {
+  return Number(value || 0).toLocaleString(
+    "en-IN",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
 };
 
 const formatDate = (value: any) => {
   if (!value) return "-";
 
-  return new Date(value).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  );
+};
+
+const addLabelValue = (
+  doc: jsPDF,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  width = 70
+) => {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(
+    slate[0],
+    slate[1],
+    slate[2]
+  );
+
+  doc.text(label.toUpperCase(), x, y);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(15, 23, 42);
+
+  const lines = doc.splitTextToSize(
+    value || "-",
+    width
+  );
+
+  doc.text(lines, x, y + 5);
+
+  return y + 5 + lines.length * 4;
 };
 
 export const exportPartyLedgerPdf = (
@@ -60,181 +110,38 @@ export const exportPartyLedgerPdf = (
   const pageHeight =
     doc.internal.pageSize.getHeight();
 
-  /*
-   * ============================
-   * HEADER
-   * ============================
-   */
+  const customer =
+    party.customerDetails || {};
 
-  doc.setFillColor(
-    blue[0],
-    blue[1],
-    blue[2]
-  );
+  const supplier =
+    party.supplierDetails || {};
 
-  doc.rect(
-    0,
-    0,
-    pageWidth,
-    30,
-    "F"
-  );
+  const expense =
+    party.companyExpenseDetails || {};
 
-  doc.setTextColor(255, 255, 255);
+  const isCustomer =
+    party.partyType === "CUSTOMER";
 
-  doc.setFont(
-    "helvetica",
-    "bold"
-  );
+  const isSupplier =
+    party.partyType === "SUPPLIER";
 
-  doc.setFontSize(20);
+  const isExpense =
+    party.partyType === "COMPANY_EXPENSE";
 
-  doc.text(
-    "TOYHUB CORPORATION",
-    14,
-    13
-  );
-
-  doc.setFont(
-    "helvetica",
-    "normal"
-  );
-
-  doc.setFontSize(9);
-
-  doc.text(
-    "Internal Accounts Management System",
-    14,
-    20
-  );
-
-  doc.setFont(
-    "helvetica",
-    "bold"
-  );
-
-  doc.setFontSize(12);
-
-  doc.text(
-    "ACCOUNT STATEMENT",
-    pageWidth - 14,
-    14,
-    {
-      align: "right",
-    }
-  );
-
-  doc.setFont(
-    "helvetica",
-    "normal"
-  );
-
-  doc.setFontSize(8);
-
-  doc.text(
-    `Generated: ${formatDate(new Date())}`,
-    pageWidth - 14,
-    21,
-    {
-      align: "right",
-    }
-  );
-
-  /*
-   * ============================
-   * PARTY INFORMATION
-   * ============================
-   */
-
-  doc.setTextColor(
-    15,
-    23,
-    42
-  );
-
-  doc.setFont(
-    "helvetica",
-    "bold"
-  );
-
-  doc.setFontSize(17);
-
-  doc.text(
-    party.companyName ||
-      "Unnamed Party",
-    14,
-    42
-  );
-
-  doc.setFont(
-    "helvetica",
-    "normal"
-  );
-
-  doc.setFontSize(9);
-
-  doc.setTextColor(
-    slate[0],
-    slate[1],
-    slate[2]
-  );
-
-  doc.text(
-    `Party Type: ${
-      party.partyType || "-"
-    }`,
-    14,
-    49
-  );
-
-  doc.text(
-    `Phone: ${party.phone || "-"}`,
-    14,
-    55
-  );
-
-  const gst =
-    party.customerDetails?.gstNumber ||
-    party.supplierDetails?.gstNumber ||
+  const gstNumber =
+    customer.gstNumber ||
+    supplier.gstNumber ||
     "-";
 
-  doc.text(
-    `GST: ${gst}`,
-    14,
-    61
-  );
-
   const paymentTerms =
-    party.customerDetails
-      ?.paymentTerms ??
-    party.supplierDetails
-      ?.paymentTerms;
-
-  doc.text(
-    `Payment Terms: ${
-      paymentTerms !== undefined
-        ? `${paymentTerms} Days`
-        : "-"
-    }`,
-    95,
-    49
-  );
+    customer.paymentTerms ??
+    supplier.paymentTerms ??
+    0;
 
   const dueDate =
-    party.customerDetails?.dueDate ||
-    party.supplierDetails?.dueDate;
-
-  doc.text(
-    `Due Date: ${formatDate(dueDate)}`,
-    95,
-    55
-  );
-
-  /*
-   * ============================
-   * SUMMARY
-   * ============================
-   */
+    customer.dueDate ||
+    supplier.dueDate ||
+    null;
 
   const openingBalance =
     Number(
@@ -282,42 +189,550 @@ export const exportPartyLedgerPdf = (
       0
     );
 
-  const cardY = 68;
-  const cardWidth = 63;
-  const cardHeight = 25;
-  const gap = 5;
+  /*
+   * ========================================
+   * HEADER
+   * ========================================
+   */
 
-  const cards: {
-    title: string;
-    value: string;
-    color: [number, number, number];
-  }[] = [
+  doc.setFillColor(
+    blue[0],
+    blue[1],
+    blue[2]
+  );
+
+  doc.rect(
+    0,
+    0,
+    pageWidth,
+    34,
+    "F"
+  );
+
+  /*
+   * LOGO
+   */
+
+  try {
+    doc.addImage(
+      logo,
+      "PNG",
+      12,
+      5,
+      34,
+      24
+    );
+  } catch (error) {
+    console.error(
+      "Failed to add logo",
+      error
+    );
+  }
+
+  doc.setTextColor(
+    255,
+    255,
+    255
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(18);
+
+  doc.text(
+    "TOYHUB CORPORATION",
+    52,
+    13
+  );
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    "Internal Accounts Management System",
+    52,
+    20
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(12);
+
+  doc.text(
+    "ACCOUNT STATEMENT",
+    pageWidth - 14,
+    13,
+    {
+      align: "right",
+    }
+  );
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+  doc.setFontSize(8);
+
+  doc.text(
+    `Generated: ${formatDate(
+      new Date()
+    )}`,
+    pageWidth - 14,
+    20,
+    {
+      align: "right",
+    }
+  );
+
+  /*
+   * ========================================
+   * PARTY INFORMATION
+   * ========================================
+   */
+
+  let infoY = 45;
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(16);
+
+  doc.text(
+    party.companyName ||
+      "Unnamed Party",
+    14,
+    infoY
+  );
+
+  infoY += 8;
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+  doc.setFontSize(8);
+
+  doc.setTextColor(
+    slate[0],
+    slate[1],
+    slate[2]
+  );
+
+  doc.text(
+    `Party Code: ${
+      party.partyCode || "-"
+    }`,
+    14,
+    infoY
+  );
+
+  doc.text(
+    `Party Type: ${
+      party.partyType || "-"
+    }`,
+    80,
+    infoY
+  );
+
+  doc.text(
+    `Status: ${
+      party.status || "-"
+    }`,
+    150,
+    infoY
+  );
+
+  /*
+   * ========================================
+   * CONTACT DETAILS
+   * ========================================
+   */
+
+  const infoTop = 62;
+
+  doc.setDrawColor(
+    226,
+    232,
+    240
+  );
+
+  doc.roundedRect(
+    14,
+    infoTop,
+    125,
+    46,
+    3,
+    3,
+    "S"
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
+
+  doc.text(
+    "Contact Information",
+    20,
+    infoTop + 8
+  );
+
+  addLabelValue(
+    doc,
+    "Contact Person",
+    party.contactPerson ||
+      "-",
+    20,
+    infoTop + 16,
+    50
+  );
+
+  addLabelValue(
+    doc,
+    "Phone",
+    party.phone || "-",
+    78,
+    infoTop + 16,
+    45
+  );
+
+  addLabelValue(
+    doc,
+    "Email",
+    party.email || "-",
+    20,
+    infoTop + 30,
+    50
+  );
+
+  addLabelValue(
+    doc,
+    "GST Number",
+    gstNumber,
+    78,
+    infoTop + 30,
+    45
+  );
+
+  /*
+   * ========================================
+   * ADDRESS
+   * ========================================
+   */
+
+  doc.roundedRect(
+    144,
+    infoTop,
+    pageWidth - 158,
+    46,
+    3,
+    3,
+    "S"
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(10);
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
+
+  doc.text(
+    "Address",
+    150,
+    infoTop + 8
+  );
+
+  const address = [
+    party.address,
+    party.city,
+    party.state,
+    party.pincode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+  doc.setFontSize(9);
+
+  doc.setTextColor(
+    slate[0],
+    slate[1],
+    slate[2]
+  );
+
+  doc.text(
+    doc.splitTextToSize(
+      address || "-",
+      pageWidth - 174
+    ),
+    150,
+    infoTop + 17
+  );
+
+  /*
+   * ========================================
+   * BUSINESS / COMMERCIAL DETAILS
+   * ========================================
+   */
+
+  const detailY = 114;
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(11);
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
+
+  doc.text(
+    "Account Details",
+    14,
+    detailY
+  );
+
+  const details: string[][] = [];
+
+  details.push([
+    "Opening Balance",
+    formatAmount(
+      openingBalance
+    ),
+    "Payment Terms",
+    `${paymentTerms} Days`,
+    "Due Date",
+    formatDate(dueDate),
+  ]);
+
+  details.push([
+    "Packing Charges",
+    isCustomer
+      ? formatAmount(
+          customer.packingCharges
+        )
+      : "-",
+
+    "Transport Charges",
+    isCustomer
+      ? formatAmount(
+          customer.transportCharges
+        )
+      : "-",
+
+    "Current Balance",
+    formatAmount(
+      closingBalance
+    ),
+  ]);
+
+  if (isCustomer) {
+    details.push([
+      "Billing Name",
+      customer.billingName ||
+        "-",
+
+      "Transport Name",
+      customer.transportName ||
+        "-",
+
+      "Transport Number",
+      customer.transportNumber ||
+        "-",
+    ]);
+
+    details.push([
+      "Transport Phone",
+      customer.transportPhone ||
+        "-",
+
+      "Marka",
+      customer.marka || "-",
+
+      "Station",
+      customer.station || "-",
+    ]);
+  }
+
+  if (isSupplier) {
+    details.push([
+      "GST Number",
+      supplier.gstNumber ||
+        "-",
+
+      "Payment Terms",
+      `${supplier.paymentTerms ?? 0} Days`,
+
+      "Due Date",
+      formatDate(
+        supplier.dueDate
+      ),
+    ]);
+  }
+
+  if (isExpense) {
+    details.push([
+      "Expense Category",
+      expense.expenseCategory ||
+        "-",
+
+      "Description",
+      expense.description ||
+        "-",
+
+      "Status",
+      party.status || "-",
+    ]);
+  }
+
+  autoTable(doc, {
+    startY: detailY + 5,
+
+    body: details,
+
+    theme: "grid",
+
+    styles: {
+      font: "helvetica",
+      fontSize: 8,
+      cellPadding: 3,
+      textColor: [
+        30,
+        41,
+        59,
+      ],
+      lineColor: [
+        226,
+        232,
+        240,
+      ],
+      lineWidth: 0.2,
+    },
+
+    columnStyles: {
+      0: {
+        fontStyle: "bold",
+        cellWidth: 35,
+      },
+      1: {
+        cellWidth: 48,
+      },
+      2: {
+        fontStyle: "bold",
+        cellWidth: 35,
+      },
+      3: {
+        cellWidth: 48,
+      },
+      4: {
+        fontStyle: "bold",
+        cellWidth: 35,
+      },
+      5: {
+        cellWidth: 48,
+      },
+    },
+  });
+
+  /*
+   * ========================================
+   * SUMMARY
+   * ========================================
+   */
+
+  const summaryY =
+    (doc as any).lastAutoTable.finalY +
+    8;
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(11);
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
+
+  doc.text(
+    "Transaction Summary",
+    14,
+    summaryY
+  );
+
+  const summaryCards = [
     {
       title: "Opening Balance",
-      value:
-        formatCurrency(
-          openingBalance
-        ),
+      value: formatAmount(
+        openingBalance
+      ),
       color: blue,
     },
     {
       title: "Money Received",
-      value:
-        formatCurrency(moneyIn),
+      value: formatAmount(
+        moneyIn
+      ),
       color: green,
     },
     {
       title: "Money Paid",
-      value:
-        formatCurrency(moneyOut),
+      value: formatAmount(
+        moneyOut
+      ),
       color: red,
     },
     {
       title: "Closing Balance",
-      value:
-        formatCurrency(
-          closingBalance
-        ),
+      value: formatAmount(
+        closingBalance
+      ),
       color:
         closingBalance >= 0
           ? green
@@ -325,20 +740,24 @@ export const exportPartyLedgerPdf = (
     },
   ];
 
-  cards.forEach(
-    (
-      card,
-      index
-    ) => {
+  const cardY =
+    summaryY + 5;
+
+  const cardWidth = 63;
+  const cardHeight = 23;
+  const gap = 5;
+
+  summaryCards.forEach(
+    (card, index) => {
       const x =
         14 +
         index *
           (cardWidth + gap);
 
       doc.setFillColor(
-        248,
-        250,
-        252
+        lightSlate[0],
+        lightSlate[1],
+        lightSlate[2]
       );
 
       doc.roundedRect(
@@ -371,17 +790,17 @@ export const exportPartyLedgerPdf = (
         slate[2]
       );
 
-      doc.setFontSize(8);
-
       doc.setFont(
         "helvetica",
         "normal"
       );
 
+      doc.setFontSize(7);
+
       doc.text(
         card.title,
         x + 7,
-        cardY + 8
+        cardY + 7
       );
 
       doc.setTextColor(
@@ -390,26 +809,77 @@ export const exportPartyLedgerPdf = (
         card.color[2]
       );
 
-      doc.setFontSize(13);
-
       doc.setFont(
         "helvetica",
         "bold"
       );
 
+      doc.setFontSize(12);
+
       doc.text(
         card.value,
         x + 7,
-        cardY + 18
+        cardY + 17
       );
     }
   );
 
   /*
-   * ============================
-   * TRANSACTION TABLE
-   * ============================
+   * ========================================
+   * REMARKS
+   * ========================================
    */
+
+  const remarksY =
+    cardY + cardHeight + 7;
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(9);
+
+  doc.setTextColor(
+    15,
+    23,
+    42
+  );
+
+  doc.text(
+    "Remarks",
+    14,
+    remarksY
+  );
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+  doc.setTextColor(
+    slate[0],
+    slate[1],
+    slate[2]
+  );
+
+  doc.text(
+    doc.splitTextToSize(
+      party.remarks || "-",
+      pageWidth - 28
+    ),
+    14,
+    remarksY + 5
+  );
+
+  /*
+   * ========================================
+   * LEDGER TABLE
+   * ========================================
+   */
+
+  const tableStartY =
+    remarksY + 14;
 
   const tableRows =
     ledger.map(
@@ -431,28 +901,19 @@ export const exportPartyLedgerPdf = (
             "-",
 
           isMoneyIn
-            ? formatCurrency(
-                Number(
-                  transaction.amount ||
-                    0
-                )
+            ? formatAmount(
+                transaction.amount
               )
             : "-",
 
           !isMoneyIn
-            ? formatCurrency(
-                Number(
-                  transaction.amount ||
-                    0
-                )
+            ? formatAmount(
+                transaction.amount
               )
             : "-",
 
-          formatCurrency(
-            Number(
-              transaction.balanceAfterTransaction ||
-                0
-            )
+          formatAmount(
+            transaction.balanceAfterTransaction
           ),
 
           transaction.remarks ||
@@ -462,16 +923,16 @@ export const exportPartyLedgerPdf = (
     );
 
   autoTable(doc, {
-    startY: 101,
+    startY: tableStartY,
 
     head: [
       [
         "Date",
         "Type",
         "Payment Method",
-        "Money In",
-        "Money Out",
-        "Balance",
+        "Money In (INR)",
+        "Money Out (INR)",
+        "Balance (INR)",
         "Remarks",
       ],
     ],
@@ -496,7 +957,7 @@ export const exportPartyLedgerPdf = (
     styles: {
       font: "helvetica",
       fontSize: 8,
-      cellPadding: 4,
+      cellPadding: 3.5,
       textColor: [
         30,
         41,
@@ -534,42 +995,33 @@ export const exportPartyLedgerPdf = (
       0: {
         cellWidth: 27,
       },
-
       1: {
-        cellWidth: 28,
+        cellWidth: 29,
         halign: "center",
       },
-
       2: {
         cellWidth: 35,
       },
-
       3: {
-        cellWidth: 30,
+        cellWidth: 32,
         halign: "right",
       },
-
       4: {
-        cellWidth: 30,
+        cellWidth: 32,
         halign: "right",
       },
-
       5: {
         cellWidth: 32,
         halign: "right",
       },
-
       6: {
         cellWidth: "auto",
       },
     },
 
-    didParseCell: (
-      data
-    ) => {
+    didParseCell: (data) => {
       if (
-        data.section ===
-          "body" &&
+        data.section === "body" &&
         data.column.index === 1
       ) {
         const value =
@@ -578,23 +1030,19 @@ export const exportPartyLedgerPdf = (
           );
 
         if (
-          value ===
-          "Money In"
+          value === "Money In"
         ) {
           data.cell.styles.textColor =
             green;
-
           data.cell.styles.fontStyle =
             "bold";
         }
 
         if (
-          value ===
-          "Money Out"
+          value === "Money Out"
         ) {
           data.cell.styles.textColor =
             red;
-
           data.cell.styles.fontStyle =
             "bold";
         }
@@ -608,9 +1056,9 @@ export const exportPartyLedgerPdf = (
   });
 
   /*
-   * ============================
+   * ========================================
    * FOOTER
-   * ============================
+   * ========================================
    */
 
   const pageCount =
@@ -636,7 +1084,12 @@ export const exportPartyLedgerPdf = (
       pageHeight - 14
     );
 
-    doc.setFontSize(8);
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(7);
 
     doc.setTextColor(
       100,
@@ -645,7 +1098,7 @@ export const exportPartyLedgerPdf = (
     );
 
     doc.text(
-      "ToyHub Corporation • Account Statement",
+      "ToyHub Corporation • Account Statement • Amounts in INR",
       14,
       pageHeight - 8
     );
@@ -661,9 +1114,9 @@ export const exportPartyLedgerPdf = (
   }
 
   /*
-   * ============================
+   * ========================================
    * SAVE
-   * ============================
+   * ========================================
    */
 
   const safeName =

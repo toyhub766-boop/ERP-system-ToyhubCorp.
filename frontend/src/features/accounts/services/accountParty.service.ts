@@ -1,7 +1,5 @@
 import api from "../../../services/api/axios";
 
-
-
 export const getParties = async () => {
   const res = await api.get("/accounts/party");
   return res.data;
@@ -35,6 +33,20 @@ export const updateParty = async (
   const res = await api.put(
     `/accounts/party/${id}`,
     data
+  );
+
+  return res.data;
+};
+
+export const updatePartyDueDate = async (
+  id: string,
+  dueDate: string | null
+) => {
+  const res = await api.patch(
+    `/accounts/party/${id}/due-date`,
+    {
+      dueDate,
+    }
   );
 
   return res.data;

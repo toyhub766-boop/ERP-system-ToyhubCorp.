@@ -4,8 +4,8 @@ import AttendanceHeader from "./AttendanceHeader";
 import AttendanceOverview from "./AttendanceOverview";
 import AttendanceToolbar from "./AttendanceToolbar";
 import EmployeeAttendanceTable from "./EmployeeAttendanceTable";
-import AttendancePhotoPreview from "./AttendancePhotoPreview";
 import LabourAttendanceTable from "./LabourAttendanceTable";
+import AttendancePhotoPreview from "./AttendancePhotoPreview";
 
 interface AttendanceRecord {
   _id: string;
@@ -68,12 +68,10 @@ const AttendanceDashboard = ({
   onExportExcel,
   onExportPdf,
 }: Props) => {
-  const [
-    activeTab,
-    setActiveTab,
-  ] = useState<
-    "employee" | "labour"
-  >("employee");
+  const [activeTab, setActiveTab] =
+    useState<
+      "employee" | "labour"
+    >("employee");
 
   const [search, setSearch] =
     useState("");
@@ -81,34 +79,30 @@ const AttendanceDashboard = ({
   const [status, setStatus] =
     useState("All");
 
-  const [
-    previewPhoto,
-    setPreviewPhoto,
-  ] = useState("");
+  const [previewPhoto, setPreviewPhoto] =
+    useState("");
 
-  const [
-    previewEmployee,
-    setPreviewEmployee,
-  ] = useState("");
+  const [previewEmployee, setPreviewEmployee] =
+    useState("");
 
-  const [
-  previewDate,
-  setPreviewDate,
-] = useState("");
+  const [previewDate, setPreviewDate] =
+    useState("");
 
   /*
-   * ===============================
+   * =========================================================
    * TAB RECORDS
-   * ===============================
+   * =========================================================
    */
 
   const tabRecords = useMemo(() => {
+    const type =
+      activeTab === "employee"
+        ? "EMPLOYEE"
+        : "LABOUR";
+
     return attendance.filter(
       (record) =>
-        record.attendanceType ===
-        (activeTab === "employee"
-          ? "EMPLOYEE"
-          : "LABOUR")
+        record.attendanceType === type
     );
   }, [
     attendance,
@@ -116,68 +110,68 @@ const AttendanceDashboard = ({
   ]);
 
   /*
-   * ===============================
-   * SEARCH + STATUS
-   * ===============================
+   * =========================================================
+   * FILTERED RECORDS
+   * =========================================================
    */
 
-  const filteredRecords = useMemo(() => {
-    const normalizedSearch =
-      search.trim().toLowerCase();
+  const filteredRecords =
+    useMemo(() => {
+      const normalizedSearch =
+        search.trim().toLowerCase();
 
-    return tabRecords.filter(
-      (record) => {
+      return tabRecords.filter(
+        (record) => {
+          const person =
+            activeTab === "employee"
+              ? record.employee
+              : record.labour;
 
-        const person =
-          activeTab === "employee"
-            ? record.employee
-            : record.labour;
+          const name =
+            person?.name
+              ?.toLowerCase() || "";
 
-        const name =
-          person?.name
-            ?.toLowerCase() || "";
+          const role =
+            person?.role
+              ?.toLowerCase() || "";
 
-        const role =
-          person?.role
-            ?.toLowerCase() || "";
+          const employeeId =
+            person?.employeeId
+              ?.toLowerCase() || "";
 
-        const employeeId =
-          person?.employeeId
-            ?.toLowerCase() || "";
+          const matchesSearch =
+            !normalizedSearch ||
+            name.includes(
+              normalizedSearch
+            ) ||
+            role.includes(
+              normalizedSearch
+            ) ||
+            employeeId.includes(
+              normalizedSearch
+            );
 
-        const matchesSearch =
-          !normalizedSearch ||
-          name.includes(
-            normalizedSearch
-          ) ||
-          role.includes(
-            normalizedSearch
-          ) ||
-          employeeId.includes(
-            normalizedSearch
+          const matchesStatus =
+            status === "All" ||
+            record.status === status;
+
+          return (
+            matchesSearch &&
+            matchesStatus
           );
-
-        const matchesStatus =
-          status === "All" ||
-          record.status === status;
-
-        return (
-          matchesSearch &&
-          matchesStatus
-        );
-      }
-    );
-  }, [
-    tabRecords,
-    search,
-    status,
-    activeTab,
-  ]);
+        }
+      );
+    }, [
+      tabRecords,
+      search,
+      status,
+      activeTab,
+    ]);
 
   /*
-   * ===============================
+   * =========================================================
    * TAB CHANGE
-   * ===============================
+   * =========================================================
    */
 
   const handleTabChange = (
@@ -186,129 +180,171 @@ const AttendanceDashboard = ({
     setActiveTab(tab);
     setSearch("");
     setStatus("All");
+
+    // Close any open photo when
+    // switching between datasets.
+    closePhotoPreview();
   };
 
   /*
-   * ===============================
+   * =========================================================
    * PHOTO PREVIEW
-   * ===============================
+   * =========================================================
    */
 
   const handleViewPhoto = (
-  photo: string,
-  employeeName: string,
-  date?: string
-) => {
-  setPreviewPhoto(photo);
-  setPreviewEmployee(
-    employeeName
-  );
-  setPreviewDate(date || "");
-};
+    photo: string,
+    employeeName: string,
+    date?: string
+  ) => {
+    if (!photo) return;
+
+    setPreviewPhoto(photo);
+    setPreviewEmployee(
+      employeeName
+    );
+    setPreviewDate(
+      date || ""
+    );
+  };
 
   const closePhotoPreview = () => {
-  setPreviewPhoto("");
-  setPreviewEmployee("");
-  setPreviewDate("");
-};
+    setPreviewPhoto("");
+    setPreviewEmployee("");
+    setPreviewDate("");
+  };
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-[#F6F8FC]">
 
       <div
         className="
           mx-auto
           w-full
           max-w-[1500px]
-          px-4
+          px-3
           py-6
-          sm:px-6
+          sm:px-5
           sm:py-8
           lg:px-8
           lg:py-10
         "
       >
 
-        {/* ================= HEADER ================= */}
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
         <AttendanceHeader
           activeTab={activeTab}
-          onTabChange={handleTabChange}
+          onTabChange={
+            handleTabChange
+          }
           onAddAttendance={
             onAddAttendance
           }
         />
 
-        {/* ================= OVERVIEW ================= */}
+        {/* =================================================
+            OVERVIEW
+        ================================================= */}
 
         <AttendanceOverview
           records={tabRecords}
         />
 
-        {/* ================= TOOLBAR ================= */}
+        {/* =================================================
+            TOOLBAR
+        ================================================= */}
 
-        <AttendanceToolbar
-          search={search}
-          status={status}
-          onSearchChange={setSearch}
-          onStatusChange={setStatus}
-          onExportExcel={() =>
-            onExportExcel(
-              filteredRecords
-            )
-          }
-          onExportPdf={() =>
-            onExportPdf(
-              filteredRecords
-            )
-          }
-        />
+        <div className="mt-7">
 
-        {/* ================= EMPLOYEE TABLE ================= */}
-
-        {activeTab === "employee" && (
-          <EmployeeAttendanceTable
-            records={filteredRecords}
-            onEdit={
-              onEditAttendance
+          <AttendanceToolbar
+            search={search}
+            status={status}
+            onSearchChange={
+              setSearch
             }
-            onDelete={
-              onDeleteAttendance
+            onStatusChange={
+              setStatus
             }
-            onViewPhoto={
-              handleViewPhoto
+            onExportExcel={() =>
+              onExportExcel(
+                filteredRecords
+              )
+            }
+            onExportPdf={() =>
+              onExportPdf(
+                filteredRecords
+              )
             }
           />
-        )}
 
-        {/* ================= LABOUR ================= */}
+        </div>
 
-        {activeTab === "labour" && (
-  <LabourAttendanceTable
-    records={filteredRecords}
-    onEdit={onEditAttendance}
-    onDelete={onDeleteAttendance}
-    onViewPhoto={handleViewPhoto}
-  />
-)}
+        {/* =================================================
+            TABLE
+        ================================================= */}
+
+        <div className="mt-5">
+
+          {activeTab ===
+            "employee" && (
+            <EmployeeAttendanceTable
+              records={
+                filteredRecords
+              }
+              onEdit={
+                onEditAttendance
+              }
+              onDelete={
+                onDeleteAttendance
+              }
+              onViewPhoto={
+                handleViewPhoto
+              }
+            />
+          )}
+
+          {activeTab ===
+            "labour" && (
+            <LabourAttendanceTable
+              records={
+                filteredRecords
+              }
+              onEdit={
+                onEditAttendance
+              }
+              onDelete={
+                onDeleteAttendance
+              }
+              onViewPhoto={
+                handleViewPhoto
+              }
+            />
+          )}
+
+        </div>
 
       </div>
 
-      {/* ================= PHOTO PREVIEW ================= */}
+      {/* ===================================================
+          PHOTO PREVIEW
+      =================================================== */}
 
       <AttendancePhotoPreview
-  open={Boolean(
-    previewPhoto
-  )}
-  photo={previewPhoto}
-  employeeName={
-    previewEmployee
-  }
-  date={previewDate}
-  onClose={
-    closePhotoPreview
-  }
-/>
+        open={Boolean(
+          previewPhoto
+        )}
+        photo={previewPhoto}
+        employeeName={
+          previewEmployee
+        }
+        date={previewDate}
+        onClose={
+          closePhotoPreview
+        }
+      />
 
     </div>
   );

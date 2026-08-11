@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import clsx from "clsx";
 
 type PageContainerProps = {
   children: ReactNode;
@@ -8,20 +7,18 @@ type PageContainerProps = {
 
 const PageContainer = ({
   children,
-  className,
+  className = "",
 }: PageContainerProps) => {
   return (
     <section
-      className={clsx(
-        "w-full",
-        "max-w-[1320px]",
-        "mx-auto",
-        "px-4",
-        "sm:px-6",
-        "lg:px-8",
-        "py-6",
-        className
-      )}
+      className={`
+        w-full
+        min-w-0
+        py-6
+        sm:py-7
+        lg:py-8
+        ${className}
+      `}
     >
       {children}
     </section>

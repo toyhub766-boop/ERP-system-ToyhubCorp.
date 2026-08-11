@@ -1,38 +1,64 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../../components/ui/Sidebar";
 
 type Props = {
   children: React.ReactNode;
 };
 
+const SIDEBAR_STORAGE_KEY = "toyhub-sidebar-collapsed";
+
 const AdminLayout = ({ children }: Props) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return (
+        localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true"
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        SIDEBAR_STORAGE_KEY,
+        String(collapsed)
+      );
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [collapsed]);
 
   return (
-    
-    <div className="min-h-screen bg-[#F4F7FB] flex">
-      {/* Sidebar */}
+    <div className="flex min-h-screen overflow-x-hidden bg-[#F6F7F9]">
+
+      {/* =====================================================
+          SIDEBAR
+      ===================================================== */}
+
       <Sidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
       />
 
-      {/* Main Content */}
-      
+      {/* =====================================================
+          MAIN CONTENT
+      ===================================================== */}
+
       <div
         className={`
-          flex-1 min-w-0 pl-3 lg:pl-5   
-          transition-all
-          duration-300
+          min-w-0 flex-1
+          transition-all duration-300 ease-out
           ${collapsed ? "ml-20" : "ml-64"}
         `}
       >
-        <main className="px-6 py-6 lg:px-10 lg:py-8">
-  <div className="mx-auto w-full max-w-[1440px]">
-    {children}
-  </div>
-</main>
+        <main className="w-full px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            {children}
+          </div>
+        </main>
       </div>
+
     </div>
   );
 };

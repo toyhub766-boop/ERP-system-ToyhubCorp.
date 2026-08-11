@@ -16,14 +16,17 @@ interface Props {
 const formatDate = (value?: string) => {
   if (!value) return "";
 
-  return new Date(value).toLocaleDateString(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }
-  );
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 const AttendancePhotoPreview = ({
@@ -33,10 +36,6 @@ const AttendancePhotoPreview = ({
   date,
   onClose,
 }: Props) => {
-  /*
-   * Close with Escape
-   */
-
   useEffect(() => {
     if (!open) return;
 
@@ -61,10 +60,6 @@ const AttendancePhotoPreview = ({
     };
   }, [open, onClose]);
 
-  /*
-   * Prevent rendering when closed
-   */
-
   if (!open || !photo) {
     return null;
   }
@@ -74,60 +69,88 @@ const AttendancePhotoPreview = ({
       className="
         fixed
         inset-0
-        z-[100]
+        z-[200]
         flex
         items-center
         justify-center
-        bg-slate-950/75
-        p-4
-        backdrop-blur-sm
-        animate-in
-        fade-in
-        duration-200
+        bg-slate-950/70
+        p-3
+        backdrop-blur-md
+        sm:p-6
       "
       onClick={onClose}
     >
+
+      {/* Modal */}
 
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Attendance photo preview"
+        onClick={(event) =>
+          event.stopPropagation()
+        }
         className="
           relative
           flex
           w-full
-          max-w-3xl
+          max-w-4xl
           flex-col
           overflow-hidden
-          rounded-2xl
+          rounded-[28px]
+          border
+          border-white/10
           bg-white
-          shadow-2xl
+          shadow-[0_30px_100px_rgba(0,0,0,0.35)]
           animate-in
+          fade-in
           zoom-in-95
           duration-200
         "
-        onClick={(event) =>
-          event.stopPropagation()
-        }
       >
 
         {/* ================= HEADER ================= */}
 
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div
+          className="
+            flex
+            shrink-0
+            items-center
+            justify-between
+            border-b
+            border-slate-100
+            bg-white
+            px-5
+            py-4
+            sm:px-6
+          "
+        >
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-[#17357A]">
-              <FiCamera size={17} />
+            <div
+              className="
+                flex
+                h-10
+                w-10
+                shrink-0
+                items-center
+                justify-center
+                rounded-xl
+                bg-[#17357A]/10
+                text-[#17357A]
+              "
+            >
+              <FiCamera size={18} />
             </div>
 
-            <div>
+            <div className="min-w-0">
 
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-bold text-slate-900">
                 Attendance Photo
               </p>
 
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 truncate text-xs text-slate-500">
                 {employeeName}
               </p>
 
@@ -138,38 +161,69 @@ const AttendancePhotoPreview = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close photo preview"
             className="
               flex
               h-9
               w-9
+              shrink-0
               items-center
               justify-center
               rounded-xl
               text-slate-400
-              transition
+              transition-all
+              duration-200
               hover:bg-slate-100
               hover:text-slate-700
+              active:scale-95
             "
-            aria-label="Close photo preview"
           >
             <FiX size={19} />
           </button>
 
         </div>
 
-        {/* ================= IMAGE ================= */}
+        {/* ================= IMAGE AREA ================= */}
 
-        <div className="flex max-h-[70vh] min-h-[280px] items-center justify-center bg-slate-100 p-4 sm:p-6">
+        <div
+          className="
+            relative
+            flex
+            min-h-[300px]
+            max-h-[72vh]
+            items-center
+            justify-center
+            overflow-hidden
+            bg-[#0F172A]
+            p-4
+            sm:min-h-[420px]
+            sm:p-8
+          "
+        >
+
+          {/* subtle background */}
+
+          <div
+            className="
+              pointer-events-none
+              absolute
+              inset-0
+              opacity-30
+              [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.08)_0,transparent_60%)]
+            "
+          />
 
           <img
             src={photo}
             alt={`${employeeName} attendance`}
             className="
-              max-h-[62vh]
+              relative
+              z-10
+              max-h-[65vh]
               max-w-full
-              rounded-xl
+              rounded-2xl
               object-contain
-              shadow-lg
+              shadow-[0_20px_60px_rgba(0,0,0,0.35)]
             "
           />
 
@@ -177,11 +231,27 @@ const AttendancePhotoPreview = ({
 
         {/* ================= FOOTER ================= */}
 
-        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          className="
+            flex
+            shrink-0
+            flex-col
+            gap-4
+            border-t
+            border-slate-100
+            bg-white
+            px-5
+            py-4
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+            sm:px-6
+          "
+        >
 
-          <div>
+          <div className="min-w-0">
 
-            <p className="text-sm font-semibold text-slate-900">
+            <p className="truncate text-sm font-bold text-slate-900">
               {employeeName}
             </p>
 
@@ -203,17 +273,22 @@ const AttendancePhotoPreview = ({
             className="
               inline-flex
               h-10
+              w-full
               items-center
               justify-center
               rounded-xl
-              bg-[#172B6B]
-              px-5
+              bg-[#17357A]
+              px-6
               text-sm
               font-semibold
               text-white
-              transition
-              hover:bg-[#20398F]
+              shadow-[0_5px_15px_rgba(23,53,122,0.18)]
+              transition-all
+              duration-200
+              hover:bg-[#10295D]
+              hover:shadow-[0_7px_20px_rgba(23,53,122,0.25)]
               active:scale-[0.98]
+              sm:w-auto
             "
           >
             Close

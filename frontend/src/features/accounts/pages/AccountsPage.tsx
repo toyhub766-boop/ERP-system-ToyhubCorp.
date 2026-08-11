@@ -35,19 +35,25 @@ import {
   exportAccountsExcel,
 } from "../../../utils/exportAccountsExcel";
 
-const AccountsPage = () => {
-  // ==========================================
-  // STATE
-  // ==========================================
+import {
+  Download,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown,
+} from "lucide-react";
 
-  const [parties, setParties] = useState<any[]>([]);
+const AccountsPage = () => {
+  const [parties, setParties] =
+    useState<any[]>([]);
 
   const [selectedParty, setSelectedParty] =
     useState<any>(null);
 
-  const [ledger, setLedger] = useState<any[]>([]);
+  const [ledger, setLedger] =
+    useState<any[]>([]);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
   const [partyModalOpen, setPartyModalOpen] =
     useState(false);
@@ -61,70 +67,76 @@ const AccountsPage = () => {
   const [
     transactionType,
     setTransactionType,
-  ] = useState<"MONEY_IN" | "MONEY_OUT">(
-    "MONEY_IN"
-  );
+  ] = useState<
+    "MONEY_IN" | "MONEY_OUT"
+  >("MONEY_IN");
 
-  // ==========================================
-  // PARTY COUNTS
-  // ==========================================
+  const [
+    accountsExportOpen,
+    setAccountsExportOpen,
+  ] = useState(false);
 
-  const customers = parties.filter(
-    (party) =>
-      party.partyType === "CUSTOMER"
-  );
-
-  const suppliers = parties.filter(
-    (party) =>
-      party.partyType === "SUPPLIER"
-  );
-
-  const companyExpenses = parties.filter(
-    (party) =>
-      party.partyType === "COMPANY_EXPENSE"
-  );
-
-  // ==========================================
-  // BALANCE SUMMARY
-  // ==========================================
-
-  const youllGet = parties
-    .filter(
+  const customers =
+    parties.filter(
       (party) =>
-        Number(party.currentBalance || 0) > 0
-    )
-    .reduce(
-      (sum, party) =>
-        sum +
-        Number(
-          party.currentBalance || 0
-        ),
-      0
+        party.partyType ===
+        "CUSTOMER"
     );
 
-  const youllGive = parties
-    .filter(
+  const suppliers =
+    parties.filter(
       (party) =>
-        Number(party.currentBalance || 0) < 0
-    )
-    .reduce(
-      (sum, party) =>
-        sum +
-        Math.abs(
+        party.partyType ===
+        "SUPPLIER"
+    );
+
+  const companyExpenses =
+    parties.filter(
+      (party) =>
+        party.partyType ===
+        "COMPANY_EXPENSE"
+    );
+
+  const youllGet =
+    parties
+      .filter(
+        (party) =>
           Number(
             party.currentBalance || 0
-          )
-        ),
-      0
-    );
+          ) > 0
+      )
+      .reduce(
+        (sum, party) =>
+          sum +
+          Number(
+            party.currentBalance || 0
+          ),
+        0
+      );
 
-  // ==========================================
-  // LOAD ALL PARTIES
-  // ==========================================
+  const youllGive =
+    parties
+      .filter(
+        (party) =>
+          Number(
+            party.currentBalance || 0
+          ) < 0
+      )
+      .reduce(
+        (sum, party) =>
+          sum +
+          Math.abs(
+            Number(
+              party.currentBalance || 0
+            )
+          ),
+        0
+      );
 
   const loadParties = async () => {
     try {
-      const data = await getParties();
+      const data =
+        await getParties();
 
       setParties(data);
 
@@ -140,10 +152,6 @@ const AccountsPage = () => {
       return [];
     }
   };
-
-  // ==========================================
-  // LOAD PARTY LEDGER
-  // ==========================================
 
   const loadLedger = async (
     partyId: string
@@ -169,76 +177,57 @@ const AccountsPage = () => {
     }
   };
 
-  // ==========================================
-  // REFRESH ACCOUNTS
-  // ==========================================
+  const refreshAccounts =
+    async () => {
+      try {
+        const updatedParties =
+          await loadParties();
 
-  const refreshAccounts = async () => {
-    try {
-      const updatedParties =
-        await loadParties();
+        if (!selectedParty) {
+          return;
+        }
 
-      if (!selectedParty) {
-        return;
-      }
+        const latestParty =
+          updatedParties.find(
+            (party: any) =>
+              party._id ===
+              selectedParty._id
+          );
 
-      const latestParty =
-        updatedParties.find(
-          (party: any) =>
-            party._id ===
-            selectedParty._id
+        if (!latestParty) {
+          setSelectedParty(null);
+          setLedger([]);
+          return;
+        }
+
+        setSelectedParty(
+          latestParty
         );
 
-      // Party was deleted
-      if (!latestParty) {
-        setSelectedParty(null);
-        setLedger([]);
-        return;
+        await loadLedger(
+          latestParty._id
+        );
+      } catch (error) {
+        console.error(
+          "Failed to refresh accounts:",
+          error
+        );
       }
+    };
 
-      // Refresh selected party
-      setSelectedParty(
-        latestParty
-      );
+  const handleSelectParty =
+    async (party: any) => {
+      setSelectedParty(party);
 
-      // Refresh its ledger
       await loadLedger(
-        latestParty._id
+        party._id
       );
-    } catch (error) {
-      console.error(
-        "Failed to refresh accounts:",
-        error
-      );
-    }
-  };
-
-  // ==========================================
-  // SELECT PARTY
-  // ==========================================
-
-  const handleSelectParty = async (
-    party: any
-  ) => {
-    setSelectedParty(party);
-
-    await loadLedger(
-      party._id
-    );
-  };
-
-  // ==========================================
-  // ADD PARTY
-  // ==========================================
+    };
 
   const handleAddParty = () => {
     setEditParty(null);
     setPartyModalOpen(true);
   };
-
-  // ==========================================
-  // EDIT PARTY
-  // ==========================================
 
   const handleEditParty = () => {
     if (!selectedParty) {
@@ -252,18 +241,11 @@ const AccountsPage = () => {
     setPartyModalOpen(true);
   };
 
-  // ==========================================
-  // PARTY MODAL CLOSE
-  // ==========================================
-
-  const handleClosePartyModal = () => {
-    setPartyModalOpen(false);
-    setEditParty(null);
-  };
-
-  // ==========================================
-  // PARTY CREATED / UPDATED
-  // ==========================================
+  const handleClosePartyModal =
+    () => {
+      setPartyModalOpen(false);
+      setEditParty(null);
+    };
 
   const handlePartySuccess =
     async () => {
@@ -271,10 +253,6 @@ const AccountsPage = () => {
         const updatedParties =
           await loadParties();
 
-        /*
-         * If we were editing an existing
-         * party, keep that party selected.
-         */
         if (editParty) {
           const latestParty =
             updatedParties.find(
@@ -303,10 +281,6 @@ const AccountsPage = () => {
         );
       }
     };
-
-  // ==========================================
-  // DELETE TRANSACTION
-  // ==========================================
 
   const handleDeleteTransaction =
     async (
@@ -340,10 +314,6 @@ const AccountsPage = () => {
         );
       }
     };
-
-  // ==========================================
-  // DELETE PARTY
-  // ==========================================
 
   const handleDeleteParty =
     async () => {
@@ -383,10 +353,6 @@ const AccountsPage = () => {
       }
     };
 
-  // ==========================================
-  // MONEY IN
-  // ==========================================
-
   const handleMoneyIn = () => {
     if (!selectedParty) {
       return;
@@ -398,10 +364,6 @@ const AccountsPage = () => {
 
     setModalOpen(true);
   };
-
-  // ==========================================
-  // MONEY OUT
-  // ==========================================
 
   const handleMoneyOut = () => {
     if (!selectedParty) {
@@ -415,18 +377,10 @@ const AccountsPage = () => {
     setModalOpen(true);
   };
 
-  // ==========================================
-  // CLOSE TRANSACTION MODAL
-  // ==========================================
-
   const handleCloseTransactionModal =
     () => {
       setModalOpen(false);
     };
-
-  // ==========================================
-  // TRANSACTION SUCCESS
-  // ==========================================
 
   const handleTransactionSuccess =
     async () => {
@@ -435,31 +389,16 @@ const AccountsPage = () => {
       setModalOpen(false);
     };
 
-  // ==========================================
-  // VIEW REPORT
-  // ==========================================
-
   const handleViewReport = () => {
     if (!selectedParty) {
       return;
     }
 
-    /*
-     * Report UI can be connected here.
-     *
-     * We intentionally don't fake a report
-     * action until the report component/page
-     * is defined.
-     */
     console.log(
       "View report:",
       selectedParty.companyName
     );
   };
-
-  // ==========================================
-  // EXPORT PARTY PDF
-  // ==========================================
 
   const handleExportPdf =
     async () => {
@@ -484,10 +423,6 @@ const AccountsPage = () => {
       }
     };
 
-  // ==========================================
-  // EXPORT PARTY EXCEL
-  // ==========================================
-
   const handleExportExcel =
     async () => {
       if (!selectedParty) {
@@ -511,288 +446,313 @@ const AccountsPage = () => {
       }
     };
 
-    // ==========================================
-// EXPORT WHOLE ACCOUNTS LEDGER
-// ==========================================
+  const handleExportAccounts =
+    async (
+      format: "PDF" | "EXCEL"
+    ) => {
+      setAccountsExportOpen(false);
 
-const handleExportAccounts = async (
-  format: "PDF" | "EXCEL"
-) => {
-  try {
-    if (parties.length === 0) {
-      alert("No accounts available to export.");
-      return;
-    }
-
-    const exportRows: any[] = [];
-
-    // Fetch ledger for every party
-    for (const party of parties) {
       try {
-        const partyLedger =
-          await getPartyLedger(party._id);
+        if (parties.length === 0) {
+          alert(
+            "No accounts available to export."
+          );
+          return;
+        }
 
-        partyLedger.forEach(
-          (transaction: any) => {
-            exportRows.push({
-              date: transaction.date,
+        const exportRows: any[] =
+          [];
 
-              partyCode:
-                party.partyCode || "--",
+        for (
+          const party of parties
+        ) {
+          try {
+            const partyLedger =
+              await getPartyLedger(
+                party._id
+              );
 
-              partyName:
-                party.companyName || "--",
+            partyLedger.forEach(
+              (
+                transaction: any
+              ) => {
+                exportRows.push({
+                  date:
+                    transaction.date,
 
-              partyType:
-                party.partyType || "--",
+                  partyCode:
+                    party.partyCode ||
+                    "--",
 
-              contactPerson:
-                party.contactPerson || "--",
+                  partyName:
+                    party.companyName ||
+                    "--",
 
-              transactionType:
-                transaction.transactionType ===
-                "MONEY_IN"
-                  ? "Money In"
-                  : "Money Out",
+                  partyType:
+                    party.partyType ||
+                    "--",
 
-              paymentMethod:
-                transaction.paymentMethod || "--",
+                  contactPerson:
+                    party.contactPerson ||
+                    "--",
 
-              amount:
-                Number(
-                  transaction.amount || 0
-                ),
+                  transactionType:
+                    transaction.transactionType ===
+                    "MONEY_IN"
+                      ? "Money In"
+                      : "Money Out",
 
-              balance:
-                Number(
-                  transaction.balanceAfterTransaction ||
-                    0
-                ),
+                  paymentMethod:
+                    transaction.paymentMethod ||
+                    "--",
 
-              remarks:
-                transaction.remarks || "--",
-            });
+                  amount:
+                    Number(
+                      transaction.amount ||
+                        0
+                    ),
+
+                  balance:
+                    Number(
+                      transaction.balanceAfterTransaction ||
+                        0
+                    ),
+
+                  remarks:
+                    transaction.remarks ||
+                    "--",
+                });
+              }
+            );
+          } catch (error) {
+            console.error(
+              `Failed to load ledger for ${party.companyName}:`,
+              error
+            );
           }
+        }
+
+        exportRows.sort(
+          (a, b) =>
+            new Date(
+              a.date
+            ).getTime() -
+            new Date(
+              b.date
+            ).getTime()
         );
+
+        const summary = {
+          totalParties:
+            parties.length,
+
+          customers:
+            customers.length,
+
+          suppliers:
+            suppliers.length,
+
+          companyExpenses:
+            companyExpenses.length,
+
+          youllGet,
+
+          youllGive,
+        };
+
+        if (
+          format === "PDF"
+        ) {
+          await exportAccountsPdf(
+            exportRows,
+            summary,
+            "toy-hub-accounts-ledger"
+          );
+        }
+
+        if (
+          format === "EXCEL"
+        ) {
+          await exportAccountsExcel(
+            exportRows,
+            summary,
+            "toy-hub-accounts-ledger"
+          );
+        }
       } catch (error) {
         console.error(
-          `Failed to load ledger for ${party.companyName}:`,
+          "Accounts export failed:",
           error
         );
+
+        alert(
+          "Failed to export accounts ledger."
+        );
       }
-    }
-
-    // Sort oldest → newest
-    exportRows.sort(
-      (a, b) =>
-        new Date(a.date).getTime() -
-        new Date(b.date).getTime()
-    );
-
-    // ======================================
-    // SUMMARY
-    // ======================================
-
-    const summary = {
-      totalParties:
-        parties.length,
-
-      customers:
-        customers.length,
-
-      suppliers:
-        suppliers.length,
-
-      companyExpenses:
-        companyExpenses.length,
-
-      youllGet,
-
-      youllGive,
     };
-
-    // ======================================
-    // EXPORT
-    // ======================================
-
-    if (format === "PDF") {
-      await exportAccountsPdf(
-        exportRows,
-        summary,
-        "toy-hub-accounts-ledger"
-      );
-    }
-
-    if (format === "EXCEL") {
-      await exportAccountsExcel(
-        exportRows,
-        summary,
-        "toy-hub-accounts-ledger"
-      );
-    }
-  } catch (error) {
-    console.error(
-      "Accounts export failed:",
-      error
-    );
-
-    alert(
-      "Failed to export accounts ledger."
-    );
-  }
-};
-
-  // ==========================================
-  // INITIAL LOAD
-  // ==========================================
 
   useEffect(() => {
     loadParties();
   }, []);
 
-  // ==========================================
-  // UI
-  // ==========================================
-
   return (
     <AdminLayout>
+
       <PageContainer className="space-y-6">
 
-        {/* =====================================
-            PAGE HEADER
-        ===================================== */}
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 
-  <PageHeader
-    title="Accounts"
-    subtitle="Customer, Supplier & Company Expense Ledger"
-  />
+          <PageHeader
+            title="Accounts"
+            subtitle="Customer, Supplier & Company Expense Ledger"
+            className="mb-0"
+          />
 
-  <div className="relative group">
+          {/* WHOLE ACCOUNTS EXPORT */}
 
-    <button
-      type="button"
-      className="rounded-xl bg-[#17357A] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#10295d]"
-    >
-      Export Accounts
-    </button>
+          <div className="relative shrink-0">
 
-    <div className="absolute right-0 z-50 mt-2 hidden w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl group-hover:block">
+            <button
+              type="button"
+              onClick={() =>
+                setAccountsExportOpen(
+                  (value) => !value
+                )
+              }
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#17357A] px-4 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(23,53,122,0.18)] transition hover:bg-[#10295d] active:scale-[0.98]"
+            >
+              <Download size={16} />
 
-      <button
-        type="button"
-        onClick={() =>
-          handleExportAccounts("PDF")
-        }
-        className="block w-full px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-      >
-        Export Accounts PDF
-      </button>
+              Export Accounts
 
-      <button
-        type="button"
-        onClick={() =>
-          handleExportAccounts("EXCEL")
-        }
-        className="block w-full border-t border-slate-100 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-      >
-        Export Accounts Excel
-      </button>
+              <ChevronDown
+                size={15}
+                className={`transition-transform ${
+                  accountsExportOpen
+                    ? "rotate-180"
+                    : ""
+                }`}
+              />
+            </button>
 
-    </div>
+            {accountsExportOpen && (
+              <div className="absolute right-0 top-[calc(100%+8px)] z-[100] w-56 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
 
-  </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleExportAccounts(
+                      "PDF"
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                    <FileText
+                      size={15}
+                    />
+                  </div>
 
-</div>
+                  <div>
+                    <p className="font-semibold">
+                      Export PDF
+                    </p>
 
-        {/* =====================================
-            SUMMARY CARDS
-        ===================================== */}
+                    <p className="text-[11px] text-slate-400">
+                      Full accounts report
+                    </p>
+                  </div>
+                </button>
 
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleExportAccounts(
+                      "EXCEL"
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <FileSpreadsheet
+                      size={15}
+                    />
+                  </div>
 
-          {/* You'll Get */}
+                  <div>
+                    <p className="font-semibold">
+                      Export Excel
+                    </p>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">
-              You'll Get
-            </p>
+                    <p className="text-[11px] text-slate-400">
+                      Full accounts spreadsheet
+                    </p>
+                  </div>
+                </button>
 
-            <h2 className="mt-2 text-3xl font-bold text-green-600">
-              ₹
-              {youllGet.toLocaleString(
-                "en-IN"
-              )}
-            </h2>
-          </div>
+              </div>
+            )}
 
-          {/* You'll Give */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">
-              You'll Give
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-red-600">
-              ₹
-              {youllGive.toLocaleString(
-                "en-IN"
-              )}
-            </h2>
-          </div>
-
-          {/* Customers */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">
-              Customers
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {customers.length}
-            </h2>
-          </div>
-
-          {/* Suppliers */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">
-              Suppliers
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {suppliers.length}
-            </h2>
-          </div>
-
-          {/* Company Expense */}
-
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-500">
-              Company Expense
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {companyExpenses.length}
-            </h2>
           </div>
 
         </div>
 
-        {/* =====================================
-            MAIN ACCOUNTS AREA
-        ===================================== */}
+        {/* =================================================
+            SUMMARY
+        ================================================= */}
 
-        <div className="grid gap-6 xl:grid-cols-12">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
 
-          {/* ===================================
-              LEFT — PARTY LIST
-          =================================== */}
+          <SummaryCard
+            label="You'll Get"
+            value={`₹${youllGet.toLocaleString(
+              "en-IN"
+            )}`}
+            valueClass="text-emerald-600"
+          />
 
-          <div className="xl:col-span-4">
+          <SummaryCard
+            label="You'll Give"
+            value={`₹${youllGive.toLocaleString(
+              "en-IN"
+            )}`}
+            valueClass="text-red-600"
+          />
 
-            <div className="h-[74vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <SummaryCard
+            label="Customers"
+            value={customers.length}
+          />
+
+          <SummaryCard
+            label="Suppliers"
+            value={suppliers.length}
+          />
+
+          <SummaryCard
+            label="Company Expense"
+            value={
+              companyExpenses.length
+            }
+          />
+
+        </div>
+
+        {/* =================================================
+            ACCOUNTS WORKSPACE
+        ================================================= */}
+
+        <div className="grid items-start gap-5 xl:grid-cols-12">
+
+          {/* PARTY LIST */}
+
+          <div className="min-w-0 xl:col-span-4">
+
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.04)] xl:sticky xl:top-5">
 
               <PartyList
                 parties={parties}
@@ -811,16 +771,13 @@ const handleExportAccounts = async (
 
           </div>
 
-          {/* ===================================
-              RIGHT — LEDGER
-          =================================== */}
+          {/* LEDGER */}
 
-          <div className="xl:col-span-8">
+          <div className="min-w-0 xl:col-span-8">
 
-            <div className="h-[74vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.04)]">
 
               <LedgerPanel
-
                 selectedParty={
                   selectedParty
                 }
@@ -828,8 +785,6 @@ const handleExportAccounts = async (
                 ledger={ledger}
 
                 loading={loading}
-
-                /* Money */
 
                 onMoneyIn={
                   handleMoneyIn
@@ -839,13 +794,9 @@ const handleExportAccounts = async (
                   handleMoneyOut
                 }
 
-                /* Transactions */
-
                 onDelete={
                   handleDeleteTransaction
                 }
-
-                /* Party */
 
                 onDeleteParty={
                   handleDeleteParty
@@ -855,13 +806,9 @@ const handleExportAccounts = async (
                   handleEditParty
                 }
 
-                /* Reports */
-
                 onViewReport={
                   handleViewReport
                 }
-
-                /* Exports */
 
                 onExportPdf={
                   handleExportPdf
@@ -870,7 +817,6 @@ const handleExportAccounts = async (
                 onExportExcel={
                   handleExportExcel
                 }
-
               />
 
             </div>
@@ -879,60 +825,75 @@ const handleExportAccounts = async (
 
         </div>
 
-        {/* =====================================
-            ADD / EDIT PARTY MODAL
-        ===================================== */}
+        {/* =================================================
+            MODALS
+        ================================================= */}
 
         <AddPartyModal
-
           open={
             partyModalOpen
           }
-
           editParty={
             editParty
           }
-
           onClose={
             handleClosePartyModal
           }
-
           onSuccess={
             handlePartySuccess
           }
-
         />
 
-        {/* =====================================
-            MONEY IN / MONEY OUT MODAL
-        ===================================== */}
-
         <TransactionModal
-
           open={
             modalOpen
           }
-
           onClose={
             handleCloseTransactionModal
           }
-
           partyId={
-            selectedParty?._id || ""
+            selectedParty?._id ||
+            ""
           }
-
           transactionType={
             transactionType
           }
-
           onSuccess={
             handleTransactionSuccess
           }
-
         />
 
       </PageContainer>
+
     </AdminLayout>
+  );
+};
+
+interface SummaryCardProps {
+  label: string;
+  value: string | number;
+  valueClass?: string;
+}
+
+const SummaryCard = ({
+  label,
+  value,
+  valueClass = "text-slate-900",
+}: SummaryCardProps) => {
+  return (
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_2px_12px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_5px_18px_rgba(15,23,42,0.07)] sm:p-5">
+
+      <p className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+        {label}
+      </p>
+
+      <p
+        className={`mt-2 truncate text-2xl font-bold tracking-tight sm:text-3xl ${valueClass}`}
+      >
+        {value}
+      </p>
+
+    </div>
   );
 };
 

@@ -49,22 +49,32 @@ export const updateDispatch = async (
   res: Response
 ) => {
   try {
-
-    const dispatch = await Dispatch.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-      }
-    )
-      .populate({
-        path: "production",
-        populate: {
-          path: "finishedProduct",
-          select: "name",
-        },
-      })
-      .populate("dispatchedBy", "name");
+    const dispatch =
+      await Dispatch.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        {
+          new: true,
+          runValidators: true,
+        }
+      )
+        .populate({
+          path: "production",
+          populate: [
+            {
+              path: "items.product",
+              select: "name productCode",
+            },
+            {
+              path: "client",
+              select: "name companyName",
+            },
+          ],
+        })
+        .populate(
+          "dispatchedBy",
+          "name employeeId"
+        );
 
     if (!dispatch) {
       return res.status(404).json({
@@ -72,38 +82,49 @@ export const updateDispatch = async (
       });
     }
 
-    res.json(dispatch);
+    return res.json(dispatch);
 
-  } catch (error) {
+  } catch (error: any) {
+    console.error(
+      "UPDATE DISPATCH ERROR:",
+      error
+    );
 
-    console.error(error);
-
-    res.status(500).json({
-      message: "Failed to update dispatch",
+    return res.status(500).json({
+      message: error.message,
     });
-
   }
 };
 
-export const getDispatches = async (req: AuthRequest, res: Response) => {
+export const getDispatches = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const dispatches = await Dispatch.find()
       .populate({
         path: "production",
-        populate: {
-          path: "finishedProduct",
-          select: "name",
-        },
+        populate: [
+          {
+            path: "items.product",
+            select: "name productCode",
+          },
+          {
+            path: "client",
+            select: "name companyName",
+          },
+        ],
       })
-      .populate("dispatchedBy", "name")
+      .populate("dispatchedBy", "name employeeId")
       .sort({ createdAt: -1 });
 
-    res.json(dispatches);
-  } catch (error) {
-    console.error(error);
+    return res.json(dispatches);
+  } catch (error: any) {
+    console.error("GET DISPATCH ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to fetch dispatch records",
+      error: error.message,
     });
   }
 };

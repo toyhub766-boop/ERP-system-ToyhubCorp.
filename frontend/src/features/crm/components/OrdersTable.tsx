@@ -1,3 +1,14 @@
+import {
+  FiCheckCircle,
+  FiClock,
+  FiCreditCard,
+  FiEdit2,
+  FiPackage,
+  FiTrash2,
+  FiTruck,
+  FiXCircle,
+} from "react-icons/fi";
+
 interface Props {
   orders: any[];
   onEdit: (order: any) => void;
@@ -5,82 +16,375 @@ interface Props {
   onRecordPayment: (order: any) => void;
 }
 
+const getStatusConfig = (status: string) => {
+  switch (status) {
+    case "Delivered":
+      return {
+        icon: FiCheckCircle,
+        dot: "bg-emerald-500",
+        badge:
+          "border-emerald-100 bg-emerald-50 text-emerald-700",
+      };
+
+    case "Pending":
+      return {
+        icon: FiClock,
+        dot: "bg-amber-500",
+        badge:
+          "border-amber-100 bg-amber-50 text-amber-700",
+      };
+
+    case "Cancelled":
+      return {
+        icon: FiXCircle,
+        dot: "bg-red-500",
+        badge:
+          "border-red-100 bg-red-50 text-red-700",
+      };
+
+    case "Dispatched":
+      return {
+        icon: FiTruck,
+        dot: "bg-indigo-500",
+        badge:
+          "border-indigo-100 bg-indigo-50 text-indigo-700",
+      };
+
+    case "In Production":
+      return {
+        icon: FiPackage,
+        dot: "bg-violet-500",
+        badge:
+          "border-violet-100 bg-violet-50 text-violet-700",
+      };
+
+    default:
+      return {
+        icon: FiClock,
+        dot: "bg-blue-500",
+        badge:
+          "border-blue-100 bg-blue-50 text-blue-700",
+      };
+  }
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  );
+};
+
+const formatAmount = (value: any) => {
+  return Number(value || 0).toLocaleString(
+    "en-IN",
+    {
+      maximumFractionDigits: 2,
+    }
+  );
+};
+
 const OrdersTable = ({
   orders,
   onEdit,
   onDelete,
   onRecordPayment,
 }: Props) => {
+  const totalOrders = orders.length;
+
+  const pendingOrders = orders.filter(
+    (order) =>
+      order.status === "Pending"
+  ).length;
+
+  const deliveredOrders = orders.filter(
+    (order) =>
+      order.status === "Delivered"
+  ).length;
+
+  const totalValue = orders.reduce(
+    (total, order) =>
+      total +
+      Number(order.totalAmount || 0),
+    0
+  );
 
   return (
-  <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <section
+      className="
+        overflow-hidden
+        rounded-[24px]
+        border
+        border-slate-200
+        bg-white
+        shadow-sm
+      "
+    >
 
-    {/* Header */}
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
 
-    <div className="border-b border-slate-200 p-6">
+      <div
+        className="
+          border-b
+          border-slate-100
+          bg-white
+          px-5
+          py-5
+          sm:px-6
+          sm:py-6
+        "
+      >
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div
+          className="
+            flex
+            flex-col
+            gap-5
+            xl:flex-row
+            xl:items-center
+            xl:justify-between
+          "
+        >
 
-        <div>
+          {/* Title */}
 
-          <h2 className="text-2xl font-bold text-slate-900">
-            Orders
-          </h2>
+          <div className="flex items-start gap-4">
 
-          <p className="mt-1 text-sm text-slate-500">
-            Track customer orders, delivery status and payments.
-          </p>
+            <div
+              className="
+                flex
+                h-11
+                w-11
+                shrink-0
+                items-center
+                justify-center
+                rounded-2xl
+                bg-[#172B6B]/10
+                text-[#172B6B]
+              "
+            >
+              <FiPackage size={20} />
+            </div>
 
-        </div>
+            <div>
 
-        <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-3">
 
-          <div className="rounded-2xl bg-blue-50 px-5 py-3">
+                <h2
+                  className="
+                    text-lg
+                    font-bold
+                    tracking-tight
+                    text-slate-900
+                    sm:text-xl
+                  "
+                >
+                  Orders
+                </h2>
 
-            <p className="text-xs uppercase tracking-wide text-blue-500">
-              Total
-            </p>
+                <span
+                  className="
+                    rounded-full
+                    bg-slate-100
+                    px-2.5
+                    py-1
+                    text-[10px]
+                    font-bold
+                    text-slate-500
+                  "
+                >
+                  {totalOrders}
+                </span>
 
-            <h3 className="text-xl font-bold text-blue-700">
-              {orders.length}
-            </h3>
+              </div>
+
+              <p
+                className="
+                  mt-1
+                  max-w-xl
+                  text-xs
+                  leading-5
+                  text-slate-500
+                  sm:text-sm
+                "
+              >
+                Track customer orders, fulfillment
+                progress and payment activity.
+              </p>
+
+            </div>
 
           </div>
 
-          <div className="rounded-2xl bg-yellow-50 px-5 py-3">
 
-            <p className="text-xs uppercase tracking-wide text-yellow-600">
-              Pending
-            </p>
+          {/* Summary */}
 
-            <h3 className="text-xl font-bold text-yellow-700">
+          <div
+            className="
+              grid
+              grid-cols-2
+              gap-2
+              sm:grid-cols-4
+              xl:min-w-[560px]
+            "
+          >
 
-              {
-                orders.filter(
-                  (o) => o.status === "Pending"
-                ).length
-              }
+            {/* Total */}
 
-            </h3>
+            <div
+              className="
+                rounded-xl
+                border
+                border-slate-100
+                bg-slate-50
+                px-3
+                py-2.5
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-wider
+                  text-slate-400
+                "
+              >
+                Total Orders
+              </p>
 
-          </div>
+              <p
+                className="
+                  mt-1
+                  text-lg
+                  font-bold
+                  text-slate-900
+                "
+              >
+                {totalOrders}
+              </p>
+            </div>
 
-          <div className="rounded-2xl bg-green-50 px-5 py-3">
 
-            <p className="text-xs uppercase tracking-wide text-green-600">
-              Delivered
-            </p>
+            {/* Pending */}
 
-            <h3 className="text-xl font-bold text-green-700">
+            <div
+              className="
+                rounded-xl
+                border
+                border-amber-100
+                bg-amber-50/60
+                px-3
+                py-2.5
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-wider
+                  text-amber-600
+                "
+              >
+                Pending
+              </p>
 
-              {
-                orders.filter(
-                  (o) =>
-                    o.status === "Delivered"
-                ).length
-              }
+              <p
+                className="
+                  mt-1
+                  text-lg
+                  font-bold
+                  text-amber-700
+                "
+              >
+                {pendingOrders}
+              </p>
+            </div>
 
-            </h3>
+
+            {/* Delivered */}
+
+            <div
+              className="
+                rounded-xl
+                border
+                border-emerald-100
+                bg-emerald-50/60
+                px-3
+                py-2.5
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-wider
+                  text-emerald-600
+                "
+              >
+                Delivered
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-lg
+                  font-bold
+                  text-emerald-700
+                "
+              >
+                {deliveredOrders}
+              </p>
+            </div>
+
+
+            {/* Value */}
+
+            <div
+              className="
+                rounded-xl
+                border
+                border-blue-100
+                bg-blue-50/60
+                px-3
+                py-2.5
+              "
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-wider
+                  text-blue-600
+                "
+              >
+                Order Value
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  truncate
+                  text-lg
+                  font-bold
+                  text-[#172B6B]
+                "
+                title={`₹${formatAmount(totalValue)}`}
+              >
+                ₹{formatAmount(totalValue)}
+              </p>
+            </div>
 
           </div>
 
@@ -88,228 +392,550 @@ const OrdersTable = ({
 
       </div>
 
-    </div>
 
-    <div className="overflow-x-auto">
+      {/* =====================================================
+          TABLE
+      ====================================================== */}
 
-      <table className="min-w-full">
-
-        <thead className="sticky top-0 bg-slate-50">
-
-          <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-
-            <th className="px-6 py-4 text-left font-semibold">
-              Order No.
-            </th>
-
-            <th className="px-6 py-4 text-left font-semibold">
-              Status
-            </th>
-
-            <th className="px-6 py-4 text-right font-semibold">
-              Amount
-            </th>
-
-            <th className="px-6 py-4 text-center font-semibold">
-              Created
-            </th>
-
-            <th className="px-6 py-4 text-center font-semibold">
-              Actions
-            </th>
-
-          </tr>
-
-        </thead>
-<tbody>
-
-  {orders.length === 0 ? (
-
-    <tr>
-
-      <td
-        colSpan={5}
-        className="px-6 py-24 text-center"
+      <div
+        className="
+          overflow-x-auto
+          scrollbar-thin
+          scrollbar-thumb-slate-300
+          scrollbar-track-transparent
+        "
       >
 
-        <div className="flex flex-col items-center">
+        <table className="min-w-[900px] w-full">
 
-          <div className="m-5 text-2xl">
-            📦
-          </div>
+          {/* Header */}
 
-          <h3 className="text-xl font-bold text-slate-800">
-            No Orders Yet
-          </h3>
+          <thead>
 
-          <p className="mt-2 text-sm text-slate-500">
-            Orders created for this customer will appear here.
+            <tr
+              className="
+                border-b
+                border-slate-100
+                bg-slate-50/70
+              "
+            >
+
+              <th
+                className="
+                  px-6
+                  py-3.5
+                  text-left
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.12em]
+                  text-slate-400
+                "
+              >
+                Order
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-3.5
+                  text-left
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.12em]
+                  text-slate-400
+                "
+              >
+                Status
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-3.5
+                  text-right
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.12em]
+                  text-slate-400
+                "
+              >
+                Amount
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-3.5
+                  text-center
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.12em]
+                  text-slate-400
+                "
+              >
+                Created
+              </th>
+
+              <th
+                className="
+                  px-6
+                  py-3.5
+                  text-center
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.12em]
+                  text-slate-400
+                "
+              >
+                Actions
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          {/* Body */}
+
+          <tbody>
+
+            {orders.length === 0 ? (
+
+              <tr>
+
+                <td
+                  colSpan={5}
+                  className="px-6 py-20"
+                >
+
+                  <div
+                    className="
+                      mx-auto
+                      flex
+                      max-w-sm
+                      flex-col
+                      items-center
+                      text-center
+                    "
+                  >
+
+                    <div
+                      className="
+                        flex
+                        h-16
+                        w-16
+                        items-center
+                        justify-center
+                        rounded-2xl
+                        bg-slate-100
+                        text-slate-400
+                      "
+                    >
+                      <FiPackage size={27} />
+                    </div>
+
+                    <h3
+                      className="
+                        mt-5
+                        text-base
+                        font-bold
+                        text-slate-800
+                      "
+                    >
+                      No orders yet
+                    </h3>
+
+                    <p
+                      className="
+                        mt-1.5
+                        text-sm
+                        leading-5
+                        text-slate-500
+                      "
+                    >
+                      Orders created for this
+                      customer will appear here.
+                    </p>
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            ) : (
+
+              orders.map((order) => {
+
+                const status =
+                  getStatusConfig(
+                    order.status
+                  );
+
+                const StatusIcon =
+                  status.icon;
+
+                return (
+                  <tr
+                    key={order._id}
+                    className="
+                      group
+                      border-b
+                      border-slate-100
+                      transition-colors
+                      last:border-b-0
+                      hover:bg-slate-50/70
+                    "
+                  >
+
+                    {/* Order */}
+
+                    <td className="px-6 py-5">
+
+                      <div className="flex items-center gap-3">
+
+                        <div
+                          className="
+                            flex
+                            h-9
+                            w-9
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-xl
+                            bg-[#172B6B]/8
+                            text-[#172B6B]
+                          "
+                        >
+                          <FiPackage size={16} />
+                        </div>
+
+                        <div className="min-w-0">
+
+                          <p
+                            className="
+                              truncate
+                              text-sm
+                              font-bold
+                              text-slate-900
+                            "
+                          >
+                            {order.orderNumber ||
+                              "Order"}
+                          </p>
+
+                          <p
+                            className="
+                              mt-0.5
+                              text-[11px]
+                              text-slate-400
+                            "
+                          >
+                            Customer Order
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </td>
+
+
+                    {/* Status */}
+
+                    <td className="px-6 py-5">
+
+                      <span
+                        className={`
+                          inline-flex
+                          items-center
+                          gap-2
+                          rounded-full
+                          border
+                          px-3
+                          py-1.5
+                          text-[11px]
+                          font-bold
+                          ${status.badge}
+                        `}
+                      >
+
+                        <span
+                          className={`
+                            h-1.5
+                            w-1.5
+                            rounded-full
+                            ${status.dot}
+                          `}
+                        />
+
+                        <StatusIcon size={12} />
+
+                        {order.status}
+
+                      </span>
+
+                    </td>
+
+
+                    {/* Amount */}
+
+                    <td
+                      className="
+                        px-6
+                        py-5
+                        text-right
+                      "
+                    >
+
+                      <p
+                        className="
+                          text-sm
+                          font-bold
+                          text-slate-900
+                        "
+                      >
+                        ₹
+                        {formatAmount(
+                          order.totalAmount
+                        )}
+                      </p>
+
+                      <p
+                        className="
+                          mt-0.5
+                          text-[10px]
+                          text-slate-400
+                        "
+                      >
+                        Total value
+                      </p>
+
+                    </td>
+
+
+                    {/* Date */}
+
+                    <td
+                      className="
+                        px-6
+                        py-5
+                        text-center
+                      "
+                    >
+
+                      <p
+                        className="
+                          text-xs
+                          font-semibold
+                          text-slate-700
+                        "
+                      >
+                        {formatDate(
+                          order.createdAt
+                        )}
+                      </p>
+
+                      <p
+                        className="
+                          mt-0.5
+                          text-[10px]
+                          text-slate-400
+                        "
+                      >
+                        Created
+                      </p>
+
+                    </td>
+
+
+                    {/* Actions */}
+
+                    <td className="px-6 py-5">
+
+                      <div
+                        className="
+                          flex
+                          items-center
+                          justify-center
+                          gap-1.5
+                        "
+                      >
+
+                        {/* Payment */}
+
+                        <button
+                          type="button"
+                          title="Record payment"
+                          onClick={() =>
+                            onRecordPayment(
+                              order
+                            )
+                          }
+                          className="
+                            inline-flex
+                            h-9
+                            items-center
+                            gap-1.5
+                            rounded-lg
+                            border
+                            border-emerald-100
+                            bg-emerald-50
+                            px-3
+                            text-[11px]
+                            font-bold
+                            text-emerald-700
+                            transition
+                            hover:border-emerald-200
+                            hover:bg-emerald-100
+                            active:scale-[0.97]
+                          "
+                        >
+                          <FiCreditCard
+                            size={14}
+                          />
+
+                          Payment
+                        </button>
+
+
+                        {/* Edit */}
+
+                        <button
+                          type="button"
+                          title="Edit order"
+                          onClick={() =>
+                            onEdit(order)
+                          }
+                          className="
+                            inline-flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-lg
+                            border
+                            border-slate-200
+                            bg-white
+                            text-slate-500
+                            transition
+                            hover:border-blue-200
+                            hover:bg-blue-50
+                            hover:text-blue-700
+                            active:scale-[0.97]
+                          "
+                        >
+                          <FiEdit2
+                            size={14}
+                          />
+                        </button>
+
+
+                        {/* Delete */}
+
+                        <button
+                          type="button"
+                          title="Delete order"
+                          onClick={() =>
+                            onDelete(order)
+                          }
+                          className="
+                            inline-flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-lg
+                            border
+                            border-slate-200
+                            bg-white
+                            text-slate-400
+                            transition
+                            hover:border-red-200
+                            hover:bg-red-50
+                            hover:text-red-600
+                            active:scale-[0.97]
+                          "
+                        >
+                          <FiTrash2
+                            size={14}
+                          />
+                        </button>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+                );
+              })
+
+            )}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      {/* =====================================================
+          FOOTER
+      ====================================================== */}
+
+      {orders.length > 0 && (
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+            border-t
+            border-slate-100
+            bg-slate-50/50
+            px-5
+            py-3
+            sm:px-6
+          "
+        >
+
+          <p
+            className="
+              text-[11px]
+              text-slate-400
+            "
+          >
+            Showing{" "}
+            <span className="font-semibold text-slate-600">
+              {orders.length}
+            </span>{" "}
+            {orders.length === 1
+              ? "order"
+              : "orders"}
+          </p>
+
+          <p
+            className="
+              text-[11px]
+              font-medium
+              text-slate-400
+            "
+          >
+            Total value{" "}
+            <span className="font-bold text-slate-700">
+              ₹{formatAmount(totalValue)}
+            </span>
           </p>
 
         </div>
+      )}
 
-      </td>
-
-    </tr>
-
-  ) : (
-
-    orders.map((order) => (
-
-      <tr
-        key={order._id}
-        className="border-b border-slate-100 transition hover:bg-slate-50"
-      >
-
-        {/* Order */}
-
-        <td className="px-6 py-5">
-
-          <div>
-
-            <h4 className="font-bold text-slate-900">
-              {order.orderNumber}
-            </h4>
-
-            <p className="mt-1 text-xs text-slate-500">
-              Customer Order
-            </p>
-
-          </div>
-
-        </td>
-
-        {/* Status */}
-
-        <td className="px-6 py-5">
-
-          <span
-            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold
-
-            ${
-              order.status === "Delivered"
-                ? "bg-green-100 text-green-700"
-
-                : order.status === "Pending"
-
-                ? "bg-yellow-100 text-yellow-700"
-
-                : order.status === "Cancelled"
-
-                ? "bg-red-100 text-red-700"
-
-                : "bg-blue-100 text-blue-700"
-            }`}
-          >
-
-            {order.status}
-
-          </span>
-
-        </td>
-
-        {/* Amount */}
-
-        <td className="px-6 py-5 text-right">
-
-          <div>
-
-            <p className="text-xl font-bold text-slate-900">
-
-              ₹
-              {Number(
-                order.totalAmount || 0
-              ).toLocaleString()}
-
-            </p>
-
-            <p className="text-xs text-slate-500">
-
-              Total Value
-
-            </p>
-
-          </div>
-
-        </td>
-
-        {/* Date */}
-
-        <td className="px-6 py-5 text-center">
-
-          <div>
-
-            <p className="font-medium text-slate-700">
-
-              {order.createdAt
-                ? new Date(
-                    order.createdAt
-                  ).toLocaleDateString()
-                : "-"}
-
-            </p>
-
-            <p className="text-xs text-slate-400">
-
-              Created
-
-            </p>
-
-          </div>
-
-        </td>
-
-        {/* Actions */}
-
-        <td className="px-6 py-5">
-
-          <div className="flex justify-center gap-2">
-
-            <button
-              onClick={() =>
-                onRecordPayment(order)
-              }
-              className="rounded-lg bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200"
-            >
-              Payment
-            </button>
-
-            <button
-              onClick={() =>
-                onEdit(order)
-              }
-              className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-200"
-            >
-              Edit
-            </button>
-
-            <button
-              onClick={() =>
-                onDelete(order)
-              }
-              className="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-200"
-            >
-              Delete
-            </button>
-
-          </div>
-
-        </td>
-
-      </tr>
-
-    ))
-
-  )}
-
-</tbody>
-
-      </table>
-
-    </div>
-
-  </div>
-);
+    </section>
+  );
 };
 
 export default OrdersTable;

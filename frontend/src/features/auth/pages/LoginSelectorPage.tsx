@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import {
-  FiArrowRight,
-} from "react-icons/fi";
+  ArrowRight,
+  BriefcaseBusiness,
+  ShieldCheck,
+} from "lucide-react";
 
 import logo from "../../../assets/images/logo.png";
 
@@ -9,121 +11,212 @@ const LoginSelectorPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#3458D4_0%,#203D9C_45%,#142B6F_100%)] flex flex-col items-center justify-center px-6 py-10">
+    <main className="min-h-screen bg-[#F6F8FC]">
 
-      <div className="w-full max-w-md">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 sm:px-6">
 
-        {/* Logo */}
+        {/* =================================================
+            BACKGROUND DECORATION
+        ================================================= */}
 
-        <div className="flex justify-center m-8">
-          <div className="h-28 w-28 rounded-[28px] bg-white/10 backdrop-blur-xl border border-white/15 shadow-2xl flex items-center justify-center">
-            <img
-              src={logo}
-              alt="Toy Hub"
-              className="h-12 object-contain"
-            />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[#17357A]/[0.045] blur-3xl" />
+
+        <div className="pointer-events-none absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-[#FF8A1F]/[0.045] blur-3xl" />
+
+        {/* =================================================
+            CONTENT
+        ================================================= */}
+
+        <div className="relative z-10 w-full max-w-[470px]">
+
+          {/* =================================================
+              BRAND
+          ================================================= */}
+
+          <div className="mb-8 text-center">
+
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70">
+
+              <img
+                src={logo}
+                alt="Toy Hub Corporation"
+                className="h-10 w-auto object-contain"
+              />
+
+            </div>
+
+            <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">
+              TOY HUB
+            </h1>
+
+            <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+              Corporation
+            </p>
+
           </div>
-        </div>
 
-        {/* Heading */}
+          {/* =================================================
+              CARD
+          ================================================= */}
 
-        <div className="text-center mt-8">
-          <h1 className="mt-8 text-white text-3xl font-bold tracking-tight">
-            TOYHUB Corp.
-          </h1>
+          <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
 
-          <p className="mt-3 text-blue-100 text-md font-medium">
-            Inventory & Operations System
-          </p>
+            {/* Header */}
 
-          <p className="mt-12 mb-5 text-blue-100/80 text-sm">
-  Select your login type to continue
-</p>
-        </div>
+            <div className="mb-7">
 
-        {/* Cards */}
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#17357A]">
+                Internal Operations
+              </p>
 
-        <div className="mt-10 flex flex-col gap-3">
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                Welcome back
+              </h2>
 
-          {/* Staff */}
-
-          <button
-            onClick={() => navigate("/login/staff")}
-            className="group w-full h-20 bg-white rounded-2xl px-6 flex items-center justify-between shadow-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300"
-          >
-
-            <div className="flex items-center gap-4">
-
-              <div className="text-left">
-
-                <h3 className="font-bold text-slate-900 text-xl">
-                  Staff App
-                </h3>
-
-                <p className="text-slate-500 text-sm">
-                  Department Staff Access
-                </p>
-
-              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Choose the workspace you need to
+                access.
+              </p>
 
             </div>
 
-            <FiArrowRight
-              size={22}
-              className="text-slate-400 group-hover:translate-x-1 transition-transform"
-            />
+            {/* =================================================
+                LOGIN OPTIONS
+            ================================================= */}
 
-          </button>
+            <div className="space-y-3">
 
-          {/* Admin */}
+              {/* STAFF */}
 
-          <button
-            onClick={() => navigate("/login/admin")}
-            className="group w-full h-20 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl px-6 flex items-center justify-between shadow-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300"
-          >
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    "/login/staff"
+                  )
+                }
+                className="group flex min-h-[84px] w-full items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)] active:translate-y-0"
+              >
 
-            <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition group-hover:bg-[#17357A]/10 group-hover:text-[#17357A]">
 
-              <div className="text-left">
+                  <BriefcaseBusiness
+                    size={20}
+                    strokeWidth={2}
+                  />
 
-                <h3 className="font-bold text-xl text-white">
-                  Admin Dashboard
-                </h3>
+                </div>
 
-                <p className="text-orange-100 text-sm">
-                  Founder & Management Access
-                </p>
+                <div className="min-w-0 flex-1">
 
-              </div>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    Staff App
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Department staff access
+                  </p>
+
+                </div>
+
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition group-hover:bg-white group-hover:text-[#17357A]">
+
+                  <ArrowRight
+                    size={18}
+                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                  />
+
+                </div>
+
+              </button>
+
+              {/* ADMIN */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(
+                    "/login/admin"
+                  )
+                }
+                className="group flex min-h-[84px] w-full items-center gap-4 rounded-2xl border border-[#17357A] bg-[#17357A] p-4 text-left shadow-[0_8px_24px_rgba(23,53,122,0.16)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#10295D] hover:shadow-[0_12px_30px_rgba(23,53,122,0.22)] active:translate-y-0"
+              >
+
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+
+                  <ShieldCheck
+                    size={20}
+                    strokeWidth={2}
+                  />
+
+                </div>
+
+                <div className="min-w-0 flex-1">
+
+                  <h3 className="text-base font-semibold text-white">
+                    Admin Dashboard
+                  </h3>
+
+                  <p className="mt-1 text-sm text-blue-100/75">
+                    Founder &amp; management access
+                  </p>
+
+                </div>
+
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/60 transition group-hover:bg-white/10 group-hover:text-white">
+
+                  <ArrowRight
+                    size={18}
+                    className="transition-transform duration-200 group-hover:translate-x-0.5"
+                  />
+
+                </div>
+
+              </button>
 
             </div>
 
-            <FiArrowRight
-              size={22}
-              className="text-white group-hover:translate-x-1 transition-transform"
-            />
+            {/* =================================================
+                SECURITY NOTE
+            ================================================= */}
 
-          </button>
+            <div className="mt-7 flex items-center justify-center gap-2 text-xs text-slate-400">
+
+              <ShieldCheck
+                size={14}
+              />
+
+              <span>
+                Authorized personnel only
+              </span>
+
+            </div>
+
+          </section>
+
+          {/* =================================================
+              FOOTER
+          ================================================= */}
+
+          <div className="mt-6 text-center">
+
+            <p className="text-xs text-slate-400">
+              ©{" "}
+              {new Date().getFullYear()}{" "}
+              Toy Hub Corporation
+            </p>
+
+            <p className="mt-1 text-[11px] text-slate-300">
+              Developed by HoneyFootnotes
+            </p>
+
+          </div>
 
         </div>
 
       </div>
 
-      {/* Footer */}
-
-      <div className="absolute bottom-6 text-center">
-
-        <p className="text-xs text-blue-100/60">
-          © {new Date().getFullYear()} Toy Hub Corporation
-        </p>
-
-        <p className="text-xs text-blue-100/60">
-          Developed by HoneyFootnotes*
-        </p>
-
-      </div>
-
-    </div>
+    </main>
   );
 };
 

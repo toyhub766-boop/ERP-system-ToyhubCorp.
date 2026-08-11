@@ -18,44 +18,38 @@ const StatCard = ({
     <div
       className={clsx(
         `
-        bg-white
+        rounded-2xl
         border
-        border-slate-200
-        rounded-xl
-        shadow-sm
-
-        px-4
+        border-slate-200/80
+        bg-white
+        px-5
         py-4
-
-        flex
-        items-center
-        justify-between
-
+        shadow-[0_1px_3px_rgba(15,23,42,0.04)]
         transition-all
         duration-200
-
-        hover:shadow-md
+        hover:-translate-y-[1px]
+        hover:shadow-[0_4px_12px_rgba(15,23,42,0.06)]
         `,
         className
       )}
     >
-      <div className="min-w-0">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            {title}
+          </p>
 
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-          {title}
-        </p>
-
-        <h2 className="mt-2 text-3xl sm:text-4xl font-bold text-slate-900 leading-none">
-          {value}
-        </h2>
-
-      </div>
-
-      {icon && (
-        <div className="ml-4 shrink-0 text-2xl text-slate-300">
-          {icon}
+          <p className="mt-2 truncate text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {value}
+          </p>
         </div>
-      )}
+
+        {icon && (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+            {icon}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

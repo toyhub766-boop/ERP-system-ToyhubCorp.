@@ -18,25 +18,19 @@ interface Props {
 const PartyFilters = ({
   search,
   setSearch,
-
   statusFilter,
   setStatusFilter,
-
   balanceFilter,
   setBalanceFilter,
-
   dueDateFilter,
   setDueDateFilter,
-
   sortBy,
   setSortBy,
 }: Props) => {
   return (
-    <div className="space-y-4 border-b border-slate-200 bg-white p-4">
+    <div className="space-y-3 border-b border-slate-200 bg-white p-3">
 
-      {/* =========================
-          SEARCH
-      ========================= */}
+      {/* SEARCH */}
 
       <input
         value={search}
@@ -44,23 +38,49 @@ const PartyFilters = ({
           setSearch(e.target.value)
         }
         placeholder="Search Party..."
-        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-[#17357A] focus:ring-2 focus:ring-[#17357A]/10"
+        className="
+          h-10
+          w-full
+          rounded-xl
+          border
+          border-slate-300
+          bg-white
+          px-3.5
+          text-sm
+          outline-none
+          transition
+          placeholder:text-slate-400
+          focus:border-[#17357A]
+          focus:ring-2
+          focus:ring-[#17357A]/10
+        "
       />
 
-      {/* =========================
-          FILTERS
-      ========================= */}
+      {/* FILTERS */}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-
-        {/* Status */}
+      <div className="grid grid-cols-2 gap-2">
 
         <select
           value={statusFilter}
           onChange={(e) =>
-            setStatusFilter(e.target.value)
+            setStatusFilter(
+              e.target.value
+            )
           }
-          className="rounded-xl border border-slate-300 bg-white p-3 text-sm outline-none focus:border-[#17357A]"
+          className="
+            h-9
+            min-w-0
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            px-2.5
+            text-xs
+            font-medium
+            text-slate-600
+            outline-none
+            focus:border-[#17357A]
+          "
         >
           <option value="ALL">
             All Status
@@ -75,14 +95,27 @@ const PartyFilters = ({
           </option>
         </select>
 
-        {/* Balance */}
-
         <select
           value={balanceFilter}
           onChange={(e) =>
-            setBalanceFilter(e.target.value)
+            setBalanceFilter(
+              e.target.value
+            )
           }
-          className="rounded-xl border border-slate-300 bg-white p-3 text-sm outline-none focus:border-[#17357A]"
+          className="
+            h-9
+            min-w-0
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            px-2.5
+            text-xs
+            font-medium
+            text-slate-600
+            outline-none
+            focus:border-[#17357A]
+          "
         >
           <option value="ALL">
             All Balance
@@ -101,14 +134,27 @@ const PartyFilters = ({
           </option>
         </select>
 
-        {/* Due Date */}
-
         <select
           value={dueDateFilter}
           onChange={(e) =>
-            setDueDateFilter(e.target.value)
+            setDueDateFilter(
+              e.target.value
+            )
           }
-          className="rounded-xl border border-slate-300 bg-white p-3 text-sm outline-none focus:border-[#17357A]"
+          className="
+            h-9
+            min-w-0
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            px-2.5
+            text-xs
+            font-medium
+            text-slate-600
+            outline-none
+            focus:border-[#17357A]
+          "
         >
           <option value="ALL">
             All Due Dates
@@ -131,14 +177,27 @@ const PartyFilters = ({
           </option>
         </select>
 
-        {/* Sort */}
-
         <select
           value={sortBy}
           onChange={(e) =>
-            setSortBy(e.target.value)
+            setSortBy(
+              e.target.value
+            )
           }
-          className="rounded-xl border border-slate-300 bg-white p-3 text-sm outline-none focus:border-[#17357A]"
+          className="
+            h-9
+            min-w-0
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            px-2.5
+            text-xs
+            font-medium
+            text-slate-600
+            outline-none
+            focus:border-[#17357A]
+          "
         >
           <option value="LATEST">
             Latest
@@ -166,6 +225,7 @@ const PartyFilters = ({
         </select>
 
       </div>
+
     </div>
   );
 };

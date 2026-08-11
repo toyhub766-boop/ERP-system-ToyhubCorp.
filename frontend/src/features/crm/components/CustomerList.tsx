@@ -1,3 +1,9 @@
+import {
+  FiSearch,
+  FiPhone,
+  FiUsers,
+} from "react-icons/fi";
+
 interface Props {
   customers: any[];
 
@@ -21,69 +27,147 @@ const CustomerList = ({
   search,
   setSearch,
 }: Props) => {
-
-  const filteredCustomers =
-    customers.filter((customer) => {
-
-      const q = search.toLowerCase();
+  const filteredCustomers = customers.filter(
+    (customer) => {
+      const q = search.toLowerCase().trim();
 
       return (
-
         customer.companyName
           ?.toLowerCase()
-          .includes(q)
-
-        ||
-
+          .includes(q) ||
         customer.contactPerson
           ?.toLowerCase()
-          .includes(q)
-
-        ||
-
+          .includes(q) ||
         customer.phone
           ?.toLowerCase()
-          .includes(q)
-
-        ||
-
+          .includes(q) ||
         customer.customerCode
           ?.toLowerCase()
-          .includes(q)
-
-        ||
-
+          .includes(q) ||
         customer.gstNumber
           ?.toLowerCase()
           .includes(q)
-
       );
-
-    });
+    }
+  );
 
   return (
+    <section
+      className="
+        flex
+        min-h-0
+        flex-col
+        overflow-hidden
+        rounded-3xl
+        border
+        border-slate-200
+        bg-white
+        shadow-sm
+      "
+    >
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div
+        className="
+          shrink-0
+          border-b
+          border-slate-100
+          px-5
+          py-5
+          sm:px-6
+        "
+      >
+        <div className="flex items-start justify-between gap-4">
 
-      {/* Header */}
+          <div>
+            <div className="flex items-center gap-3">
 
-      <div className="border-b border-slate-200 p-6">
+              <div
+                className="
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-blue-50
+                  text-[#172B6B]
+                "
+              >
+                <FiUsers size={18} />
+              </div>
 
-        <h2 className="text-2xl font-bold text-slate-900">
-          Customers
-        </h2>
+              <div>
+                <h2
+                  className="
+                    text-lg
+                    font-bold
+                    tracking-tight
+                    text-slate-900
+                  "
+                >
+                  Customers
+                </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Manage customer relationships
-        </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Manage customer relationships
+                </p>
+              </div>
 
+            </div>
+          </div>
+
+          <span
+            className="
+              shrink-0
+              rounded-full
+              bg-slate-100
+              px-3
+              py-1.5
+              text-xs
+              font-semibold
+              text-slate-600
+            "
+          >
+            {filteredCustomers.length}
+          </span>
+
+        </div>
       </div>
 
-      {/* Search */}
 
-      <div className="p-6">
+      {/* =====================================================
+          SEARCH + FILTER SUMMARY
+      ===================================================== */}
+
+      <div
+        className="
+          shrink-0
+          border-b
+          border-slate-100
+          px-5
+          py-4
+          sm:px-6
+        "
+      >
+
+        {/* Search */}
 
         <div className="relative">
+
+          <FiSearch
+            size={17}
+            className="
+              pointer-events-none
+              absolute
+              left-3.5
+              top-1/2
+              -translate-y-1/2
+              text-slate-400
+            "
+          />
 
           <input
             value={search}
@@ -92,215 +176,476 @@ const CustomerList = ({
             }
             placeholder="Search customers..."
             className="
-              h-12
+              h-11
               w-full
               rounded-xl
               border
-              border-slate-300
-              pl-11
+              border-slate-200
+              bg-slate-50
+              pl-10
               pr-4
+              text-sm
+              text-slate-800
               outline-none
-              transition
+              transition-all
+              duration-200
+              placeholder:text-slate-400
               focus:border-[#172B6B]
+              focus:bg-white
               focus:ring-4
-              focus:ring-blue-100
+              focus:ring-blue-50
             "
           />
 
         </div>
 
-                {/* Filters */}
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        {/* Summary */}
 
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+        <div className="mt-3 flex flex-wrap gap-2">
+
+          <span
+            className="
+              rounded-full
+              bg-blue-50
+              px-3
+              py-1.5
+              text-[11px]
+              font-semibold
+              text-blue-700
+            "
+          >
             {customers.length} Customers
           </span>
 
-          <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+          <span
+            className="
+              rounded-full
+              bg-emerald-50
+              px-3
+              py-1.5
+              text-[11px]
+              font-semibold
+              text-emerald-700
+            "
+          >
             {
               customers.filter(
                 (c) => c.status === "Active"
               ).length
-            }{" "}
-            Active
+            } Active
           </span>
 
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+          <span
+            className="
+              rounded-full
+              bg-amber-50
+              px-3
+              py-1.5
+              text-[11px]
+              font-semibold
+              text-amber-700
+            "
+          >
             {
               customers.filter(
-                (c) =>
-                  c.stage === "LEAD"
+                (c) => c.stage === "LEAD"
               ).length
-            }{" "}
-            Leads
+            } Leads
           </span>
 
         </div>
 
       </div>
 
-      {/* Customer List */}
 
-      <div className="max-h-[700px] space-y-3 overflow-y-auto p-4">
+      {/* =====================================================
+          SCROLLABLE CUSTOMER LIST
+      ===================================================== */}
 
-        {!filteredCustomers.length ? (
+      <div
+        className="
+          min-h-0
+          flex-1
+          overflow-y-auto
+          px-4
+          py-4
+          sm:px-5
+          [scrollbar-width:thin]
+          [scrollbar-color:#CBD5E1_transparent]
+        "
+      >
 
-          <div className="rounded-2xl border border-dashed border-slate-300 py-16 text-center">
+        <div className="space-y-3">
 
-            <div className="text-5xl">
-              🔍
-            </div>
+          {!filteredCustomers.length ? (
 
-            <h3 className="mt-5 text-lg font-bold text-slate-800">
-              No Customers Found
-            </h3>
+            <div
+              className="
+                flex
+                min-h-[280px]
+                flex-col
+                items-center
+                justify-center
+                rounded-2xl
+                border
+                border-dashed
+                border-slate-200
+                bg-slate-50/50
+                px-6
+                text-center
+              "
+            >
 
-            <p className="mt-2 text-sm text-slate-500">
-              Try another search keyword.
-            </p>
-
-          </div>
-
-        ) : (
-
-          filteredCustomers.map(
-            (customer) => (
-
-              <button
-                key={customer._id}
-                onClick={() =>
-                  setSelectedCustomer(customer)
-                }
-                className={`w-full rounded-2xl border p-5 text-left transition-all
-
-                ${
-                  selectedCustomer?._id ===
-                  customer._id
-                    ? "border-[#172B6B] bg-blue-50 shadow-md"
-                    : "border-slate-200 bg-white hover:border-[#172B6B]/30 hover:shadow-sm"
-                }`}
+              <div
+                className="
+                  flex
+                  h-12
+                  w-12
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-white
+                  text-slate-400
+                  shadow-sm
+                "
               >
-
-                <div className="flex items-start justify-between">
-
-                  <div className="flex gap-4">
-
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#172B6B] text-lg font-bold text-white">
-
-                      {customer.companyName
-                        ?.charAt(0)
-                        ?.toUpperCase()}
-
-                    </div>
-
-                    <div>
-
-                      <h3 className="text-base font-bold text-slate-900">
-
-                        {customer.companyName}
-
-                      </h3>
-
-                      <p className="mt-1 text-sm text-slate-600">
-
-                        {customer.contactPerson}
-
-                      </p>
-
-                      <p className="mt-1 text-xs text-slate-500">
-
-                        📞 {customer.phone}
-
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold
-
-                    ${
-                      customer.status ===
-                      "Active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {customer.status}
-                  </span>
-
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-
-                    {customer.stage}
-
-                  </span>
-
-                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
-
-                    {customer.category}
-
-                  </span>
-
-                  <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
-
-                    {customer.partyType}
-
-                  </span>
-
-                </div>
-
-                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-
-                  <div>
-
-                    <p className="text-xs uppercase tracking-wide text-slate-400">
-                      Outstanding
-                    </p>
-
-                    <p className="text-lg font-bold text-red-600">
-
-                      ₹
-                      {customer.currentBalance || 0}
-
-                    </p>
-
-                  </div>
-
-                  <div className="text-right">
-
-                    <p className="text-xs uppercase tracking-wide text-slate-400">
-                      Code
-                    </p>
-
-                    <p className="font-semibold text-slate-700">
-
-                      {customer.customerCode}
-
-                    </p>
-
-                  </div>
-
-                </div>
-
-              </button>
-
-            )
-          )
-
-        )}
-
+                <FiSearch size={20} />
               </div>
 
-    </div>
+              <h3
+                className="
+                  mt-4
+                  text-sm
+                  font-bold
+                  text-slate-800
+                "
+              >
+                No customers found
+              </h3>
 
+              <p
+                className="
+                  mt-1
+                  max-w-xs
+                  text-xs
+                  leading-5
+                  text-slate-500
+                "
+              >
+                Try searching with a different
+                company name, contact, phone or
+                customer code.
+              </p>
+
+            </div>
+
+          ) : (
+
+            filteredCustomers.map(
+              (customer) => {
+
+                const selected =
+                  selectedCustomer?._id ===
+                  customer._id;
+
+                return (
+                  <button
+                    key={customer._id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedCustomer(
+                        customer
+                      )
+                    }
+                    className={`
+                      group
+                      w-full
+                      rounded-2xl
+                      border
+                      p-4
+                      text-left
+                      transition-all
+                      duration-200
+                      ${
+                        selected
+                          ? `
+                            border-[#172B6B]
+                            bg-blue-50/60
+                            shadow-sm
+                          `
+                          : `
+                            border-slate-200
+                            bg-white
+                            hover:-translate-y-0.5
+                            hover:border-slate-300
+                            hover:shadow-sm
+                          `
+                      }
+                    `}
+                  >
+
+                    {/* Main information */}
+
+                    <div
+                      className="
+                        flex
+                        items-start
+                        justify-between
+                        gap-3
+                      "
+                    >
+
+                      <div className="flex min-w-0 gap-3">
+
+                        <div
+                          className={`
+                            flex
+                            h-11
+                            w-11
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-xl
+                            text-sm
+                            font-bold
+                            ${
+                              selected
+                                ? "bg-[#172B6B] text-white"
+                                : "bg-slate-100 text-[#172B6B]"
+                            }
+                          `}
+                        >
+                          {customer.companyName
+                            ?.charAt(0)
+                            ?.toUpperCase() || "C"}
+                        </div>
+
+                        <div className="min-w-0">
+
+                          <h3
+                            className="
+                              truncate
+                              text-sm
+                              font-bold
+                              text-slate-900
+                            "
+                          >
+                            {customer.companyName}
+                          </h3>
+
+                          <p
+                            className="
+                              mt-0.5
+                              truncate
+                              text-xs
+                              text-slate-500
+                            "
+                          >
+                            {customer.contactPerson}
+                          </p>
+
+                          <p
+                            className="
+                              mt-1.5
+                              flex
+                              items-center
+                              gap-1.5
+                              text-xs
+                              text-slate-400
+                            "
+                          >
+                            <FiPhone size={12} />
+                            {customer.phone || "--"}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* Status */}
+
+                      <span
+                        className={`
+                          shrink-0
+                          rounded-full
+                          px-2.5
+                          py-1
+                          text-[10px]
+                          font-bold
+                          ${
+                            customer.status ===
+                            "Active"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-red-50 text-red-600"
+                          }
+                        `}
+                      >
+                        {customer.status}
+                      </span>
+
+                    </div>
+
+
+                    {/* Tags */}
+
+                    <div
+                      className="
+                        mt-4
+                        flex
+                        flex-wrap
+                        gap-1.5
+                      "
+                    >
+
+                      {customer.stage && (
+                        <span
+                          className="
+                            rounded-lg
+                            bg-slate-100
+                            px-2.5
+                            py-1
+                            text-[10px]
+                            font-semibold
+                            text-slate-600
+                          "
+                        >
+                          {customer.stage}
+                        </span>
+                      )}
+
+                      {customer.category && (
+                        <span
+                          className="
+                            rounded-lg
+                            bg-blue-50
+                            px-2.5
+                            py-1
+                            text-[10px]
+                            font-semibold
+                            text-blue-700
+                          "
+                        >
+                          {customer.category}
+                        </span>
+                      )}
+
+                      {customer.partyType && (
+                        <span
+                          className="
+                            rounded-lg
+                            bg-purple-50
+                            px-2.5
+                            py-1
+                            text-[10px]
+                            font-semibold
+                            text-purple-700
+                          "
+                        >
+                          {customer.partyType}
+                        </span>
+                      )}
+
+                    </div>
+
+
+                    {/* Bottom information */}
+
+                    <div
+                      className="
+                        mt-4
+                        flex
+                        items-end
+                        justify-between
+                        border-t
+                        border-slate-100
+                        pt-3
+                      "
+                    >
+
+                      <div>
+
+                        <p
+                          className="
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-[0.08em]
+                            text-slate-400
+                          "
+                        >
+                          Outstanding
+                        </p>
+
+                        <p
+                          className={`
+                            mt-1
+                            text-sm
+                            font-bold
+                            ${
+                              Number(
+                                customer.currentBalance ||
+                                  0
+                              ) > 0
+                                ? "text-rose-600"
+                                : "text-emerald-600"
+                            }
+                          `}
+                        >
+                          ₹
+                          {Number(
+                            customer.currentBalance ||
+                              0
+                          ).toLocaleString("en-IN")}
+                        </p>
+
+                      </div>
+
+
+                      <div className="text-right">
+
+                        <p
+                          className="
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-[0.08em]
+                            text-slate-400
+                          "
+                        >
+                          Code
+                        </p>
+
+                        <p
+                          className="
+                            mt-1
+                            text-xs
+                            font-semibold
+                            text-slate-700
+                          "
+                        >
+                          {customer.customerCode ||
+                            "--"}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </button>
+                );
+              }
+            )
+
+          )}
+
+        </div>
+
+      </div>
+
+    </section>
   );
-
 };
 
 export default CustomerList;

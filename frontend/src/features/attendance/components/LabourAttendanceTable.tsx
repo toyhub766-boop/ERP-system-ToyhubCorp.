@@ -1,7 +1,6 @@
 import {
   FiCalendar,
   FiCamera,
-  FiClock,
   FiEdit2,
   FiTrash2,
   FiUser,
@@ -40,13 +39,9 @@ interface LabourRecord {
 interface Props {
   records: LabourRecord[];
 
-  onEdit: (
-    record: LabourRecord
-  ) => void;
+  onEdit: (record: LabourRecord) => void;
 
-  onDelete: (
-    record: LabourRecord
-  ) => void;
+  onDelete: (record: LabourRecord) => void;
 
   onViewPhoto: (
     photo: string,
@@ -55,35 +50,33 @@ interface Props {
   ) => void;
 }
 
-const getStatusStyles = (
-  status?: string
-) => {
+const getStatusStyles = (status?: string) => {
   switch (status) {
     case "Present":
       return {
         wrapper:
-          "border-emerald-100 bg-emerald-50 text-emerald-700",
+          "border-emerald-200/70 bg-emerald-50 text-emerald-700",
         dot: "bg-emerald-500",
       };
 
     case "Absent":
       return {
         wrapper:
-          "border-red-100 bg-red-50 text-red-700",
+          "border-red-200/70 bg-red-50 text-red-700",
         dot: "bg-red-500",
       };
 
     case "Half Day":
       return {
         wrapper:
-          "border-amber-100 bg-amber-50 text-amber-700",
+          "border-amber-200/70 bg-amber-50 text-amber-700",
         dot: "bg-amber-500",
       };
 
     case "Leave":
       return {
         wrapper:
-          "border-blue-100 bg-blue-50 text-blue-700",
+          "border-blue-200/70 bg-blue-50 text-blue-700",
         dot: "bg-blue-500",
       };
 
@@ -96,44 +89,66 @@ const getStatusStyles = (
   }
 };
 
-const getScore = (
-  record: LabourRecord
-) => {
-  if (
-    typeof record.score === "number"
-  ) {
-    return record.score;
+const getScore = (record: LabourRecord) => {
+  if (typeof record.score === "number") {
+    return Math.max(0, Math.min(100, record.score));
   }
 
   if (
     record.tasksAssigned &&
     record.tasksAssigned > 0
   ) {
-    return Math.round(
-      ((record.tasksCompleted || 0) /
-        record.tasksAssigned) *
-        100
+    return Math.min(
+      100,
+      Math.round(
+        ((record.tasksCompleted || 0) /
+          record.tasksAssigned) *
+          100
+      )
     );
   }
 
   return 0;
 };
 
-const formatDate = (
-  value?: string
-) => {
+const getScoreStyles = (score: number) => {
+  if (score >= 80) {
+    return {
+      badge:
+        "bg-emerald-50 text-emerald-700 border-emerald-100",
+      bar: "bg-emerald-500",
+    };
+  }
+
+  if (score >= 50) {
+    return {
+      badge:
+        "bg-amber-50 text-amber-700 border-amber-100",
+      bar: "bg-amber-500",
+    };
+  }
+
+  return {
+    badge:
+      "bg-red-50 text-red-700 border-red-100",
+    bar: "bg-red-500",
+  };
+};
+
+const formatDate = (value?: string) => {
   if (!value) return "-";
 
-  return new Date(
-    value
-  ).toLocaleDateString(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }
-  );
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 const LabourAttendanceTable = ({
@@ -144,393 +159,333 @@ const LabourAttendanceTable = ({
 }: Props) => {
   return (
     <section className="mt-8">
+      {/* ================= HEADER ================= */}
 
-      {/* ================= SECTION HEADER ================= */}
+      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+            Labour Attendance
+          </h2>
 
-      <div className="mb-4">
-
-        <h2 className="text-lg font-semibold text-slate-900">
-          Labour Attendance
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          {records.length === 1
-            ? "1 attendance record"
-            : `${records.length} attendance records`}
-        </p>
-
+          <p className="mt-1 text-sm text-slate-500">
+            {records.length === 1
+              ? "1 attendance record"
+              : `${records.length} attendance records`}
+          </p>
+        </div>
       </div>
 
-      {/* ================= TABLE CARD ================= */}
+      {/* ================= CARD ================= */}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.05)]">
         {records.length === 0 ? (
-
-          /* ================= EMPTY STATE ================= */
-
           <div className="flex min-h-[320px] items-center justify-center px-6 py-12">
-
             <div className="max-w-sm text-center">
-
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
                 <FiUser
-                  size={23}
+                  size={22}
                   className="text-slate-400"
                 />
-
               </div>
 
-              <h3 className="mt-5 text-lg font-semibold text-slate-900">
-                No labour attendance records
+              <h3 className="mt-5 text-base font-semibold text-slate-900">
+                No labour attendance
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                There are no labour attendance
-                records matching the current
-                search or filter.
+                No attendance records match the
+                current search or status filter.
               </p>
-
             </div>
-
           </div>
-
         ) : (
-
-          /* ================= TABLE ================= */
-
           <div className="overflow-x-auto">
-
             <table className="w-full min-w-[1120px] border-collapse">
+              {/* ================= HEAD ================= */}
 
               <thead>
-
-                <tr className="border-b border-slate-200 bg-slate-50">
-
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-200 bg-slate-50/80">
+                  <th className="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Labour
                   </th>
 
-                  <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Photo
                   </th>
 
-                  <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Department
                   </th>
 
-                  <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Date
                   </th>
 
-                  <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Check In
                   </th>
 
-                  <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Check Out
                   </th>
 
-                  <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Tasks
                   </th>
 
-                  <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Score
                   </th>
 
-                  <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Status
                   </th>
 
-                  <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-4 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     Actions
                   </th>
-
                 </tr>
-
               </thead>
 
-              <tbody>
+              {/* ================= BODY ================= */}
 
-                {records.map(
-                  (record) => {
-                    const labour =
-                      record.labour;
+              <tbody className="divide-y divide-slate-100">
+                {records.map((record) => {
+                  const labour = record.labour;
 
-                    const labourName =
-                      labour?.name ||
-                      "Unknown Labour";
+                  const labourName =
+                    labour?.name ||
+                    "Unknown Labour";
 
-                    const score =
-                      getScore(record);
+                  const score = getScore(record);
 
-                    const statusStyles =
-                      getStatusStyles(
-                        record.status
-                      );
+                  const statusStyles =
+                    getStatusStyles(
+                      record.status
+                    );
 
-                    return (
-                      <tr
-                        key={record._id}
-                        className="
-                          border-b
-                          border-slate-100
-                          transition-colors
-                          last:border-0
-                          hover:bg-slate-50/70
-                        "
-                      >
+                  const scoreStyles =
+                    getScoreStyles(score);
 
-                        {/* ================= LABOUR ================= */}
+                  const completed =
+                    record.tasksCompleted || 0;
 
-                        <td className="px-5 py-5">
+                  const assigned =
+                    record.tasksAssigned || 0;
 
-                          <div className="flex items-center gap-3">
+                  const taskProgress =
+                    assigned > 0
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            (completed /
+                              assigned) *
+                              100
+                          )
+                        )
+                      : 0;
 
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-sm font-bold text-amber-700">
+                  return (
+                    <tr
+                      key={record._id}
+                      className="
+                        group
+                        transition-colors
+                        duration-150
+                        hover:bg-slate-50/70
+                      "
+                    >
+                      {/* ================= LABOUR ================= */}
 
-                              {labourName
-                                .charAt(0)
-                                .toUpperCase()}
-
-                            </div>
-
-                            <div className="min-w-0">
-
-                              <p className="truncate text-sm font-semibold text-slate-900">
-                                {labourName}
-                              </p>
-
-                              <p className="mt-0.5 text-xs text-slate-500">
-                                Labour
-                              </p>
-
-                            </div>
-
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3.5">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-sm font-bold text-amber-700">
+                            {labourName
+                              .charAt(0)
+                              .toUpperCase()}
                           </div>
 
-                        </td>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {labourName}
+                            </p>
 
-                        {/* ================= PHOTO ================= */}
+                            <p className="mt-0.5 text-xs text-slate-400">
+                              Labour
+                            </p>
+                          </div>
+                        </div>
+                      </td>
 
-                        <td className="px-4 py-5 text-center">
+                      {/* ================= PHOTO ================= */}
 
-                          {record.photo ? (
+                      <td className="px-4 py-5 text-center">
+                        {record.photo ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onViewPhoto(
+                                record.photo!,
+                                labourName,
+                                record.date
+                              )
+                            }
+                            className="
+                              group/photo
+                              relative
+                              mx-auto
+                              block
+                              h-11
+                              w-11
+                              overflow-hidden
+                              rounded-xl
+                              border
+                              border-slate-200
+                              bg-slate-100
+                              shadow-sm
+                              transition-all
+                              duration-200
+                              hover:scale-105
+                              hover:border-slate-300
+                              hover:shadow-md
+                              focus:outline-none
+                              focus:ring-2
+                              focus:ring-[#17357A]/20
+                            "
+                            title="View attendance photo"
+                          >
+                            <img
+                              src={record.photo}
+                              alt={`${labourName} attendance`}
+                              className="h-full w-full object-cover"
+                            />
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onViewPhoto(
-                                  record.photo!,
-                                  labourName,
-                                  record.date
-                                )
-                              }
+                            <span
                               className="
-                                group
-                                relative
-                                mx-auto
-                                block
-                                h-11
-                                w-11
-                                overflow-hidden
-                                rounded-xl
-                                border
-                                border-slate-200
-                                bg-slate-100
-                                shadow-sm
-                                transition
-                                hover:scale-105
-                                hover:shadow-md
-                              "
-                              title="View attendance photo"
-                            >
-
-                              <img
-                                src={
-                                  record.photo
-                                }
-                                alt={`${labourName} attendance`}
-                                className="h-full w-full object-cover"
-                              />
-
-                              <span
-                                className="
-                                  absolute
-                                  inset-0
-                                  flex
-                                  items-center
-                                  justify-center
-                                  bg-slate-900/45
-                                  opacity-0
-                                  transition
-                                  group-hover:opacity-100
-                                "
-                              >
-                                <FiCamera
-                                  size={15}
-                                  className="text-white"
-                                />
-                              </span>
-
-                            </button>
-
-                          ) : (
-
-                            <div
-                              className="
-                                mx-auto
+                                absolute
+                                inset-0
                                 flex
-                                h-11
-                                w-11
                                 items-center
                                 justify-center
-                                rounded-xl
-                                border
-                                border-dashed
-                                border-slate-200
-                                bg-slate-50
+                                bg-slate-950/45
+                                opacity-0
+                                transition-opacity
+                                duration-200
+                                group-hover/photo:opacity-100
                               "
                             >
                               <FiCamera
-                                size={16}
-                                className="text-slate-300"
+                                size={15}
+                                className="text-white"
                               />
-                            </div>
+                            </span>
+                          </button>
+                        ) : (
+                          <div
+                            className="
+                              mx-auto
+                              flex
+                              h-11
+                              w-11
+                              items-center
+                              justify-center
+                              rounded-xl
+                              border
+                              border-dashed
+                              border-slate-200
+                              bg-slate-50
+                            "
+                          >
+                            <FiCamera
+                              size={16}
+                              className="text-slate-300"
+                            />
+                          </div>
+                        )}
+                      </td>
 
-                          )}
+                      {/* ================= DEPARTMENT ================= */}
 
-                        </td>
+                      <td className="px-4 py-5">
+                        <span className="text-sm font-medium text-slate-700">
+                          {labour?.department ||
+                            "-"}
+                        </span>
+                      </td>
 
-                        {/* ================= DEPARTMENT ================= */}
+                      {/* ================= DATE ================= */}
 
-                        <td className="px-4 py-5">
+                      <td className="px-4 py-5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                            <FiCalendar
+                              size={14}
+                            />
+                          </div>
 
                           <span className="text-sm font-medium text-slate-700">
-                            {labour?.department ||
+                            {formatDate(
+                              record.date
+                            )}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* ================= CHECK IN ================= */}
+
+                      <td className="px-4 py-5">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+
+                          <span className="text-sm font-medium text-slate-700">
+                            {record.checkIn ||
                               "-"}
                           </span>
+                        </div>
+                      </td>
 
-                        </td>
+                      {/* ================= CHECK OUT ================= */}
 
-                        {/* ================= DATE ================= */}
+                      <td className="px-4 py-5">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-red-400" />
 
-                        <td className="px-4 py-5">
+                          <span className="text-sm font-medium text-slate-700">
+                            {record.checkOut ||
+                              "-"}
+                          </span>
+                        </div>
+                      </td>
 
-                          <div className="flex items-center gap-2">
+                      {/* ================= TASKS ================= */}
 
-                            <FiCalendar
-                              size={15}
-                              className="shrink-0 text-slate-400"
-                            />
-
-                            <span className="text-sm font-medium text-slate-700">
-                              {formatDate(
-                                record.date
-                              )}
+                      <td className="px-4 py-5">
+                        <div className="w-[125px]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold text-slate-800">
+                              {completed}/{assigned}
                             </span>
 
-                          </div>
-
-                        </td>
-
-                        {/* ================= CHECK IN ================= */}
-
-                        <td className="px-4 py-5">
-
-                          <div className="flex items-center gap-2">
-
-                            <FiClock
-                              size={15}
-                              className="text-emerald-500"
-                            />
-
-                            <span className="text-sm font-medium text-slate-700">
-                              {record.checkIn ||
-                                "-"}
+                            <span className="text-[11px] text-slate-400">
+                              {taskProgress}%
                             </span>
-
                           </div>
 
-                        </td>
-
-                        {/* ================= CHECK OUT ================= */}
-
-                        <td className="px-4 py-5">
-
-                          <div className="flex items-center gap-2">
-
-                            <FiClock
-                              size={15}
-                              className="text-red-400"
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full bg-[#17357A] transition-all duration-500"
+                              style={{
+                                width: `${taskProgress}%`,
+                              }}
                             />
-
-                            <span className="text-sm font-medium text-slate-700">
-                              {record.checkOut ||
-                                "-"}
-                            </span>
-
                           </div>
+                        </div>
+                      </td>
 
-                        </td>
+                      {/* ================= SCORE ================= */}
 
-                        {/* ================= TASKS ================= */}
-
-                        <td className="px-4 py-5">
-
-                          <div className="min-w-[120px]">
-
-                            <div className="flex items-center justify-between gap-3">
-
-                              <span className="text-sm font-semibold text-slate-800">
-                                {record.tasksCompleted ||
-                                  0}
-                                /
-                                {record.tasksAssigned ||
-                                  0}
-                              </span>
-
-                              <span className="text-xs text-slate-400">
-                                tasks
-                              </span>
-
-                            </div>
-
-                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-
-                              <div
-                                className="h-full rounded-full bg-[#17357A] transition-all"
-                                style={{
-                                  width: `${
-                                    record.tasksAssigned &&
-                                    record.tasksAssigned >
-                                      0
-                                      ? Math.min(
-                                          100,
-                                          Math.round(
-                                            ((record.tasksCompleted ||
-                                              0) /
-                                              record.tasksAssigned) *
-                                              100
-                                          )
-                                        )
-                                      : 0
-                                  }%`,
-                                }}
-                              />
-
-                            </div>
-
-                          </div>
-
-                        </td>
-
-                        {/* ================= SCORE ================= */}
-
-                        <td className="px-4 py-5 text-center">
-
+                      <td className="px-4 py-5 text-center">
+                        <div className="flex flex-col items-center gap-1.5">
                           <span
                             className={`
                               inline-flex
@@ -538,133 +493,116 @@ const LabourAttendanceTable = ({
                               items-center
                               justify-center
                               rounded-lg
+                              border
                               px-2.5
                               py-1.5
                               text-xs
                               font-bold
-                              ${
-                                score >= 80
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : score >= 50
-                                  ? "bg-amber-50 text-amber-700"
-                                  : "bg-red-50 text-red-700"
-                              }
+                              ${scoreStyles.badge}
                             `}
                           >
                             {score}%
                           </span>
+                        </div>
+                      </td>
 
-                        </td>
+                      {/* ================= STATUS ================= */}
 
-                        {/* ================= STATUS ================= */}
-
-                        <td className="px-4 py-5 text-center">
-
+                      <td className="px-4 py-5 text-center">
+                        <span
+                          className={`
+                            inline-flex
+                            items-center
+                            gap-2
+                            whitespace-nowrap
+                            rounded-full
+                            border
+                            px-3
+                            py-1.5
+                            text-xs
+                            font-semibold
+                            ${statusStyles.wrapper}
+                          `}
+                        >
                           <span
                             className={`
-                              inline-flex
-                              items-center
-                              gap-2
-                              whitespace-nowrap
+                              h-1.5
+                              w-1.5
                               rounded-full
-                              border
-                              px-3
-                              py-1.5
-                              text-xs
-                              font-semibold
-                              ${statusStyles.wrapper}
+                              ${statusStyles.dot}
                             `}
+                          />
+
+                          {record.status ||
+                            "Unknown"}
+                        </span>
+                      </td>
+
+                      {/* ================= ACTIONS ================= */}
+
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onEdit(record)
+                            }
+                            className="
+                              flex
+                              h-9
+                              w-9
+                              items-center
+                              justify-center
+                              rounded-lg
+                              text-slate-400
+                              transition-all
+                              duration-150
+                              hover:bg-blue-50
+                              hover:text-[#17357A]
+                              active:scale-95
+                            "
+                            title="Edit attendance"
                           >
-
-                            <span
-                              className={`
-                                h-1.5
-                                w-1.5
-                                rounded-full
-                                ${statusStyles.dot}
-                              `}
+                            <FiEdit2
+                              size={16}
                             />
+                          </button>
 
-                            {record.status ||
-                              "Unknown"}
-
-                          </span>
-
-                        </td>
-
-                        {/* ================= ACTIONS ================= */}
-
-                        <td className="px-5 py-5">
-
-                          <div className="flex items-center justify-center gap-2">
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onEdit(record)
-                              }
-                              className="
-                                flex
-                                h-9
-                                w-9
-                                items-center
-                                justify-center
-                                rounded-lg
-                                text-slate-500
-                                transition
-                                hover:bg-blue-50
-                                hover:text-[#17357A]
-                              "
-                              title="Edit attendance"
-                            >
-                              <FiEdit2
-                                size={16}
-                              />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onDelete(record)
-                              }
-                              className="
-                                flex
-                                h-9
-                                w-9
-                                items-center
-                                justify-center
-                                rounded-lg
-                                text-slate-500
-                                transition
-                                hover:bg-red-50
-                                hover:text-red-600
-                              "
-                              title="Delete attendance"
-                            >
-                              <FiTrash2
-                                size={16}
-                              />
-                            </button>
-
-                          </div>
-
-                        </td>
-
-                      </tr>
-                    );
-                  }
-                )}
-
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onDelete(record)
+                            }
+                            className="
+                              flex
+                              h-9
+                              w-9
+                              items-center
+                              justify-center
+                              rounded-lg
+                              text-slate-400
+                              transition-all
+                              duration-150
+                              hover:bg-red-50
+                              hover:text-red-600
+                              active:scale-95
+                            "
+                            title="Delete attendance"
+                          >
+                            <FiTrash2
+                              size={16}
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
-
             </table>
-
           </div>
-
         )}
-
       </div>
-
     </section>
   );
 };

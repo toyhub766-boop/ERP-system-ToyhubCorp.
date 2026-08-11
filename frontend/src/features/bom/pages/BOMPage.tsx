@@ -1,4 +1,17 @@
 import { useEffect, useState } from "react";
+import {
+  FiBox,
+  FiChevronRight,
+  FiDownload,
+  FiEdit3,
+  FiFileText,
+  FiLayers,
+  FiPlus,
+  FiTrash2,
+  FiPackage,
+  FiCheckCircle,
+} from "react-icons/fi";
+
 import AdminLayout from "../../../app/layouts/AdminLayout";
 
 import {
@@ -13,6 +26,7 @@ import { getProducts } from "../../inventory/services/product.service";
 import { exportBOMExcel } from "../../../utils/exportBOMExcel";
 import { exportBOMPdf } from "../../../utils/exportBOMPdf";
 
+
 const BOMPage = () => {
   const [boms, setBoms] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -24,14 +38,19 @@ const BOMPage = () => {
     useState("");
 
   const [materials, setMaterials] = useState([
-  {
-    product: "",
-    quantity: 1,
-  },
-]);
+    {
+      product: "",
+      quantity: 1,
+    },
+  ]);
 
-const [isEditing, setIsEditing] =
-  useState(false);
+  const [isEditing, setIsEditing] =
+    useState(false);
+
+
+  /* =========================================================
+     LOAD DATA
+  ========================================================= */
 
   const loadData = async () => {
     try {
@@ -42,731 +61,1774 @@ const [isEditing, setIsEditing] =
         ]);
 
       setBoms(bomData);
-      console.log(boms)
       setProducts(productData);
 
       if (bomData.length > 0) {
         setSelectedBOM(bomData[0]);
+      } else {
+        setSelectedBOM(null);
       }
     } catch (error) {
       console.error(error);
     }
   };
 
+
   useEffect(() => {
     loadData();
   }, []);
 
+
+  /* =========================================================
+     MATERIALS
+  ========================================================= */
+
   const addMaterial = () => {
-  setMaterials([
-    ...materials,
-    {
-      product: "",
-      quantity: 1,
-    },
-  ]);
-};
-
-const updateMaterial = (
-  index: number,
-  field: "product" | "quantity",
-  value: string | number
-) => {
-  const updated = [...materials];
-
-  updated[index] = {
-    ...updated[index],
-    [field]: value,
-  };
-
-  setMaterials(updated);
-};
-
-const handleCreateBOM = async () => {
-  if (!finishedProduct) {
-  alert("Please select a finished product.");
-  return;
-}
-
-if (
-  materials.length === 0 ||
-  materials.some(
-    (item) => !item.product || item.quantity <= 0
-  )
-) {
-  alert("Please add valid materials.");
-  return;
-}
-
-const materialIds = materials.map(
-  (m) => m.product
-);
-
-if (
-  new Set(materialIds).size !==
-  materialIds.length
-) {
-  alert(
-    "Duplicate materials are not allowed."
-  );
-  return;
-}
-  try {
-    if (isEditing) {
-  await updateBOM(
-    selectedBOM._id,
-    {
-      finishedProduct,
-      materials,
-    }
-  );
-
-  setIsEditing(false);
-
-} else {
-
-  await createBOM({
-    finishedProduct,
-    materials,
-  });
-
-}
-
-    setFinishedProduct("");
-
-    setMaterials([
+    setMaterials((current) => [
+      ...current,
       {
         product: "",
-        quantity: 0,
+        quantity: 1,
       },
     ]);
+  };
 
-    loadData();
-  } catch (error) {
-    console.error(error);
-  }
-};
 
-const handleDeleteBOM = async (id: string) => {
-  const confirmed = window.confirm(
-    "Delete this BOM?"
-  );
+  const removeMaterial = (index: number) => {
+    setMaterials((current) =>
+      current.filter((_, i) => i !== index)
+    );
+  };
 
-  if (!confirmed) return;
 
-  try {
-    await deleteBOM(id);
+  const updateMaterial = (
+    index: number,
+    field: "product" | "quantity",
+    value: string | number
+  ) => {
+    const updated = [...materials];
 
-    setSelectedBOM(null);
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+    };
 
-    loadData();
+    setMaterials(updated);
+  };
 
-  } catch (error) {
-    console.error(error);
-  }
-};
+
+  /* =========================================================
+     CREATE / UPDATE
+  ========================================================= */
+
+  const handleCreateBOM = async () => {
+    if (!finishedProduct) {
+      alert("Please select a finished product.");
+      return;
+    }
+
+    if (
+      materials.length === 0 ||
+      materials.some(
+        (item) =>
+          !item.product ||
+          item.quantity <= 0
+      )
+    ) {
+      alert("Please add valid materials.");
+      return;
+    }
+
+    const materialIds =
+      materials.map(
+        (material) => material.product
+      );
+
+    if (
+      new Set(materialIds).size !==
+      materialIds.length
+    ) {
+      alert(
+        "Duplicate materials are not allowed."
+      );
+      return;
+    }
+
+    try {
+      if (isEditing) {
+        await updateBOM(
+          selectedBOM._id,
+          {
+            finishedProduct,
+            materials,
+          }
+        );
+      } else {
+        await createBOM({
+          finishedProduct,
+          materials,
+        });
+      }
+
+      setFinishedProduct("");
+
+      setMaterials([
+        {
+          product: "",
+          quantity: 1,
+        },
+      ]);
+
+      setIsEditing(false);
+
+      await loadData();
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+
+  /* =========================================================
+     DELETE
+  ========================================================= */
+
+  const handleDeleteBOM = async (
+    id: string
+  ) => {
+    const confirmed =
+      window.confirm(
+        "Delete this BOM?"
+      );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteBOM(id);
+
+      setSelectedBOM(null);
+
+      await loadData();
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+
+  /* =========================================================
+     EDIT
+  ========================================================= */
+
+  const handleEditBOM = (
+    bom: any
+  ) => {
+    setIsEditing(true);
+
+    setFinishedProduct(
+      bom.finishedProduct._id
+    );
+
+    setMaterials(
+      bom.materials.map(
+        (item: any) => ({
+          product:
+            item.product._id,
+          quantity:
+            item.quantity,
+        })
+      )
+    );
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
 
   return (
-  <AdminLayout>
+    <AdminLayout>
 
-    <div className="mx-auto w-full max-w-[1450px] space-y-8">
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-[1500px]
+          px-4
+          py-6
+          sm:px-6
+          sm:py-8
+          lg:px-8
+          lg:py-10
+        "
+      >
 
-      {/* ===================== PAGE HEADER ===================== */}
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
-      <div className="rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm">
-
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-
-  <div>
-    <p className="text-sm text-slate-500">
-      Admin &gt; BOM
-    </p>
-
-    <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-900">
-      Bill of Materials
-    </h1>
-
-    <p className="mt-2 text-sm text-slate-500">
-      Create and manage manufacturing recipes for finished products.
-    </p>
-  </div>
-
-  <div className="flex flex-wrap gap-3">
-
-    <button
-      onClick={() =>
-        exportBOMExcel(
-          boms,
-          "BOM_Report"
-        )
-      }
-      disabled={boms.length === 0}
-      className="
-        inline-flex
-        items-center
-        justify-center
-        rounded-xl
-        border
-        border-slate-300
-        bg-white
-        px-5
-        py-3
-        text-sm
-        font-semibold
-        text-slate-700
-        transition
-        hover:bg-slate-50
-        disabled:cursor-not-allowed
-        disabled:opacity-50
-      "
-    >
-      Export Excel
-    </button>
-
-    <button
-      onClick={() =>
-        exportBOMPdf(
-          boms,
-          "BOM Report"
-        )
-      }
-      disabled={boms.length === 0}
-      className="
-        inline-flex
-        items-center
-        justify-center
-        rounded-xl
-        bg-[#172B6B]
-        px-5
-        py-3
-        text-sm
-        font-semibold
-        text-white
-        transition
-        hover:bg-[#20398F]
-        disabled:cursor-not-allowed
-        disabled:opacity-50
-      "
-    >
-      Export PDF
-    </button>
-
-  </div>
-
-</div>
-
-      </div>
-
-      {/* ===================== CREATE BOM ===================== */}
-
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-
-        <div className="border-b border-slate-200 px-6 py-6">
-
-          <h2 className="text-2xl font-bold text-slate-900">
-            {isEditing ? "Update BOM" : "Create New BOM"}
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Select a finished product and assign the raw materials required to manufacture it.
-          </p>
-
-        </div>
-
-        <div className="space-y-6 p-6">
-
-          {/* Finished Product */}
+        <div
+          className="
+            mb-8
+            flex
+            flex-col
+            gap-6
+            lg:flex-row
+            lg:items-end
+            lg:justify-between
+          "
+        >
 
           <div>
 
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Finished Product
-            </label>
-
-            <select
+            <div
               className="
-                h-12
-                w-full
-                rounded-xl
-                border
-                border-slate-300
-                bg-white
-                px-4
-                text-sm
-                outline-none
-                transition
-                focus:border-[#172B6B]
-                focus:ring-4
-                focus:ring-blue-100
+                mb-3
+                flex
+                items-center
+                gap-2
+                text-xs
+                font-medium
+                text-slate-400
               "
-              value={finishedProduct}
-              onChange={(e) =>
-                setFinishedProduct(e.target.value)
-              }
             >
-              <option value="">
-                Select Finished Product
-              </option>
+              <span>Admin</span>
 
-              {products
-                .filter((product) => {
-                  if (product.type !== "FINISHED")
-                    return false;
+              <FiChevronRight
+                size={13}
+              />
 
-                  const alreadyHasBOM =
-                    boms.some(
-                      (bom) =>
-                        bom.finishedProduct?._id ===
-                        product._id
-                    );
-
-                  return (
-                    isEditing || !alreadyHasBOM
-                  );
-                })
-                .map((product) => (
-                  <option
-                    key={product._id}
-                    value={product._id}
-                  >
-                    {product.name}
-                  </option>
-                ))}
-            </select>
-
-          </div>
-
-          {/* Materials */}
-
-          <div>
-
-            <h3 className="mb-4 text-lg font-semibold text-slate-800">
-              Raw Materials
-            </h3>
-
-            <div className="space-y-4">
-
-              {materials.map(
-                (material, index) => (
-
-                  <div
-                    key={index}
-                    className="
-                      grid
-                      gap-4
-                      rounded-2xl
-                      border
-                      border-slate-200
-                      bg-slate-50
-                      p-4
-                      lg:grid-cols-[1fr_140px]
-                    "
-                  >
-
-                    <select
-                      className="
-                        h-12
-                        rounded-xl
-                        border
-                        border-slate-300
-                        bg-white
-                        px-4
-                        text-sm
-                        outline-none
-                        transition
-                        focus:border-[#172B6B]
-                        focus:ring-4
-                        focus:ring-blue-100
-                      "
-                      value={material.product}
-                      onChange={(e) =>
-                        updateMaterial(
-                          index,
-                          "product",
-                          e.target.value
-                        )
-                      }
-                    >
-                      <option value="">
-                        Select Material
-                      </option>
-
-                      {products
-                        .filter(
-                          (product) =>
-                            product.type === "RAW"
-                        )
-                        .map((product) => (
-                          <option
-                            key={product._id}
-                            value={product._id}
-                          >
-                            {product.name}
-                          </option>
-                        ))}
-                    </select>
-
-                    <input
-                      type="number"
-                      min={1}
-                      value={material.quantity}
-                      onChange={(e) =>
-                        updateMaterial(
-                          index,
-                          "quantity",
-                          Number(e.target.value)
-                        )
-                      }
-                      className="
-                        h-12
-                        rounded-xl
-                        border
-                        border-slate-300
-                        bg-white
-                        px-4
-                        text-sm
-                        outline-none
-                        transition
-                        focus:border-[#172B6B]
-                        focus:ring-4
-                        focus:ring-blue-100
-                      "
-                    />
-
-                  </div>
-
-                )
-              )}
-
+              <span className="text-slate-600">
+                BOM Management
+              </span>
             </div>
 
-          </div>
 
-          {/* Buttons */}
+            <div className="flex items-center gap-3">
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+              <div
+                className="
+                  flex
+                  h-11
+                  w-11
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-2xl
+                  bg-[#172B6B]
+                  text-white
+                  shadow-sm
+                "
+              >
+                <FiLayers size={20} />
+              </div>
 
-            <button
-              onClick={addMaterial}
-              className="
-                inline-flex
-                items-center
-                justify-center
-                rounded-xl
-                border
-                border-slate-300
-                bg-white
-                px-5
-                py-3
-                text-sm
-                font-semibold
-                transition
-                hover:bg-slate-50
-              "
-            >
-              + Add Material
-            </button>
+              <div>
 
-            <button
-              onClick={handleCreateBOM}
-              className="
-                inline-flex
-                items-center
-                justify-center
-                rounded-xl
-                bg-[#172B6B]
-                px-6
-                py-3
-                text-sm
-                font-semibold
-                text-white
-                transition
-                hover:bg-[#20398F]
-              "
-            >
-              {isEditing
-                ? "Update BOM"
-                : "Create BOM"}
-            </button>
+                <h1
+                  className="
+                    text-2xl
+                    font-bold
+                    tracking-tight
+                    text-slate-900
+                    sm:text-3xl
+                  "
+                >
+                  Bill of Materials
+                </h1>
 
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* ===================== BOM GRID ===================== */}
-
-      <div className="grid gap-8 xl:grid-cols-[380px_1fr]">
-        {/* ===================== BOM LIST ===================== */}
-
-<div className="space-y-5">
-
-  <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-
-    <div className="border-b border-slate-200 px-6 py-5">
-
-      <h2 className="text-xl font-bold text-slate-900">
-        Existing BOMs
-      </h2>
-
-      <p className="mt-1 text-sm text-slate-500">
-        Select a Bill of Materials to view or edit.
-      </p>
-
-    </div>
-
-    <div className="space-y-4 p-5">
-
-      {boms.length === 0 ? (
-
-        <div className="rounded-2xl border border-dashed border-slate-300 py-16 text-center text-slate-500">
-          No BOMs have been created yet.
-        </div>
-
-      ) : (
-
-        boms.map((bom) => (
-
-          <div
-            key={bom._id}
-            onClick={() => setSelectedBOM(bom)}
-            className={`
-              cursor-pointer
-              rounded-2xl
-              border
-              p-5
-              transition-all
-              duration-200
-              ${
-                selectedBOM?._id === bom._id
-                  ? "border-[#172B6B] bg-blue-50 shadow-md ring-2 ring-blue-100"
-                  : "border-slate-200 bg-white hover:border-[#172B6B]/40 hover:shadow"
-              }
-            `}
-          >
-
-            <div className="flex items-start justify-between gap-4">
-
-              <div className="min-w-0 flex-1">
-
-                <h3 className="truncate text-lg font-semibold text-slate-900">
-                  {bom.finishedProduct?.name ||
-                    "Deleted Product"}
-                </h3>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  {bom.materials.length} material
-                  {bom.materials.length !== 1 && "s"}
+                <p
+                  className="
+                    mt-1
+                    text-sm
+                    text-slate-500
+                  "
+                >
+                  Define the materials and quantities
+                  required to manufacture finished products.
                 </p>
 
               </div>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteBOM(bom._id);
-                }}
-                className="
-                  rounded-xl
-                  border
-                  border-red-200
-                  bg-red-50
-                  px-3
-                  py-2
-                  text-sm
-                  font-medium
-                  text-red-600
-                  transition
-                  hover:bg-red-100
-                "
-              >
-                Delete
-              </button>
-
             </div>
 
-            <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+          </div>
 
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Bill of Materials
-              </span>
 
-              {selectedBOM?._id === bom._id && (
-                <span className="rounded-full bg-[#172B6B] px-3 py-1 text-xs font-semibold text-white">
-                  Selected
-                </span>
-              )}
+          {/* EXPORT */}
+
+          <div
+            className="
+              flex
+              flex-col
+              gap-2
+              sm:flex-row
+            "
+          >
+
+            <button
+              type="button"
+              onClick={() =>
+                exportBOMExcel(
+                  boms,
+                  "BOM_Report"
+                )
+              }
+              disabled={
+                boms.length === 0
+              }
+              className="
+                inline-flex
+                h-11
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                px-4
+                text-sm
+                font-semibold
+                text-slate-700
+                shadow-sm
+                transition-all
+                hover:border-slate-300
+                hover:bg-slate-50
+                hover:shadow
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+              "
+            >
+              <FiDownload size={16} />
+
+              Excel
+            </button>
+
+
+            <button
+              type="button"
+              onClick={() =>
+                exportBOMPdf(
+                  boms,
+                  "BOM Report"
+                )
+              }
+              disabled={
+                boms.length === 0
+              }
+              className="
+                inline-flex
+                h-11
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-[#172B6B]
+                px-4
+                text-sm
+                font-semibold
+                text-white
+                shadow-sm
+                transition-all
+                hover:bg-[#20398F]
+                hover:shadow-md
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+              "
+            >
+              <FiFileText size={16} />
+
+              PDF
+            </button>
+
+          </div>
+
+        </div>
+
+
+        {/* =====================================================
+            CREATE / UPDATE
+        ===================================================== */}
+
+        <section
+          className="
+            mb-8
+            overflow-hidden
+            rounded-3xl
+            border
+            border-slate-200
+            bg-white
+            shadow-[0_8px_30px_rgba(15,23,42,0.04)]
+          "
+        >
+
+          <div
+            className="
+              border-b
+              border-slate-100
+              px-5
+              py-5
+              sm:px-7
+              sm:py-6
+            "
+          >
+
+            <div className="flex items-start gap-3">
+
+              <div
+                className="
+                  flex
+                  h-10
+                  w-10
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-blue-50
+                  text-[#172B6B]
+                "
+              >
+                {isEditing ? (
+                  <FiEdit3 size={18} />
+                ) : (
+                  <FiPlus size={19} />
+                )}
+              </div>
+
+              <div>
+
+                <h2
+                  className="
+                    text-lg
+                    font-bold
+                    text-slate-900
+                  "
+                >
+                  {isEditing
+                    ? "Update BOM"
+                    : "Create New BOM"}
+                </h2>
+
+                <p
+                  className="
+                    mt-1
+                    text-sm
+                    text-slate-500
+                  "
+                >
+                  {isEditing
+                    ? "Modify the manufacturing recipe and material quantities."
+                    : "Create a manufacturing recipe for a finished product."}
+                </p>
+
+              </div>
 
             </div>
 
           </div>
 
-        ))
 
-      )}
+          <div
+            className="
+              space-y-7
+              p-5
+              sm:p-7
+            "
+          >
 
-    </div>
+            {/* FINISHED PRODUCT */}
 
-  </div>
+            <div>
 
-</div>
+              <label
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-slate-700
+                "
+              >
+                Finished Product
+              </label>
 
-{/* ===================== DETAILS ===================== */}
+              <select
+                value={finishedProduct}
+                onChange={(e) =>
+                  setFinishedProduct(
+                    e.target.value
+                  )
+                }
+                className="
+                  h-12
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  px-4
+                  text-sm
+                  text-slate-800
+                  outline-none
+                  transition-all
+                  focus:border-[#172B6B]
+                  focus:bg-white
+                  focus:ring-4
+                  focus:ring-blue-50
+                "
+              >
 
-{/* ===================== BOM DETAILS ===================== */}
+                <option value="">
+                  Select Finished Product
+                </option>
 
-<div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+                {products
+                  .filter(
+                    (product) => {
+                      if (
+                        product.type !==
+                        "FINISHED"
+                      ) {
+                        return false;
+                      }
 
-  {selectedBOM ? (
+                      const alreadyHasBOM =
+                        boms.some(
+                          (bom) =>
+                            bom
+                              .finishedProduct
+                              ?._id ===
+                            product._id
+                        );
 
-    <>
+                      return (
+                        isEditing ||
+                        !alreadyHasBOM
+                      );
+                    }
+                  )
+                  .map(
+                    (product) => (
+                      <option
+                        key={
+                          product._id
+                        }
+                        value={
+                          product._id
+                        }
+                      >
+                        {product.name}
+                      </option>
+                    )
+                  )}
 
-      <div className="flex flex-col gap-5 border-b border-slate-200 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
+              </select>
 
-        <div>
+            </div>
 
-          <p className="text-sm text-slate-500">
-            Bill of Materials
-          </p>
 
-          <h2 className="mt-1 text-3xl font-bold text-slate-900">
-            {selectedBOM.finishedProduct?.name}
-          </h2>
+            {/* MATERIALS */}
 
-          <p className="mt-2 text-sm text-slate-500">
-            {selectedBOM.materials.length} material
-            {selectedBOM.materials.length !== 1 && "s"} required for production.
-          </p>
+            <div>
 
-        </div>
-
-        <button
-          onClick={() => {
-            setIsEditing(true);
-
-            setFinishedProduct(
-              selectedBOM.finishedProduct._id
-            );
-
-            setMaterials(
-              selectedBOM.materials.map((item: any) => ({
-                product: item.product._id,
-                quantity: item.quantity,
-              }))
-            );
-          }}
-          className="
-            inline-flex
-            items-center
-            justify-center
-            rounded-xl
-            bg-[#172B6B]
-            px-6
-            py-3
-            text-sm
-            font-semibold
-            text-white
-            transition
-            hover:bg-[#20398F]
-          "
-        >
-          Edit BOM
-        </button>
-
-      </div>
-
-      <div className="grid gap-5 p-6 md:grid-cols-2">
-
-        {selectedBOM.materials.map(
-          (item: any, index: number) => (
-
-            <div
-              key={index}
-              className="
-                rounded-2xl
-                border
-                border-slate-200
-                bg-white
-                p-5
-                shadow-sm
-              "
-            >
-
-              <div className="flex items-start justify-between">
+              <div
+                className="
+                  mb-4
+                  flex
+                  flex-col
+                  gap-2
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
+                "
+              >
 
                 <div>
 
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {item.product?.name}
+                  <h3
+                    className="
+                      text-sm
+                      font-bold
+                      text-slate-900
+                    "
+                  >
+                    Raw Materials
                   </h3>
 
-                  <p className="mt-2 text-sm text-slate-500">
-                    Available Stock
-                  </p>
-
-                  <p className="font-semibold text-slate-700">
-                    {item.product?.currentStock} {item.product?.unit}
+                  <p
+                    className="
+                      mt-1
+                      text-xs
+                      text-slate-500
+                    "
+                  >
+                    Define the quantity of each
+                    material required per unit.
                   </p>
 
                 </div>
 
-                <div className="text-right">
+                <span
+                  className="
+                    inline-flex
+                    w-fit
+                    rounded-full
+                    bg-slate-100
+                    px-3
+                    py-1
+                    text-xs
+                    font-medium
+                    text-slate-600
+                  "
+                >
+                  {materials.length}{" "}
+                  {materials.length === 1
+                    ? "material"
+                    : "materials"}
+                </span>
 
-                  <div className="text-3xl font-bold text-[#172B6B]">
-                    ×{item.quantity}
-                  </div>
+              </div>
 
-                  <p className="text-xs text-slate-500">
-                    {item.product?.unit}/unit
+
+              <div className="space-y-3">
+
+                {materials.map(
+                  (
+                    material,
+                    index
+                  ) => (
+
+                    <div
+                      key={index}
+                      className="
+                        group
+                        rounded-2xl
+                        border
+                        border-slate-200
+                        bg-slate-50/70
+                        p-3
+                        transition-all
+                        duration-200
+                        hover:border-slate-300
+                        hover:bg-slate-50
+                      "
+                    >
+
+                      <div
+                        className="
+                          grid
+                          gap-3
+                          lg:grid-cols-[1fr_160px_auto]
+                        "
+                      >
+
+                        {/* MATERIAL */}
+
+                        <div>
+
+                          <label
+                            className="
+                              mb-1.5
+                              block
+                              px-1
+                              text-[11px]
+                              font-semibold
+                              uppercase
+                              tracking-wide
+                              text-slate-400
+                            "
+                          >
+                            Material
+                          </label>
+
+                          <select
+                            value={
+                              material.product
+                            }
+                            onChange={(
+                              e
+                            ) =>
+                              updateMaterial(
+                                index,
+                                "product",
+                                e.target.value
+                              )
+                            }
+                            className="
+                              h-11
+                              w-full
+                              rounded-xl
+                              border
+                              border-slate-200
+                              bg-white
+                              px-3
+                              text-sm
+                              text-slate-800
+                              outline-none
+                              transition
+                              focus:border-[#172B6B]
+                              focus:ring-4
+                              focus:ring-blue-50
+                            "
+                          >
+
+                            <option value="">
+                              Select Material
+                            </option>
+
+                            {products
+                              .filter(
+                                (
+                                  product
+                                ) =>
+                                  product.type ===
+                                  "RAW"
+                              )
+                              .map(
+                                (
+                                  product
+                                ) => (
+                                  <option
+                                    key={
+                                      product._id
+                                    }
+                                    value={
+                                      product._id
+                                    }
+                                  >
+                                    {
+                                      product.name
+                                    }
+                                  </option>
+                                )
+                              )}
+
+                          </select>
+
+                        </div>
+
+
+                        {/* QUANTITY */}
+
+                        <div>
+
+                          <label
+                            className="
+                              mb-1.5
+                              block
+                              px-1
+                              text-[11px]
+                              font-semibold
+                              uppercase
+                              tracking-wide
+                              text-slate-400
+                            "
+                          >
+                            Quantity
+                          </label>
+
+                          <input
+                            type="number"
+                            min={1}
+                            value={
+                              material.quantity
+                            }
+                            onChange={(
+                              e
+                            ) =>
+                              updateMaterial(
+                                index,
+                                "quantity",
+                                Number(
+                                  e.target.value
+                                )
+                              )
+                            }
+                            className="
+                              h-11
+                              w-full
+                              rounded-xl
+                              border
+                              border-slate-200
+                              bg-white
+                              px-3
+                              text-sm
+                              font-medium
+                              text-slate-800
+                              outline-none
+                              transition
+                              focus:border-[#172B6B]
+                              focus:ring-4
+                              focus:ring-blue-50
+                            "
+                          />
+
+                        </div>
+
+
+                        {/* REMOVE */}
+
+                        <div
+                          className="
+                            flex
+                            items-end
+                          "
+                        >
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeMaterial(
+                                index
+                              )
+                            }
+                            disabled={
+                              materials.length ===
+                              1
+                            }
+                            className="
+                              flex
+                              h-11
+                              w-11
+                              items-center
+                              justify-center
+                              rounded-xl
+                              border
+                              border-slate-200
+                              bg-white
+                              text-slate-400
+                              transition
+                              hover:border-red-200
+                              hover:bg-red-50
+                              hover:text-red-600
+                              disabled:cursor-not-allowed
+                              disabled:opacity-30
+                            "
+                            aria-label="Remove material"
+                          >
+                            <FiTrash2
+                              size={16}
+                            />
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+
+              {/* ADD MATERIAL */}
+
+              <button
+                type="button"
+                onClick={addMaterial}
+                className="
+                  mt-4
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-xl
+                  border
+                  border-dashed
+                  border-slate-300
+                  bg-white
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-slate-600
+                  transition
+                  hover:border-[#172B6B]/40
+                  hover:bg-blue-50/40
+                  hover:text-[#172B6B]
+                "
+              >
+                <FiPlus size={16} />
+
+                Add Material
+              </button>
+
+            </div>
+
+
+            {/* FORM ACTIONS */}
+
+            <div
+              className="
+                flex
+                flex-col-reverse
+                gap-3
+                border-t
+                border-slate-100
+                pt-6
+                sm:flex-row
+                sm:justify-end
+              "
+            >
+
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setFinishedProduct("");
+                    setMaterials([
+                      {
+                        product: "",
+                        quantity: 1,
+                      },
+                    ]);
+                  }}
+                  className="
+                    inline-flex
+                    h-11
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-slate-200
+                    bg-white
+                    px-5
+                    text-sm
+                    font-semibold
+                    text-slate-600
+                    transition
+                    hover:bg-slate-50
+                  "
+                >
+                  Cancel
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={
+                  handleCreateBOM
+                }
+                className="
+                  inline-flex
+                  h-11
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  bg-[#172B6B]
+                  px-6
+                  text-sm
+                  font-semibold
+                  text-white
+                  shadow-sm
+                  transition-all
+                  hover:bg-[#20398F]
+                  hover:shadow-md
+                  active:scale-[0.98]
+                "
+              >
+
+                {isEditing ? (
+                  <FiCheckCircle
+                    size={17}
+                  />
+                ) : (
+                  <FiPlus
+                    size={17}
+                  />
+                )}
+
+                {isEditing
+                  ? "Update BOM"
+                  : "Create BOM"}
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* =====================================================
+            BOM WORKSPACE
+        ===================================================== */}
+
+        <div
+          className="
+            grid
+            gap-6
+            xl:grid-cols-[360px_minmax(0,1fr)]
+          "
+        >
+
+          {/* ===================================================
+              BOM LIST
+          =================================================== */}
+
+          <section
+            className="
+              overflow-hidden
+              rounded-3xl
+              border
+              border-slate-200
+              bg-white
+              shadow-[0_8px_30px_rgba(15,23,42,0.04)]
+            "
+          >
+
+            <div
+              className="
+                border-b
+                border-slate-100
+                px-5
+                py-5
+              "
+            >
+
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <h2
+                    className="
+                      text-base
+                      font-bold
+                      text-slate-900
+                    "
+                  >
+                    Existing BOMs
+                  </h2>
+
+                  <p
+                    className="
+                      mt-1
+                      text-xs
+                      text-slate-500
+                    "
+                  >
+                    Select a recipe to inspect.
                   </p>
 
+                </div>
+
+                <div
+                  className="
+                    flex
+                    h-9
+                    w-9
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-slate-100
+                    text-slate-500
+                  "
+                >
+                  <FiLayers
+                    size={16}
+                  />
                 </div>
 
               </div>
 
             </div>
 
-          )
-        )}
 
-      </div>
+            <div
+              className="
+                max-h-[650px]
+                space-y-2
+                overflow-y-auto
+                p-3
+              "
+            >
 
-    </>
+              {boms.length === 0 ? (
 
-  ) : (
+                <div
+                  className="
+                    px-5
+                    py-16
+                    text-center
+                  "
+                >
 
-    <div className="flex min-h-[500px] items-center justify-center p-10">
+                  <div
+                    className="
+                      mx-auto
+                      mb-4
+                      flex
+                      h-12
+                      w-12
+                      items-center
+                      justify-center
+                      rounded-2xl
+                      bg-slate-100
+                      text-slate-400
+                    "
+                  >
+                    <FiPackage
+                      size={21}
+                    />
+                  </div>
 
-      <div className="text-center">
+                  <p
+                    className="
+                      text-sm
+                      font-semibold
+                      text-slate-700
+                    "
+                  >
+                    No BOMs yet
+                  </p>
 
-        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-3xl">
-          📦
+                  <p
+                    className="
+                      mt-1
+                      text-xs
+                      leading-5
+                      text-slate-400
+                    "
+                  >
+                    Create your first
+                    manufacturing recipe above.
+                  </p>
+
+                </div>
+
+              ) : (
+
+                boms.map(
+                  (bom) => {
+
+                    const selected =
+                      selectedBOM?._id ===
+                      bom._id;
+
+                    return (
+                      <button
+                        key={bom._id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedBOM(
+                            bom
+                          )
+                        }
+                        className={`
+                          group
+                          w-full
+                          rounded-2xl
+                          border
+                          p-4
+                          text-left
+                          transition-all
+                          duration-200
+                          ${
+                            selected
+                              ? "border-[#172B6B]/30 bg-blue-50/70 shadow-sm"
+                              : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                          }
+                        `}
+                      >
+
+                        <div
+                          className="
+                            flex
+                            items-start
+                            gap-3
+                          "
+                        >
+
+                          <div
+                            className={`
+                              flex
+                              h-10
+                              w-10
+                              shrink-0
+                              items-center
+                              justify-center
+                              rounded-xl
+                              ${
+                                selected
+                                  ? "bg-[#172B6B] text-white"
+                                  : "bg-slate-100 text-slate-500"
+                              }
+                            `}
+                          >
+                            <FiBox
+                              size={17}
+                            />
+                          </div>
+
+
+                          <div className="min-w-0 flex-1">
+
+                            <p
+                              className="
+                                truncate
+                                text-sm
+                                font-semibold
+                                text-slate-900
+                              "
+                            >
+                              {bom
+                                .finishedProduct
+                                ?.name ||
+                                "Deleted Product"}
+                            </p>
+
+                            <p
+                              className="
+                                mt-1
+                                text-xs
+                                text-slate-500
+                              "
+                            >
+                              {
+                                bom
+                                  .materials
+                                  .length
+                              }{" "}
+                              material
+                              {bom
+                                .materials
+                                .length !==
+                              1
+                                ? "s"
+                                : ""}
+                            </p>
+
+                          </div>
+
+
+                          <FiChevronRight
+                            size={16}
+                            className={`
+                              mt-1
+                              shrink-0
+                              transition-transform
+                              ${
+                                selected
+                                  ? "translate-x-0 text-[#172B6B]"
+                                  : "text-slate-300 group-hover:translate-x-0.5 group-hover:text-slate-500"
+                              }
+                            `}
+                          />
+
+                        </div>
+
+
+                        {selected && (
+                          <div
+                            className="
+                              mt-3
+                              flex
+                              items-center
+                              justify-between
+                              border-t
+                              border-blue-100
+                              pt-3
+                            "
+                          >
+
+                            <span
+                              className="
+                                text-[11px]
+                                font-medium
+                                text-[#172B6B]
+                              "
+                            >
+                              Currently selected
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteBOM(
+                                  bom._id
+                                );
+                              }}
+                              className="
+                                inline-flex
+                                items-center
+                                gap-1.5
+                                rounded-lg
+                                px-2
+                                py-1
+                                text-[11px]
+                                font-semibold
+                                text-red-500
+                                transition
+                                hover:bg-red-50
+                                hover:text-red-600
+                              "
+                            >
+                              <FiTrash2
+                                size={13}
+                              />
+                              Delete
+                            </button>
+
+                          </div>
+                        )}
+
+                      </button>
+                    );
+                  }
+                )
+
+              )}
+
+            </div>
+
+          </section>
+
+
+          {/* ===================================================
+              DETAILS
+          =================================================== */}
+
+          <section
+            className="
+              min-w-0
+              overflow-hidden
+              rounded-3xl
+              border
+              border-slate-200
+              bg-white
+              shadow-[0_8px_30px_rgba(15,23,42,0.04)]
+            "
+          >
+
+            {selectedBOM ? (
+
+              <>
+
+                {/* DETAILS HEADER */}
+
+                <div
+                  className="
+                    border-b
+                    border-slate-100
+                    px-5
+                    py-6
+                    sm:px-7
+                  "
+                >
+
+                  <div
+                    className="
+                      flex
+                      flex-col
+                      gap-5
+                      sm:flex-row
+                      sm:items-start
+                      sm:justify-between
+                    "
+                  >
+
+                    <div
+                      className="
+                        flex
+                        min-w-0
+                        items-start
+                        gap-4
+                      "
+                    >
+
+                      <div
+                        className="
+                          flex
+                          h-12
+                          w-12
+                          shrink-0
+                          items-center
+                          justify-center
+                          rounded-2xl
+                          bg-blue-50
+                          text-[#172B6B]
+                        "
+                      >
+                        <FiPackage
+                          size={22}
+                        />
+                      </div>
+
+                      <div className="min-w-0">
+
+                        <p
+                          className="
+                            text-xs
+                            font-semibold
+                            uppercase
+                            tracking-wide
+                            text-slate-400
+                          "
+                        >
+                          Bill of Materials
+                        </p>
+
+                        <h2
+                          className="
+                            mt-1
+                            truncate
+                            text-xl
+                            font-bold
+                            tracking-tight
+                            text-slate-900
+                            sm:text-2xl
+                          "
+                        >
+                          {
+                            selectedBOM
+                              .finishedProduct
+                              ?.name
+                          }
+                        </h2>
+
+                        <p
+                          className="
+                            mt-1
+                            text-sm
+                            text-slate-500
+                          "
+                        >
+                          {
+                            selectedBOM
+                              .materials
+                              .length
+                          }{" "}
+                          material
+                          {selectedBOM
+                            .materials
+                            .length !==
+                          1
+                            ? "s"
+                            : ""}{" "}
+                          required per unit.
+                        </p>
+
+                      </div>
+
+                    </div>
+
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleEditBOM(
+                          selectedBOM
+                        )
+                      }
+                      className="
+                        inline-flex
+                        h-10
+                        shrink-0
+                        items-center
+                        justify-center
+                        gap-2
+                        rounded-xl
+                        border
+                        border-slate-200
+                        bg-white
+                        px-4
+                        text-sm
+                        font-semibold
+                        text-slate-700
+                        transition
+                        hover:border-slate-300
+                        hover:bg-slate-50
+                      "
+                    >
+                      <FiEdit3
+                        size={15}
+                      />
+
+                      Edit BOM
+                    </button>
+
+                  </div>
+
+                </div>
+
+
+                {/* MATERIAL DETAILS */}
+
+                <div
+                  className="
+                    grid
+                    gap-3
+                    p-5
+                    sm:p-7
+                    md:grid-cols-2
+                  "
+                >
+
+                  {selectedBOM.materials.map(
+                    (
+                      item: any,
+                      index: number
+                    ) => (
+
+                      <div
+                        key={index}
+                        className="
+                          rounded-2xl
+                          border
+                          border-slate-200
+                          bg-slate-50/60
+                          p-4
+                          transition-all
+                          duration-200
+                          hover:border-slate-300
+                          hover:bg-white
+                          hover:shadow-sm
+                        "
+                      >
+
+                        <div
+                          className="
+                            flex
+                            items-start
+                            justify-between
+                            gap-4
+                          "
+                        >
+
+                          <div
+                            className="
+                              flex
+                              min-w-0
+                              items-center
+                              gap-3
+                            "
+                          >
+
+                            <div
+                              className="
+                                flex
+                                h-10
+                                w-10
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-xl
+                                bg-white
+                                text-[#172B6B]
+                                shadow-sm
+                              "
+                            >
+                              <FiBox
+                                size={17}
+                              />
+                            </div>
+
+                            <div className="min-w-0">
+
+                              <h3
+                                className="
+                                  truncate
+                                  text-sm
+                                  font-semibold
+                                  text-slate-900
+                                "
+                              >
+                                {
+                                  item
+                                    .product
+                                    ?.name
+                                }
+                              </h3>
+
+                              <p
+                                className="
+                                  mt-1
+                                  text-xs
+                                  text-slate-500
+                                "
+                              >
+                                Required material
+                              </p>
+
+                            </div>
+
+                          </div>
+
+
+                          <div
+                            className="
+                              shrink-0
+                              text-right
+                            "
+                          >
+
+                            <p
+                              className="
+                                text-xl
+                                font-bold
+                                tracking-tight
+                                text-[#172B6B]
+                              "
+                            >
+                              ×{item.quantity}
+                            </p>
+
+                            <p
+                              className="
+                                mt-0.5
+                                text-[11px]
+                                text-slate-400
+                              "
+                            >
+                              {
+                                item
+                                  .product
+                                  ?.unit
+                              }
+                              /unit
+                            </p>
+
+                          </div>
+
+                        </div>
+
+
+                        <div
+                          className="
+                            mt-4
+                            flex
+                            items-center
+                            justify-between
+                            border-t
+                            border-slate-200/80
+                            pt-3
+                          "
+                        >
+
+                          <span
+                            className="
+                              text-xs
+                              text-slate-500
+                            "
+                          >
+                            Available stock
+                          </span>
+
+                          <span
+                            className="
+                              text-xs
+                              font-semibold
+                              text-slate-700
+                            "
+                          >
+                            {
+                              item
+                                .product
+                                ?.currentStock
+                            }{" "}
+                            {
+                              item
+                                .product
+                                ?.unit
+                            }
+                          </span>
+
+                        </div>
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              </>
+
+            ) : (
+
+              /* EMPTY */
+
+              <div
+                className="
+                  flex
+                  min-h-[520px]
+                  items-center
+                  justify-center
+                  p-8
+                "
+              >
+
+                <div
+                  className="
+                    max-w-sm
+                    text-center
+                  "
+                >
+
+                  <div
+                    className="
+                      mx-auto
+                      mb-5
+                      flex
+                      h-16
+                      w-16
+                      items-center
+                      justify-center
+                      rounded-2xl
+                      bg-slate-100
+                      text-slate-400
+                    "
+                  >
+                    <FiLayers
+                      size={25}
+                    />
+                  </div>
+
+                  <h3
+                    className="
+                      text-base
+                      font-bold
+                      text-slate-800
+                    "
+                  >
+                    No BOM selected
+                  </h3>
+
+                  <p
+                    className="
+                      mt-2
+                      text-sm
+                      leading-6
+                      text-slate-500
+                    "
+                  >
+                    Select a Bill of Materials
+                    from the list to view its
+                    materials, quantities and
+                    current stock.
+                  </p>
+
+                </div>
+
+              </div>
+
+            )}
+
+          </section>
+
         </div>
 
-        <h3 className="text-2xl font-semibold text-slate-700">
-          No BOM Selected
-        </h3>
-
-        <p className="mt-2 text-slate-500">
-          Select a Bill of Materials from the left to view its details.
-        </p>
-
       </div>
 
-    </div>
-
-  )}
-
-</div>
-
-</div>
-
-</div>
-
-</AdminLayout>
+    </AdminLayout>
   );
-  
 };
 
 export default BOMPage;

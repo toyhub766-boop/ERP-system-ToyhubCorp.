@@ -1,27 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import {
+  FiAlertCircle,
+  FiArrowUpRight,
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
+} from "react-icons/fi";
 
 import CRMStaffLayout from "../components/CRMStaffLayout";
-
-import {
-  getOrdersByCustomer,
-} from "../services/order.service";
-
-import {
-  getPaymentsByCustomer,
-} from "../services/payment.service";
-
-import {
-  getCustomers,
-  deleteCustomer,
-} from "../services/customer.service";
-
-import {
-  deleteOrder,
-} from "../services/order.service";
-
-import {
-  deletePayment,
-} from "../services/payment.service";
 
 import CRMHeader from "../components/CRMHeader";
 import CRMStats from "../components/CRMStats";
@@ -41,9 +28,22 @@ import AddNoteModal from "../components/AddNoteModal";
 import SalesPipeline from "../components/SalesPipeline";
 import CRMDueDates from "../components/CRMDueDates";
 
-import type {
-  Customer,
-} from "../types/customer.types";
+import {
+  getCustomers,
+  deleteCustomer,
+} from "../services/customer.service";
+
+import {
+  getOrdersByCustomer,
+  deleteOrder,
+} from "../services/order.service";
+
+import {
+  getPaymentsByCustomer,
+  deletePayment,
+} from "../services/payment.service";
+
+import type { Customer } from "../types/customer.types";
 
 type CRMTab =
   | "customers"
@@ -53,14 +53,12 @@ type CRMTab =
   | "payments";
 
 const CRMStaffPage = () => {
-
   // =========================================================
   // TAB
   // =========================================================
 
   const [activeTab, setActiveTab] =
     useState<CRMTab>("customers");
-
 
   // =========================================================
   // CUSTOMER DATA
@@ -75,7 +73,6 @@ const CRMStaffPage = () => {
   const [search, setSearch] =
     useState("");
 
-
   // =========================================================
   // ORDERS / PAYMENTS
   // =========================================================
@@ -85,7 +82,6 @@ const CRMStaffPage = () => {
 
   const [payments, setPayments] =
     useState<any[]>([]);
-
 
   // =========================================================
   // CUSTOMER MODAL
@@ -97,7 +93,6 @@ const CRMStaffPage = () => {
   const [editingCustomer, setEditingCustomer] =
     useState<any>(null);
 
-
   // =========================================================
   // ORDER MODAL
   // =========================================================
@@ -107,7 +102,6 @@ const CRMStaffPage = () => {
 
   const [editingOrder, setEditingOrder] =
     useState<any>(null);
-
 
   // =========================================================
   // PAYMENT MODAL
@@ -122,7 +116,6 @@ const CRMStaffPage = () => {
   const [selectedOrder, setSelectedOrder] =
     useState<any>(null);
 
-
   // =========================================================
   // NOTES
   // =========================================================
@@ -130,15 +123,13 @@ const CRMStaffPage = () => {
   const [showNoteModal, setShowNoteModal] =
     useState(false);
 
-
   // =========================================================
-  // LOAD CUSTOMER ORDERS + PAYMENTS
+  // LOAD CUSTOMER DATA
   // =========================================================
 
   const loadCustomerData = async (
     customerId?: string
   ) => {
-
     const id =
       customerId ||
       selectedCustomer?._id;
@@ -150,7 +141,6 @@ const CRMStaffPage = () => {
     }
 
     try {
-
       const [
         ordersData,
         paymentsData,
@@ -166,26 +156,20 @@ const CRMStaffPage = () => {
       setPayments(
         paymentsData || []
       );
-
     } catch (error) {
-
       console.error(
         "Failed to load customer data:",
         error
       );
-
     }
   };
-
 
   // =========================================================
   // LOAD CUSTOMERS
   // =========================================================
 
   const loadCustomers = async () => {
-
     try {
-
       const data =
         await getCustomers();
 
@@ -193,13 +177,8 @@ const CRMStaffPage = () => {
         data || []
       );
 
-      /*
-       * Preserve the currently selected customer
-       * whenever possible.
-       */
       setSelectedCustomer(
         (current: any) => {
-
           if (!data?.length) {
             return null;
           }
@@ -221,17 +200,13 @@ const CRMStaffPage = () => {
           );
         }
       );
-
     } catch (error) {
-
       console.error(
         "Failed to load customers:",
         error
       );
-
     }
   };
-
 
   // =========================================================
   // INITIAL LOAD
@@ -241,13 +216,11 @@ const CRMStaffPage = () => {
     loadCustomers();
   }, []);
 
-
   // =========================================================
   // LOAD SELECTED CUSTOMER DATA
   // =========================================================
 
   useEffect(() => {
-
     if (!selectedCustomer?._id) {
       setOrders([]);
       setPayments([]);
@@ -257,66 +230,35 @@ const CRMStaffPage = () => {
     loadCustomerData(
       selectedCustomer._id
     );
-
   }, [selectedCustomer?._id]);
-
 
   // =========================================================
   // REMINDER SUMMARY
   // =========================================================
 
-  const today = new Date();
+  const reminderStats = useMemo(() => {
+    const today = new Date();
 
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
-
-
-  const overdueReminders =
-    customers.filter(
-      (customer: any) =>
-        customer.specialNotes?.some(
-          (note: any) => {
-
-            if (
-              !note.reminderDate ||
-              note.completed
-            ) {
-              return false;
-            }
-
-            const reminder =
-              new Date(
-                note.reminderDate
-              );
-
-            reminder.setHours(
-              0,
-              0,
-              0,
-              0
-            );
-
-            return reminder < today;
-          }
-        )
+    today.setHours(
+      0,
+      0,
+      0,
+      0
     );
 
+    let overdue = 0;
+    let todayCount = 0;
+    let upcoming = 0;
 
-  const todayReminders =
-    customers.filter(
-      (customer: any) =>
-        customer.specialNotes?.some(
+    customers.forEach(
+      (customer: any) => {
+        customer.specialNotes?.forEach(
           (note: any) => {
-
             if (
               !note.reminderDate ||
               note.completed
             ) {
-              return false;
+              return;
             }
 
             const reminder =
@@ -331,162 +273,120 @@ const CRMStaffPage = () => {
               0
             );
 
-            return (
+            if (
               reminder.getTime() ===
               today.getTime()
-            );
-          }
-        )
-    );
-
-
-  const upcomingReminders =
-    customers.filter(
-      (customer: any) =>
-        customer.specialNotes?.some(
-          (note: any) => {
-
-            if (
-              !note.reminderDate ||
-              note.completed
             ) {
-              return false;
+              todayCount++;
+            } else if (
+              reminder < today
+            ) {
+              overdue++;
+            } else {
+              upcoming++;
             }
-
-            const reminder =
-              new Date(
-                note.reminderDate
-              );
-
-            reminder.setHours(
-              0,
-              0,
-              0,
-              0
-            );
-
-            return reminder > today;
           }
-        )
+        );
+      }
     );
 
+    return {
+      overdue,
+      today: todayCount,
+      upcoming,
+    };
+  }, [customers]);
 
   // =========================================================
   // DELETE CUSTOMER
   // =========================================================
 
-  const handleDeleteCustomer =
-    async (
-      customer: any
-    ) => {
+  const handleDeleteCustomer = async (
+    customer: any
+  ) => {
+    if (
+      !window.confirm(
+        "Delete customer?"
+      )
+    ) {
+      return;
+    }
 
-      if (
-        !window.confirm(
-          "Delete customer?"
-        )
-      ) {
-        return;
-      }
+    try {
+      await deleteCustomer(
+        customer._id
+      );
 
-      try {
+      setSelectedCustomer(null);
+      setOrders([]);
+      setPayments([]);
 
-        await deleteCustomer(
-          customer._id
-        );
-
-        /*
-         * Clear selected customer first
-         * so the old customer doesn't flash.
-         */
-        setSelectedCustomer(null);
-
-        setOrders([]);
-        setPayments([]);
-
-        await loadCustomers();
-
-      } catch (error) {
-
-        console.error(
-          "Failed to delete customer:",
-          error
-        );
-
-      }
-    };
-
+      await loadCustomers();
+    } catch (error) {
+      console.error(
+        "Failed to delete customer:",
+        error
+      );
+    }
+  };
 
   // =========================================================
   // DELETE ORDER
   // =========================================================
 
-  const handleDeleteOrder =
-    async (
-      order: any
-    ) => {
+  const handleDeleteOrder = async (
+    order: any
+  ) => {
+    if (
+      !window.confirm(
+        "Delete order?"
+      )
+    ) {
+      return;
+    }
 
-      if (
-        !window.confirm(
-          "Delete order?"
-        )
-      ) {
-        return;
-      }
+    try {
+      await deleteOrder(
+        order._id
+      );
 
-      try {
-
-        await deleteOrder(
-          order._id
-        );
-
-        await loadCustomerData();
-
-      } catch (error) {
-
-        console.error(
-          "Failed to delete order:",
-          error
-        );
-
-      }
-    };
-
+      await loadCustomerData();
+    } catch (error) {
+      console.error(
+        "Failed to delete order:",
+        error
+      );
+    }
+  };
 
   // =========================================================
   // DELETE PAYMENT
   // =========================================================
 
-  const handleDeletePayment =
-    async (
-      payment: any
-    ) => {
+  const handleDeletePayment = async (
+    payment: any
+  ) => {
+    if (
+      !window.confirm(
+        "Delete payment?"
+      )
+    ) {
+      return;
+    }
 
-      if (
-        !window.confirm(
-          "Delete payment?"
-        )
-      ) {
-        return;
-      }
+    try {
+      await deletePayment(
+        payment._id
+      );
 
-      try {
-
-        await deletePayment(
-          payment._id
-        );
-
-        await loadCustomerData();
-
-      } catch (error) {
-
-        console.error(
-          "Failed to delete payment:",
-          error
-        );
-
-      }
-    };
-
+      await loadCustomerData();
+    } catch (error) {
+      console.error(
+        "Failed to delete payment:",
+        error
+      );
+    }
+  };
 
   // =========================================================
   // RENDER
@@ -495,86 +395,309 @@ const CRMStaffPage = () => {
   return (
     <CRMStaffLayout>
 
-      <div className="mx-auto w-full max-w-[1450px] space-y-8">
-
+      <div className="mx-auto w-full max-w-[1500px] space-y-6">
 
         {/* =====================================================
             HEADER
         ===================================================== */}
 
         <CRMHeader
+          isStaff
           onAddCustomer={() => {
-
             setEditingCustomer(null);
-
             setShowAddCustomer(true);
-
           }}
         />
 
-
         {/* =====================================================
-            FOLLOW-UP SUMMARY
+            FOLLOW-UP COMMAND CENTER
         ===================================================== */}
 
-        <div className="grid gap-5 md:grid-cols-3">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
 
+          {/* FOLLOW-UP SUMMARY */}
 
-          {/* OVERDUE */}
+          <div
+            className="
+              overflow-hidden
+              rounded-[28px]
+              border
+              border-slate-200
+              bg-white
+              shadow-sm
+            "
+          >
+            <div
+              className="
+                flex
+                flex-col
+                gap-5
+                p-5
+                sm:p-6
+                lg:flex-row
+                lg:items-center
+                lg:justify-between
+              "
+            >
 
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+              <div>
+                <div className="flex items-center gap-2">
 
-            <p className="text-sm font-medium text-red-500">
-              Overdue Follow-ups
-            </p>
+                  <span
+                    className="
+                      h-2
+                      w-2
+                      rounded-full
+                      bg-[#172B6B]
+                    "
+                  />
 
-            <h2 className="mt-3 text-4xl font-bold text-red-700">
-              {
-                overdueReminders.length
-              }
-            </h2>
+                  <span
+                    className="
+                      text-[11px]
+                      font-bold
+                      uppercase
+                      tracking-[0.16em]
+                      text-[#172B6B]
+                    "
+                  >
+                    Follow-up Command Center
+                  </span>
+
+                </div>
+
+                <h2
+                  className="
+                    mt-2
+                    text-xl
+                    font-bold
+                    tracking-tight
+                    text-slate-900
+                  "
+                >
+                  Stay ahead of customer conversations
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Keep track of overdue, today's and
+                  upcoming customer activities.
+                </p>
+              </div>
+
+              {/* REMINDER CARDS */}
+
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+
+                {/* OVERDUE */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab("dues")
+                  }
+                  className="
+                    group
+                    min-w-[90px]
+                    rounded-2xl
+                    border
+                    border-red-100
+                    bg-red-50/60
+                    p-3
+                    text-left
+                    transition-all
+                    duration-200
+                    hover:-translate-y-0.5
+                    hover:border-red-200
+                    hover:bg-red-50
+                    hover:shadow-sm
+                  "
+                >
+                  <div className="flex items-center justify-between">
+
+                    <FiAlertCircle
+                      size={15}
+                      className="text-red-500"
+                    />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="
+                        text-red-300
+                        transition
+                        group-hover:text-red-500
+                      "
+                    />
+
+                  </div>
+
+                  <p className="mt-3 text-2xl font-bold text-red-600">
+                    {reminderStats.overdue}
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-500">
+                    Overdue
+                  </p>
+                </button>
+
+                {/* TODAY */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab("dues")
+                  }
+                  className="
+                    group
+                    min-w-[90px]
+                    rounded-2xl
+                    border
+                    border-amber-100
+                    bg-amber-50/60
+                    p-3
+                    text-left
+                    transition-all
+                    duration-200
+                    hover:-translate-y-0.5
+                    hover:border-amber-200
+                    hover:bg-amber-50
+                    hover:shadow-sm
+                  "
+                >
+                  <div className="flex items-center justify-between">
+
+                    <FiClock
+                      size={15}
+                      className="text-amber-600"
+                    />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="
+                        text-amber-300
+                        transition
+                        group-hover:text-amber-600
+                      "
+                    />
+
+                  </div>
+
+                  <p className="mt-3 text-2xl font-bold text-amber-700">
+                    {reminderStats.today}
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+                    Today
+                  </p>
+                </button>
+
+                {/* UPCOMING */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab("dues")
+                  }
+                  className="
+                    group
+                    min-w-[90px]
+                    rounded-2xl
+                    border
+                    border-green-100
+                    bg-green-50/60
+                    p-3
+                    text-left
+                    transition-all
+                    duration-200
+                    hover:-translate-y-0.5
+                    hover:border-green-200
+                    hover:bg-green-50
+                    hover:shadow-sm
+                  "
+                >
+                  <div className="flex items-center justify-between">
+
+                    <FiCalendar
+                      size={15}
+                      className="text-green-600"
+                    />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="
+                        text-green-300
+                        transition
+                        group-hover:text-green-600
+                      "
+                    />
+
+                  </div>
+
+                  <p className="mt-3 text-2xl font-bold text-green-700">
+                    {reminderStats.upcoming}
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-600">
+                    Upcoming
+                  </p>
+                </button>
+
+              </div>
+            </div>
+          </div>
+
+          {/* STAFF STATUS */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-4
+              rounded-[28px]
+              border
+              border-slate-200
+              bg-white
+              px-5
+              py-5
+              shadow-sm
+            "
+          >
+
+            <div
+              className="
+                flex
+                h-11
+                w-11
+                shrink-0
+                items-center
+                justify-center
+                rounded-2xl
+                bg-blue-50
+                text-[#172B6B]
+              "
+            >
+              <FiCheckCircle size={19} />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Staff Workspace
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-slate-900">
+                CRM Operations Active
+              </p>
+
+              <p className="mt-0.5 text-xs text-slate-400">
+                {customers.length} customers available
+              </p>
+            </div>
 
           </div>
 
-
-          {/* TODAY */}
-
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-
-            <p className="text-sm font-medium text-amber-600">
-              Due Today
-            </p>
-
-            <h2 className="mt-3 text-4xl font-bold text-amber-700">
-              {
-                todayReminders.length
-              }
-            </h2>
-
-          </div>
-
-
-          {/* UPCOMING */}
-
-          <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
-
-            <p className="text-sm font-medium text-green-600">
-              Upcoming
-            </p>
-
-            <h2 className="mt-3 text-4xl font-bold text-green-700">
-              {
-                upcomingReminders.length
-              }
-            </h2>
-
-          </div>
-
-        </div>
-
+        </section>
 
         {/* =====================================================
-            EXISTING CRM STATS
+            CRM STATS
         ===================================================== */}
 
         <CRMStats
@@ -583,34 +706,42 @@ const CRMStaffPage = () => {
           payments={payments}
         />
 
-
         {/* =====================================================
-            MAIN CRM CONTAINER
+            MAIN CRM WORKSPACE
         ===================================================== */}
 
-        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <section
+          className="
+            overflow-hidden
+            rounded-[30px]
+            border
+            border-slate-200
+            bg-white
+            shadow-sm
+          "
+        >
 
+          {/* TABS */}
 
-          {/* ===================================================
-              TABS
-          =================================================== */}
-
-          <div className="border-b border-slate-200 px-6 py-4">
-
+          <div
+            className="
+              border-b
+              border-slate-100
+              bg-slate-50/40
+              px-4
+              py-3
+              sm:px-5
+            "
+          >
             <CRMTabs
               activeTab={activeTab}
               setActiveTab={setActiveTab}
             />
-
           </div>
 
+          {/* CONTENT */}
 
-          {/* ===================================================
-              TAB CONTENT
-          =================================================== */}
-
-          <div className="p-6">
-
+          <div className="p-4 sm:p-5 lg:p-6">
 
             {/* =================================================
                 CUSTOMERS
@@ -618,8 +749,13 @@ const CRMStaffPage = () => {
 
             {activeTab === "customers" && (
 
-              <div className="grid gap-8 xl:grid-cols-[360px_1fr]">
-
+              <div
+                className="
+                  grid
+                  gap-5
+                  xl:grid-cols-[360px_minmax(0,1fr)]
+                "
+              >
 
                 {/* CUSTOMER LIST */}
 
@@ -639,7 +775,6 @@ const CRMStaffPage = () => {
 
                 </div>
 
-
                 {/* CUSTOMER PROFILE */}
 
                 <div className="min-w-0">
@@ -653,11 +788,7 @@ const CRMStaffPage = () => {
                       orders
                     }
 
-
-                    onEdit={(
-                      customer
-                    ) => {
-
+                    onEdit={(customer) => {
                       setEditingCustomer(
                         customer
                       );
@@ -665,80 +796,53 @@ const CRMStaffPage = () => {
                       setShowAddCustomer(
                         true
                       );
-
                     }}
-
 
                     onDelete={
                       handleDeleteCustomer
                     }
 
-
                     onCreateOrder={() => {
-
-                      setEditingOrder(
-                        null
-                      );
+                      setEditingOrder(null);
 
                       setShowOrderModal(
                         true
                       );
-
                     }}
 
-
                     onAddNote={() => {
-
                       setShowNoteModal(
                         true
                       );
-
                     }}
-
 
                     onRecordPayment={() => {
-
-                      /*
-                       * Existing profile payment
-                       * functionality is preserved.
-                       *
-                       * Payment recording from an
-                       * individual order remains
-                       * available through Orders.
-                       */
-
+                      // Payment recording
+                      // remains available
+                      // from Orders.
                     }}
-
                   />
 
                 </div>
 
               </div>
-
             )}
-
 
             {/* =================================================
                 SALES PIPELINE
             ================================================= */}
 
             {activeTab === "pipeline" && (
-
               <SalesPipeline />
-
             )}
 
-
             {/* =================================================
-                CUSTOMER DUE MANAGEMENT
+                DUE DATES
             ================================================= */}
 
             {activeTab === "dues" && (
-
               <CRMDueDates />
-
             )}
-
 
             {/* =================================================
                 ORDERS
@@ -747,36 +851,23 @@ const CRMStaffPage = () => {
             {activeTab === "orders" && (
 
               <OrdersTable
+                orders={orders}
 
-                orders={
-                  orders
-                }
-
-
-                onEdit={(
-                  order
-                ) => {
-
-                  setEditingOrder(
-                    order
-                  );
+                onEdit={(order) => {
+                  setEditingOrder(order);
 
                   setShowOrderModal(
                     true
                   );
-
                 }}
-
 
                 onDelete={
                   handleDeleteOrder
                 }
 
-
                 onRecordPayment={(
                   order
                 ) => {
-
                   setSelectedOrder(
                     order
                   );
@@ -788,13 +879,10 @@ const CRMStaffPage = () => {
                   setShowPaymentModal(
                     true
                   );
-
                 }}
-
               />
 
             )}
-
 
             {/* =================================================
                 PAYMENTS
@@ -803,217 +891,127 @@ const CRMStaffPage = () => {
             {activeTab === "payments" && (
 
               <PaymentsOverview
+                payments={payments}
 
-                payments={
-                  payments
-                }
-
-
-                onEdit={(
-                  payment
-                ) => {
-
+                onEdit={(payment) => {
                   setEditingPayment(
                     payment
+                  );
+
+                  /*
+                   * PaymentModal expects
+                   * an order object.
+                   *
+                   * If the payment contains
+                   * a populated order, use it.
+                   */
+                  setSelectedOrder(
+                    payment.order
                   );
 
                   setShowPaymentModal(
                     true
                   );
-
                 }}
-
 
                 onDelete={
                   handleDeletePayment
                 }
-
               />
 
             )}
 
           </div>
 
-        </div>
-
+        </section>
 
         {/* =====================================================
             CUSTOMER MODAL
         ===================================================== */}
 
         <CustomerModal
-
-          open={
-            showAddCustomer
-          }
-
-          customer={
-            editingCustomer
-          }
+          open={showAddCustomer}
+          customer={editingCustomer}
 
           onClose={() => {
-
-            setShowAddCustomer(
-              false
-            );
-
-            setEditingCustomer(
-              null
-            );
-
+            setShowAddCustomer(false);
+            setEditingCustomer(null);
           }}
 
           onSuccess={async () => {
-
             await loadCustomers();
 
-            setShowAddCustomer(
-              false
-            );
-
-            setEditingCustomer(
-              null
-            );
-
+            setShowAddCustomer(false);
+            setEditingCustomer(null);
           }}
-
         />
-
 
         {/* =====================================================
             ORDER MODAL
         ===================================================== */}
 
         <OrderModal
-
-          open={
-            showOrderModal
-          }
-
-          customer={
-            selectedCustomer
-          }
-
-          order={
-            editingOrder
-          }
+          open={showOrderModal}
+          customer={selectedCustomer}
+          order={editingOrder}
 
           onClose={() => {
-
-            setShowOrderModal(
-              false
-            );
-
-            setEditingOrder(
-              null
-            );
-
+            setShowOrderModal(false);
+            setEditingOrder(null);
           }}
 
           onSuccess={async () => {
-
             await loadCustomerData();
 
-            setShowOrderModal(
-              false
-            );
-
-            setEditingOrder(
-              null
-            );
-
+            setShowOrderModal(false);
+            setEditingOrder(null);
           }}
-
         />
-
 
         {/* =====================================================
             PAYMENT MODAL
         ===================================================== */}
 
         <PaymentModal
-
-          open={
-            showPaymentModal
-          }
-
-          order={
-            selectedOrder
-          }
-
-          payment={
-            editingPayment
-          }
+          open={showPaymentModal}
+          order={selectedOrder}
+          payment={editingPayment}
 
           onClose={() => {
-
-            setShowPaymentModal(
-              false
-            );
-
-            setEditingPayment(
-              null
-            );
-
-            setSelectedOrder(
-              null
-            );
-
+            setShowPaymentModal(false);
+            setEditingPayment(null);
+            setSelectedOrder(null);
           }}
 
           onSuccess={async () => {
-
             await loadCustomerData();
 
-            setShowPaymentModal(
-              false
-            );
-
-            setEditingPayment(
-              null
-            );
-
-            setSelectedOrder(
-              null
-            );
-
+            setShowPaymentModal(false);
+            setEditingPayment(null);
+            setSelectedOrder(null);
           }}
-
         />
-
 
         {/* =====================================================
             NOTE MODAL
         ===================================================== */}
 
         <AddNoteModal
-
-          open={
-            showNoteModal
-          }
-
+          open={showNoteModal}
           customerId={
             selectedCustomer?._id
           }
 
           onClose={() =>
-            setShowNoteModal(
-              false
-            )
+            setShowNoteModal(false)
           }
 
           onSuccess={async () => {
-
             await loadCustomers();
-
             await loadCustomerData();
 
-            setShowNoteModal(
-              false
-            );
-
+            setShowNoteModal(false);
           }}
-
         />
 
       </div>

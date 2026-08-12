@@ -413,23 +413,76 @@ return (
 
     </PageContainer>
 {showModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-
-    <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+  <div
+    className="
+      fixed
+      inset-0
+      z-50
+      flex
+      items-center
+      justify-center
+      bg-black/50
+      p-3
+      sm:p-4
+    "
+  >
+    <div
+      className="
+        flex
+        max-h-[calc(100vh-1.5rem)]
+        w-full
+        max-w-2xl
+        flex-col
+        overflow-hidden
+        rounded-2xl
+        bg-white
+        shadow-2xl
+        sm:max-h-[calc(100vh-2rem)]
+        sm:rounded-3xl
+      "
+    >
 
       {/* Header */}
 
-      <div className="flex items-start justify-between border-b border-slate-200 px-8 py-6">
+      <div
+        className="
+          flex
+          shrink-0
+          items-start
+          justify-between
+          gap-4
+          border-b
+          border-slate-200
+          px-5
+          py-4
+          sm:px-8
+          sm:py-6
+        "
+      >
+        <div className="min-w-0">
 
-        <div>
-
-          <h2 className="text-2xl font-bold text-slate-900">
+          <h2
+            className="
+              text-xl
+              font-bold
+              text-slate-900
+              sm:text-2xl
+            "
+          >
             {editingWarehouse
               ? "Edit Warehouse"
               : "Add Warehouse"}
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p
+            className="
+              mt-1
+              text-xs
+              leading-5
+              text-slate-500
+              sm:text-sm
+            "
+          >
             Assign warehouse details and inventory managers.
           </p>
 
@@ -437,7 +490,20 @@ return (
 
         <button
           onClick={() => setShowModal(false)}
-          className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
+          aria-label="Close"
+          className="
+            flex
+            h-9
+            w-9
+            shrink-0
+            items-center
+            justify-center
+            rounded-xl
+            text-lg
+            text-slate-500
+            transition
+            hover:bg-slate-100
+          "
         >
           ✕
         </button>
@@ -446,13 +512,33 @@ return (
 
       {/* Body */}
 
-      <div className="space-y-6 p-8">
+      <div
+        className="
+          min-h-0
+          flex-1
+          space-y-5
+          overflow-y-auto
+          px-5
+          py-5
+          sm:space-y-6
+          sm:px-8
+          sm:py-8
+        "
+      >
 
         {/* Warehouse Name */}
 
         <div>
 
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label
+            className="
+              mb-2
+              block
+              text-sm
+              font-semibold
+              text-slate-700
+            "
+          >
             Warehouse Name
           </label>
 
@@ -473,9 +559,12 @@ return (
               border-slate-300
               px-4
               py-3
+              text-sm
               outline-none
               transition
               focus:border-[#172B6B]
+              focus:ring-2
+              focus:ring-[#172B6B]/10
             "
           />
 
@@ -485,7 +574,15 @@ return (
 
         <div>
 
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label
+            className="
+              mb-2
+              block
+              text-sm
+              font-semibold
+              text-slate-700
+            "
+          >
             Location
           </label>
 
@@ -506,9 +603,12 @@ return (
               border-slate-300
               px-4
               py-3
+              text-sm
               outline-none
               transition
               focus:border-[#172B6B]
+              focus:ring-2
+              focus:ring-[#172B6B]/10
             "
           />
 
@@ -518,81 +618,148 @@ return (
 
         <div>
 
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label
+            className="
+              mb-1
+              block
+              text-sm
+              font-semibold
+              text-slate-700
+            "
+          >
             Inventory Managers
           </label>
 
-          <p className="mb-3 text-sm text-slate-500">
+          <p
+            className="
+              mb-3
+              text-xs
+              leading-5
+              text-slate-500
+              sm:text-sm
+            "
+          >
             Select one or more managers for this warehouse.
           </p>
 
-          <div className="max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-slate-300 p-4">
+          <div
+            className="
+              max-h-48
+              space-y-2
+              overflow-y-auto
+              rounded-2xl
+              border
+              border-slate-300
+              p-3
+              sm:max-h-64
+              sm:p-4
+            "
+          >
 
-            {inventoryUsers.map((user) => (
+            {inventoryUsers.length > 0 ? (
 
-              <label
-                key={user._id}
+              inventoryUsers.map((user) => (
+
+                <label
+                  key={user._id}
+                  className="
+                    flex
+                    cursor-pointer
+                    items-center
+                    gap-3
+                    rounded-xl
+                    border
+                    border-slate-200
+                    px-3
+                    py-3
+                    transition
+                    hover:bg-slate-50
+                    sm:px-4
+                  "
+                >
+
+                  <input
+                    type="checkbox"
+                    checked={newWarehouse.managers.includes(
+                      user._id
+                    )}
+                    onChange={(e) => {
+
+                      if (e.target.checked) {
+
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          managers: [
+                            ...newWarehouse.managers,
+                            user._id,
+                          ],
+                        });
+
+                      } else {
+
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          managers:
+                            newWarehouse.managers.filter(
+                              (id) =>
+                                id !== user._id
+                            ),
+                        });
+
+                      }
+
+                    }}
+                    className="
+                      h-4
+                      w-4
+                      shrink-0
+                      accent-[#172B6B]
+                    "
+                  />
+
+                  <div className="min-w-0">
+
+                    <p
+                      className="
+                        truncate
+                        text-sm
+                        font-medium
+                        text-slate-800
+                      "
+                    >
+                      {user.name}
+                    </p>
+
+                    <p
+                      className="
+                        truncate
+                        text-xs
+                        text-slate-500
+                      "
+                    >
+                      {user.employeeId}
+                    </p>
+
+                  </div>
+
+                </label>
+
+              ))
+
+            ) : (
+
+              <p
                 className="
-                  flex
-                  cursor-pointer
-                  items-center
-                  gap-3
-                  rounded-xl
-                  border
-                  border-slate-200
-                  px-4
-                  py-3
-                  transition
-                  hover:bg-slate-50
+                  py-4
+                  text-center
+                  text-sm
+                  text-slate-400
                 "
               >
+                No inventory managers found.
+              </p>
 
-                <input
-                  type="checkbox"
-                  checked={newWarehouse.managers.includes(user._id)}
-                  onChange={(e) => {
-
-                    if (e.target.checked) {
-
-                      setNewWarehouse({
-                        ...newWarehouse,
-                        managers: [
-                          ...newWarehouse.managers,
-                          user._id,
-                        ],
-                      });
-
-                    } else {
-
-                      setNewWarehouse({
-                        ...newWarehouse,
-                        managers:
-                          newWarehouse.managers.filter(
-                            (id) => id !== user._id
-                          ),
-                      });
-
-                    }
-
-                  }}
-                  className="h-4 w-4 accent-[#172B6B]"
-                />
-
-                <div>
-
-                  <p className="font-medium text-slate-800">
-                    {user.name}
-                  </p>
-
-                  <p className="text-xs text-slate-500">
-                    {user.employeeId}
-                  </p>
-
-                </div>
-
-              </label>
-
-            ))}
+            )}
 
           </div>
 
@@ -602,7 +769,15 @@ return (
 
         <div>
 
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label
+            className="
+              mb-2
+              block
+              text-sm
+              font-semibold
+              text-slate-700
+            "
+          >
             Status
           </label>
 
@@ -621,13 +796,21 @@ return (
               border-slate-300
               px-4
               py-3
+              text-sm
               outline-none
               transition
               focus:border-[#172B6B]
+              focus:ring-2
+              focus:ring-[#172B6B]/10
             "
           >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="INACTIVE">INACTIVE</option>
+            <option value="ACTIVE">
+              ACTIVE
+            </option>
+
+            <option value="INACTIVE">
+              INACTIVE
+            </option>
           </select>
 
         </div>
@@ -636,19 +819,42 @@ return (
 
       {/* Footer */}
 
-      <div className="flex justify-end gap-3 border-t border-slate-200 px-8 py-5">
+      <div
+        className="
+          flex
+          shrink-0
+          flex-col-reverse
+          gap-2
+          border-t
+          border-slate-200
+          bg-slate-50
+          px-5
+          py-4
+          sm:flex-row
+          sm:justify-end
+          sm:gap-3
+          sm:bg-white
+          sm:px-8
+          sm:py-5
+        "
+      >
 
         <button
           onClick={() => setShowModal(false)}
           className="
+            w-full
             rounded-xl
             border
             border-slate-300
+            bg-white
             px-5
             py-3
+            text-sm
             font-medium
             text-slate-700
+            transition
             hover:bg-slate-50
+            sm:w-auto
           "
         >
           Cancel
@@ -691,14 +897,17 @@ return (
             }
           }}
           className="
+            w-full
             rounded-xl
             bg-[#172B6B]
             px-6
             py-3
+            text-sm
             font-semibold
             text-white
             transition
             hover:bg-[#20398F]
+            sm:w-auto
           "
         >
           {editingWarehouse
@@ -709,7 +918,6 @@ return (
       </div>
 
     </div>
-
   </div>
 )}
 

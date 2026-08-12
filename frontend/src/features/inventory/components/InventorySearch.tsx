@@ -8,39 +8,67 @@ const InventorySearch = ({
   onChange,
 }: InventorySearchProps) => {
   return (
-    <div className="mb-8">
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-
-        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+    <div className="mb-5 sm:mb-6 lg:mb-8">
+      <div
+        className="
+          rounded-2xl
+          border
+          border-slate-200
+          bg-white
+          p-3.5
+          shadow-sm
+          sm:p-4
+        "
+      >
+        <label
+          htmlFor="inventory-search"
+          className="
+            mb-2
+            block
+            text-[10px]
+            font-semibold
+            uppercase
+            tracking-[0.08em]
+            text-slate-400
+            sm:text-xs
+            sm:tracking-wide
+            sm:text-slate-500
+          "
+        >
           Search Inventory
         </label>
 
         <input
+          id="inventory-search"
           type="text"
           placeholder="Search products by name or SKU..."
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) =>
+            onChange(e.target.value)
+          }
           className="
+            h-11
             w-full
-            h-12
             rounded-xl
             border
-            border-slate-300
+            border-slate-200
             bg-slate-50
-            px-4
+            px-3.5
             text-sm
             text-slate-800
-            placeholder:text-slate-400
             outline-none
             transition-all
             duration-200
-            focus:bg-white
+            placeholder:text-slate-400
+            hover:border-slate-300
             focus:border-[#17357A]
-            focus:ring-4
+            focus:bg-white
+            focus:ring-2
             focus:ring-[#17357A]/10
+            sm:h-12
+            sm:px-4
           "
         />
-
       </div>
     </div>
   );

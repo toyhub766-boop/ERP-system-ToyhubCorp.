@@ -1,4 +1,11 @@
-import { Eye, Pencil, Trash2, MapPin, Package } from "lucide-react";
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  MapPin,
+  Package,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import type { Product } from "../../staff/types/inventory.types";
 
@@ -16,280 +23,593 @@ const InventoryCard = ({
   onDelete,
 }: InventoryCardProps) => {
   const statusColor = {
-    Healthy: "bg-green-100 text-green-700",
-    "Low Stock": "bg-yellow-100 text-yellow-700",
-    Critical: "bg-red-100 text-red-700",
+    Healthy:
+      "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    "Low Stock":
+      "bg-amber-50 text-amber-700 ring-amber-100",
+    Critical:
+      "bg-red-50 text-red-700 ring-red-100",
   };
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] =
+    useState<string | null>(null);
+
+  const currentStatusColor =
+    statusColor[
+      product.status as keyof typeof statusColor
+    ] ||
+    "bg-slate-50 text-slate-600 ring-slate-200";
 
   return (
-    <div className="
-      bg-white
-      border
-      border-slate-200
-      rounded-2xl
-      shadow-sm
-      hover:shadow-md
-      transition-all
-      duration-200
-      p-6
-    ">
+    <>
+      <article
+        className="
+          overflow-hidden
+          rounded-2xl
+          border
+          border-slate-200
+          bg-white
+          p-4
+          shadow-sm
+          transition-shadow
+          duration-200
+          hover:shadow-md
+          sm:p-5
+          lg:p-6
+        "
+      >
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
-      {/* Header */}
-<div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-
-  <div className="flex gap-4">
-
-    <div
-      className="
-        h-16
-        w-16
-        rounded-2xl
-        overflow-hidden
-        bg-slate-100
-        flex
-        items-center
-        justify-center
-      "
-    >
-      {product.image ? (
-        <img
-  src={product.image}
-  alt={product.name}
-onClick={() => {
-  if (product.image) {
-    setPreviewImage(product.image);
-  }
-}}  title="Click to enlarge"
-  className="
-    h-full
-    w-full
-    cursor-pointer
-    object-cover
-    transition
-    duration-200
-    hover:scale-105
-  "
-/>
-      ) : (
-        <Package className="h-8 w-8 text-[#17357A]" />
-      )}
-    </div>
-
-    <div>
-      <h2 className="text-xl font-bold text-slate-900">
-        {product.name}
-      </h2>
-
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-        <span>{product.sku}</span>
-
-        <span>•</span>
-
-        <span>{product.category?.name}</span>
-
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-            product.type === "FINISHED"
-              ? "bg-blue-100 text-blue-700"
-              : "bg-orange-100 text-orange-700"
-          }`}
+        <div
+          className="
+            flex
+            min-w-0
+            flex-col
+            gap-4
+            sm:gap-5
+            lg:flex-row
+            lg:items-start
+            lg:justify-between
+          "
         >
-          {product.type === "FINISHED"
-            ? "Finished Product"
-            : "Raw Material"}
-        </span>
-      </div>
-    </div>
+          {/* PRODUCT */}
 
-  </div>
+          <div
+            className="
+              flex
+              min-w-0
+              items-start
+              gap-3
+              sm:gap-4
+            "
+          >
+            {/* IMAGE */}
 
-  <span
-    className={`inline-flex h-fit rounded-full px-3 py-1 text-xs font-semibold ${
-      statusColor[product.status as keyof typeof statusColor]
-    }`}
-  >
-    {product.status}
-  </span>
+            <button
+              type="button"
+              disabled={!product.image}
+              onClick={() => {
+                if (product.image) {
+                  setPreviewImage(
+                    product.image
+                  );
+                }
+              }}
+              className="
+                flex
+                h-14
+                w-14
+                shrink-0
+                items-center
+                justify-center
+                overflow-hidden
+                rounded-xl
+                bg-slate-100
+                sm:h-16
+                sm:w-16
+                sm:rounded-2xl
+              "
+              aria-label={
+                product.image
+                  ? `View ${product.name} image`
+                  : undefined
+              }
+            >
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="
+                    h-full
+                    w-full
+                    object-cover
+                    transition
+                    duration-200
+                    hover:scale-105
+                  "
+                />
+              ) : (
+                <Package
+                  className="
+                    h-7
+                    w-7
+                    text-[#17357A]
+                    sm:h-8
+                    sm:w-8
+                  "
+                />
+              )}
+            </button>
 
-</div>
+            {/* PRODUCT INFO */}
 
-      {/* Divider */}
+            <div className="min-w-0 pt-0.5">
+              <h2
+                className="
+                  break-words
+                  text-base
+                  font-bold
+                  leading-6
+                  text-slate-900
+                  sm:text-lg
+                  lg:text-xl
+                "
+              >
+                {product.name}
+              </h2>
 
-      <div className="my-6 border-t border-slate-100" />
+              <div
+                className="
+                  mt-1.5
+                  flex
+                  flex-wrap
+                  items-center
+                  gap-x-2
+                  gap-y-1.5
+                  text-xs
+                  text-slate-500
+                  sm:mt-2
+                  sm:text-sm
+                "
+              >
+                <span
+                  className="
+                    max-w-full
+                    truncate
+                  "
+                >
+                  {product.sku}
+                </span>
 
-      {/* Stats */}
+                <span className="text-slate-300">
+                  •
+                </span>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <span
+                  className="
+                    max-w-[140px]
+                    truncate
+                  "
+                >
+                  {product.category?.name ||
+                    "Uncategorized"}
+                </span>
 
-        <div>
-
-          <p className="text-xs uppercase tracking-wide text-slate-500">
-            Current Stock
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-900">
-            {product.currentStock}
-          </p>
-
-        </div>
-
-        <div>
-
-          <p className="text-xs uppercase tracking-wide text-slate-500">
-            Minimum Stock
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-900">
-            {product.minimumStock}
-          </p>
-
-        </div>
-
-        <div>
-
-          <p className="text-xs uppercase tracking-wide text-slate-500">
-            Warehouse
-          </p>
-
-          <div className="mt-2 flex items-center gap-2 font-semibold text-[#17357A]">
-
-            <MapPin size={16} />
-
-            {product.warehouse?.name}
-
+                <span
+                  className={`
+                    rounded-full
+                    px-2
+                    py-0.5
+                    text-[10px]
+                    font-semibold
+                    sm:px-2.5
+                    sm:py-1
+                    sm:text-xs
+                    ${
+                      product.type ===
+                      "FINISHED"
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-orange-50 text-orange-700"
+                    }
+                  `}
+                >
+                  {product.type ===
+                  "FINISHED"
+                    ? "Finished Product"
+                    : "Raw Material"}
+                </span>
+              </div>
+            </div>
           </div>
 
+          {/* STATUS */}
+
+          <span
+            className={`
+              inline-flex
+              w-fit
+              shrink-0
+              rounded-full
+              px-2.5
+              py-1
+              text-[10px]
+              font-semibold
+              ring-1
+              sm:px-3
+              sm:py-1.5
+              sm:text-xs
+              ${currentStatusColor}
+            `}
+          >
+            {product.status}
+          </span>
         </div>
 
-        <div>
+        {/* =====================================================
+            DIVIDER
+        ===================================================== */}
 
-          <p className="text-xs uppercase tracking-wide text-slate-500">
-            Product Type
-          </p>
+        <div className="my-4 border-t border-slate-100 sm:my-5 lg:my-6" />
 
-          <p className="mt-2 font-semibold text-slate-700">
-            {product.type}
-          </p>
+        {/* =====================================================
+            STATS
+        ===================================================== */}
 
+        <div
+          className="
+            grid
+            grid-cols-2
+            gap-x-4
+            gap-y-5
+            sm:gap-x-6
+            lg:grid-cols-4
+            lg:gap-6
+          "
+        >
+          {/* CURRENT STOCK */}
+
+          <div className="min-w-0">
+            <p
+              className="
+                text-[10px]
+                font-semibold
+                uppercase
+                tracking-wide
+                text-slate-400
+                sm:text-xs
+                sm:text-slate-500
+              "
+            >
+              Current Stock
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-xl
+                font-bold
+                tracking-tight
+                text-slate-900
+                sm:text-2xl
+                lg:text-3xl
+              "
+            >
+              {product.currentStock}
+            </p>
+          </div>
+
+          {/* MINIMUM STOCK */}
+
+          <div className="min-w-0">
+            <p
+              className="
+                text-[10px]
+                font-semibold
+                uppercase
+                tracking-wide
+                text-slate-400
+                sm:text-xs
+                sm:text-slate-500
+              "
+            >
+              Minimum Stock
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-xl
+                font-bold
+                tracking-tight
+                text-slate-900
+                sm:text-2xl
+                lg:text-3xl
+              "
+            >
+              {product.minimumStock}
+            </p>
+          </div>
+
+          {/* WAREHOUSE */}
+
+          <div className="min-w-0">
+            <p
+              className="
+                text-[10px]
+                font-semibold
+                uppercase
+                tracking-wide
+                text-slate-400
+                sm:text-xs
+                sm:text-slate-500
+              "
+            >
+              Warehouse
+            </p>
+
+            <div
+              className="
+                mt-1.5
+                flex
+                min-w-0
+                items-center
+                gap-1.5
+                text-sm
+                font-semibold
+                text-[#17357A]
+              "
+            >
+              <MapPin
+                size={15}
+                className="shrink-0"
+              />
+
+              <span
+                className="
+                  min-w-0
+                  truncate
+                "
+              >
+                {product.warehouse?.name ||
+                  "—"}
+              </span>
+            </div>
+          </div>
+
+          {/* PRODUCT TYPE */}
+
+          <div className="min-w-0">
+            <p
+              className="
+                text-[10px]
+                font-semibold
+                uppercase
+                tracking-wide
+                text-slate-400
+                sm:text-xs
+                sm:text-slate-500
+              "
+            >
+              Product Type
+            </p>
+
+            <p
+              className="
+                mt-1.5
+                truncate
+                text-sm
+                font-semibold
+                text-slate-700
+              "
+            >
+              {product.type}
+            </p>
+          </div>
         </div>
 
-      </div>
+        {/* =====================================================
+            DIVIDER
+        ===================================================== */}
 
-      {/* Divider */}
+        <div className="my-4 border-t border-slate-100 sm:my-5 lg:my-6" />
 
-      <div className="my-6 border-t border-slate-100" />
+        {/* =====================================================
+            ACTIONS
+        ===================================================== */}
 
-      {/* Actions */}
-
-      <div className="flex flex-wrap justify-end gap-3">
-
-        <button
-          onClick={() => {onView(product._id);
-}}
+        <div
           className="
-            flex
-            items-center
+            grid
+            grid-cols-3
             gap-2
-            rounded-xl
-            border
-            border-slate-200
-            bg-white
-            px-4
-            py-2.5
-            text-sm
-            font-medium
-            text-slate-700
-            hover:bg-slate-50
+            sm:flex
+            sm:flex-wrap
+            sm:justify-end
+            sm:gap-2.5
+            lg:gap-3
           "
         >
-          <Eye size={18} />
-          View
-        </button>
+          {/* VIEW */}
 
-        <button
-          onClick={() => onEdit(product)}
-          className="
-            flex
-            items-center
-            gap-2
-            rounded-xl
-            bg-yellow-100
-            px-4
-            py-2.5
-            text-sm
-            font-medium
-            text-yellow-800
-            hover:bg-yellow-200
-          "
-        >
-          <Pencil size={18} />
-          Edit
-        </button>
+          <button
+            type="button"
+            onClick={() =>
+              onView(product._id)
+            }
+            className="
+              flex
+              h-10
+              items-center
+              justify-center
+              gap-1.5
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              px-3
+              text-xs
+              font-semibold
+              text-slate-700
+              transition
+              hover:bg-slate-50
+              active:scale-[0.98]
+              sm:h-10
+              sm:px-4
+              sm:text-sm
+            "
+          >
+            <Eye
+              size={16}
+              className="shrink-0"
+            />
 
-        <button
-          onClick={() => onDelete(product)}
-          className="
-            flex
-            items-center
-            gap-2
-            rounded-xl
-            bg-red-100
-            px-4
-            py-2.5
-            text-sm
-            font-medium
-            text-red-600
-            hover:bg-red-200
-          "
-        >
-          <Trash2 size={18} />
-          Delete
-        </button>
+            <span>View</span>
+          </button>
 
-      </div>
+          {/* EDIT */}
+
+          <button
+            type="button"
+            onClick={() =>
+              onEdit(product)
+            }
+            className="
+              flex
+              h-10
+              items-center
+              justify-center
+              gap-1.5
+              rounded-xl
+              bg-yellow-50
+              px-3
+              text-xs
+              font-semibold
+              text-yellow-800
+              transition
+              hover:bg-yellow-100
+              active:scale-[0.98]
+              sm:h-10
+              sm:px-4
+              sm:text-sm
+            "
+          >
+            <Pencil
+              size={16}
+              className="shrink-0"
+            />
+
+            <span>Edit</span>
+          </button>
+
+          {/* DELETE */}
+
+          <button
+            type="button"
+            onClick={() =>
+              onDelete(product)
+            }
+            className="
+              flex
+              h-10
+              items-center
+              justify-center
+              gap-1.5
+              rounded-xl
+              bg-red-50
+              px-3
+              text-xs
+              font-semibold
+              text-red-600
+              transition
+              hover:bg-red-100
+              active:scale-[0.98]
+              sm:h-10
+              sm:px-4
+              sm:text-sm
+            "
+          >
+            <Trash2
+              size={16}
+              className="shrink-0"
+            />
+
+            <span>Delete</span>
+          </button>
+        </div>
+      </article>
+
+      {/* =======================================================
+          IMAGE PREVIEW
+      ======================================================= */}
 
       {previewImage && (
-  <div
-    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-    onClick={() => setPreviewImage(null)}
-  >
-    <button
-      onClick={() => setPreviewImage(null)}
-      className="
-        absolute
-        right-6
-        top-6
-        rounded-full
-        bg-white
-        px-4
-        py-2
-        text-xl
-        font-bold
-        shadow-lg
-      "
-    >
-      ✕
-    </button>
+        <div
+          className="
+            fixed
+            inset-0
+            z-[9999]
+            flex
+            items-center
+            justify-center
+            bg-slate-950/80
+            p-4
+            backdrop-blur-sm
+            sm:p-6
+          "
+          onClick={() =>
+            setPreviewImage(null)
+          }
+        >
+          <button
+            type="button"
+            onClick={() =>
+              setPreviewImage(null)
+            }
+            aria-label="Close image preview"
+            className="
+              absolute
+              right-3
+              top-3
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-full
+              bg-white
+              text-slate-700
+              shadow-lg
+              transition
+              hover:bg-slate-100
+              sm:right-6
+              sm:top-6
+            "
+          >
+            <X size={18} />
+          </button>
 
-    <img
-      src={previewImage}
-      alt="Product Preview"
-      onClick={(e) => e.stopPropagation()}
-      className="
-        max-h-[90vh]
-        max-w-[90vw]
-        rounded-2xl
-        bg-white
-        object-contain
-        shadow-2xl
-      "
-    />
-  </div>
-)}
-
-    </div>
+          <img
+            src={previewImage}
+            alt="Product Preview"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+            className="
+              max-h-[85vh]
+              max-w-full
+              rounded-2xl
+              bg-white
+              object-contain
+              shadow-2xl
+              sm:max-h-[90vh]
+              sm:max-w-[90vw]
+            "
+          />
+        </div>
+      )}
+    </>
   );
 };
 

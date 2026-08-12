@@ -325,20 +325,65 @@ const ReportsPage = () => {
   return (
     <AdminLayout>
 
-      <div className="mx-auto max-w-7xl px-8 py-8 space-y-8">
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-7xl
+          space-y-6
+          px-4
+          py-5
+          sm:space-y-7
+          sm:px-6
+          sm:py-6
+          lg:space-y-8
+          lg:px-8
+          lg:py-8
+        "
+      >
 
         {/* HEADER */}
 
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-[#17357A]">
+          <p
+            className="
+              text-[10px]
+              font-semibold
+              uppercase
+              tracking-[0.08em]
+              text-[#17357A]
+              sm:text-xs
+              sm:tracking-wide
+            "
+          >
             Reporting Center
           </p>
 
-          <h1 className="mt-2 text-4xl font-bold text-slate-900">
+          <h1
+            className="
+              mt-1.5
+              text-2xl
+              font-bold
+              text-slate-900
+              sm:mt-2
+              sm:text-3xl
+              lg:text-4xl
+            "
+          >
             Reports
           </h1>
 
-          <p className="mt-3 max-w-2xl text-slate-500">
+          <p
+            className="
+              mt-2
+              max-w-2xl
+              text-sm
+              leading-5
+              text-slate-500
+              sm:mt-3
+              sm:leading-6
+            "
+          >
             Generate PDF and Excel reports across
             every department of the ERP system.
             Export clean business records for
@@ -348,7 +393,18 @@ const ReportsPage = () => {
 
         {/* REPORT CARDS */}
 
-        <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="
+            grid
+            grid-cols-1
+            gap-4
+            sm:gap-5
+            md:grid-cols-2
+            md:gap-6
+            xl:grid-cols-3
+            xl:gap-7
+          "
+        >
 
           {/* INVENTORY */}
 

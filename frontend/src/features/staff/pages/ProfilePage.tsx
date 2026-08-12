@@ -11,122 +11,290 @@ const ProfilePage = () => {
   );
 
   const handleLogout = async () => {
-  await logoutUser();
+    await logoutUser();
 
-  navigate("/login", {
-    replace: true,
-  });
-};
+    navigate("/login", {
+      replace: true,
+    });
+  };
 
- return (
-  <div className="min-h-screen bg-slate-100 pb-24">
+  return (
+    <div
+      className="
+        min-h-screen
+        bg-slate-100
+        pb-24
+        sm:pb-24
+      "
+    >
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-    {/* Header */}
+      <div
+        className="
+          bg-[#17357A]
+          px-4
+          pb-8
+          pt-7
+          shadow-sm
+          sm:px-6
+          sm:pt-8
+        "
+      >
+        <div className="mx-auto w-full max-w-lg">
+          <h1
+            className="
+              text-2xl
+              font-bold
+              tracking-tight
+              text-white
+              sm:text-3xl
+            "
+          >
+            Profile
+          </h1>
 
-    <div className="bg-[#17357A] px-5 pt-8 pb-8 shadow-sm">
+          <p
+            className="
+              mt-1
+              text-sm
+              text-blue-100
+            "
+          >
+            Manage your account
+          </p>
+        </div>
+      </div>
 
-      <h1 className="text-2xl font-bold text-white">
-        Profile
-      </h1>
+      {/* =====================================================
+          PROFILE CONTENT
+      ===================================================== */}
 
-      <p className="mt-1 text-blue-100 text-sm">
-        Manage your account
-      </p>
+      <div
+        className="
+          mx-auto
+          -mt-6
+          w-full
+          max-w-lg
+          px-4
+          sm:px-6
+        "
+      >
+        {/* PROFILE CARD */}
 
-    </div>
+        <div
+          className="
+            mb-6
+            overflow-hidden
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            shadow-sm
+            sm:mb-8
+            sm:rounded-3xl
+          "
+        >
+          {/* Identity */}
 
-    {/* Profile Card */}
+          <div
+            className="
+              flex
+              flex-col
+              items-center
+              px-5
+              pb-6
+              pt-7
+              sm:px-6
+              sm:pt-8
+            "
+          >
+            <div
+              className="
+                flex
+                h-20
+                w-20
+                items-center
+                justify-center
+                rounded-full
+                bg-orange-500
+                text-3xl
+                font-bold
+                text-white
+                shadow-sm
+                sm:h-24
+                sm:w-24
+                sm:text-4xl
+              "
+            >
+              {user.name?.charAt(0) || "U"}
+            </div>
 
-    <div className="px-5 -mt-6">
+            <h2
+              className="
+                mt-4
+                max-w-full
+                truncate
+                px-2
+                text-xl
+                font-bold
+                text-slate-900
+                sm:mt-5
+                sm:text-2xl
+              "
+            >
+              {user.name || "User"}
+            </h2>
 
-      <div className="rounded-xl mb-9 bg-white shadow-sm border border-slate-200 overflow-hidden">
+            <p
+              className="
+                mt-1
+                text-sm
+                text-slate-500
+              "
+            >
+              {user.employeeId || "-"}
+            </p>
 
-        <div className="flex flex-col items-center px-6 pt-8 pb-6">
-
-          <div className="h-24 w-24 rounded-full bg-orange-500 flex items-center justify-center text-4xl font-bold text-white">
-
-            {user.name?.charAt(0)}
-
+            <span
+              className="
+                mt-3
+                rounded-full
+                bg-[#17357A]/10
+                px-3.5
+                py-1.5
+                text-[11px]
+                font-semibold
+                text-[#17357A]
+                sm:mt-4
+                sm:px-4
+                sm:text-xs
+              "
+            >
+              {user.role || "Staff"}
+            </span>
           </div>
 
-          <h2 className="mt-5 text-2xl font-bold text-slate-900">
-            {user.name}
-          </h2>
+          {/* Details */}
 
-          <p className="mt-1 text-slate-500">
-            {user.employeeId}
-          </p>
+          <div
+            className="
+              border-t
+              border-slate-100
+            "
+          >
+            {/* Employee ID */}
 
-          <span className="mt-4 rounded-full bg-[#17357A]/10 px-4 py-1.5 text-xs font-semibold text-[#17357A]">
-            {user.role}
-          </span>
-
-        </div>
-
-        <div className="border-t border-slate-100">
-
-          <div className="flex items-center justify-between px-6 py-5">
-
-            <div>
-              <p className="text-xs uppercase text-slate-400">
+            <div
+              className="
+                px-5
+                py-4
+                sm:px-6
+                sm:py-5
+              "
+            >
+              <p
+                className="
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                  sm:text-xs
+                "
+              >
                 Employee ID
               </p>
 
-              <p className="font-semibold">
-                {user.employeeId}
+              <p
+                className="
+                  mt-1
+                  break-all
+                  text-sm
+                  font-semibold
+                  text-slate-800
+                  sm:text-base
+                "
+              >
+                {user.employeeId || "-"}
               </p>
-
             </div>
 
-          </div>
+            <div className="border-t border-slate-100" />
 
-          <div className="border-t border-slate-100" />
+            {/* Department */}
 
-          <div className="flex items-center justify-between px-6 py-5">
-
-            <div>
-              <p className="text-xs uppercase text-slate-400">
+            <div
+              className="
+                px-5
+                py-4
+                sm:px-6
+                sm:py-5
+              "
+            >
+              <p
+                className="
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                  sm:text-xs
+                "
+              >
                 Department
               </p>
 
-              <p className="font-semibold capitalize">
-                {user.role}
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  font-semibold
+                  capitalize
+                  text-slate-800
+                  sm:text-base
+                "
+              >
+                {user.role || "-"}
               </p>
-
             </div>
-
           </div>
-
         </div>
 
+        {/* =====================================================
+            LOGOUT
+        ===================================================== */}
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="
+            mb-5
+            h-12
+            w-full
+            rounded-xl
+            bg-red-500
+            px-4
+            text-sm
+            font-semibold
+            text-white
+            shadow-sm
+            transition
+            hover:bg-red-600
+            active:scale-[0.98]
+            sm:h-13
+            sm:rounded-2xl
+            sm:text-base
+          "
+        >
+          Sign Out
+        </button>
       </div>
 
-      {/* Logout */}
-
-      <button
-        onClick={handleLogout}
-        className="
-          mt-6
-          w-full
-          rounded-2xl
-          bg-red-500
-          py-4
-          text-white
-          font-semibold
-          shadow-sm
-          transition
-          hover:bg-red-600
-        "
-      >
-        Sign Out
-      </button>
-
+      <BottomNavigation />
     </div>
-
-    <BottomNavigation />
-
-  </div>
-);
+  );
 };
 
 export default ProfilePage;

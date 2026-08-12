@@ -19,79 +19,114 @@ const ReportCard = ({
   return (
     <div
       className="
-        rounded-3xl
+        rounded-2xl
         border
         border-slate-200
         bg-white
-        p-7
+        p-4
         shadow-sm
         transition-all
-        hover:-translate-y-1
-        hover:shadow-lg
+        duration-200
+        hover:shadow-md
+        sm:rounded-3xl
+        sm:p-6
+        lg:p-7
       "
     >
-      <div className="space-y-3">
+      {/* Content */}
 
-        <h2 className="text-xl font-semibold text-slate-800">
+      <div className="space-y-2.5 sm:space-y-3">
+        <h2
+          className="
+            text-lg
+            font-semibold
+            leading-tight
+            text-slate-800
+            sm:text-xl
+          "
+        >
           {title}
         </h2>
 
-        <p className="text-sm leading-6 text-slate-500">
+        <p
+          className="
+            text-xs
+            leading-5
+            text-slate-500
+            sm:text-sm
+            sm:leading-6
+          "
+        >
           {description}
         </p>
-
       </div>
 
-      <div className="mt-8 flex gap-3">
+      {/* Actions */}
 
+      <div
+        className="
+          mt-5
+          grid
+          grid-cols-1
+          gap-2.5
+          sm:mt-7
+          sm:grid-cols-2
+          sm:gap-3
+        "
+      >
         <button
+          type="button"
           onClick={onPdf}
           className="
-            flex-1
             flex
+            min-h-11
             items-center
             justify-center
             gap-2
             rounded-xl
             bg-[#17357A]
-            px-5
+            px-4
             py-3
-            font-medium
+            text-sm
+            font-semibold
             text-white
+            shadow-sm
             transition
             hover:bg-[#21469E]
+            active:scale-[0.98]
           "
         >
-          <FiFileText size={18} />
+          <FiFileText size={17} />
           Export PDF
         </button>
 
         <button
+          type="button"
           onClick={onExcel}
           className="
-            flex-1
             flex
+            min-h-11
             items-center
             justify-center
             gap-2
             rounded-xl
             border
-            border-slate-300
+            border-slate-200
             bg-white
-            px-5
+            px-4
             py-3
-            font-medium
+            text-sm
+            font-semibold
             text-slate-700
             transition
             hover:bg-slate-50
+            active:scale-[0.98]
           "
         >
-          <FiDownload size={18} />
+          <FiDownload size={17} />
           Export Excel
         </button>
-
       </div>
-
     </div>
   );
 };

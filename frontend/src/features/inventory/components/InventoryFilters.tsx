@@ -32,18 +32,27 @@ const productTypes = [
 
 const chipStyle = (active: boolean) =>
   `
-    px-4
-    py-2
+    inline-flex
+    min-h-9
+    max-w-full
+    items-center
+    justify-center
     rounded-xl
-    text-sm
+    border
+    px-3
+    py-2
+    text-xs
     font-medium
+    leading-4
     transition-all
     duration-200
-    border
+    active:scale-[0.98]
+    sm:px-4
+    sm:text-sm
     ${
       active
-        ? "bg-[#17357A] border-[#17357A] text-white shadow-sm"
-        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+        ? "border-[#17357A] bg-[#17357A] text-white shadow-sm"
+        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
     }
   `;
 
@@ -54,12 +63,31 @@ const FilterSection = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <div className="space-y-3">
-    <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+  <div className="min-w-0 space-y-2.5">
+    <h4
+      className="
+        text-[10px]
+        font-semibold
+        uppercase
+        tracking-[0.08em]
+        text-slate-400
+        sm:text-xs
+        sm:tracking-wider
+        sm:text-slate-500
+      "
+    >
       {title}
     </h4>
 
-    <div className="flex flex-wrap gap-2">
+    <div
+      className="
+        flex
+        max-w-full
+        flex-wrap
+        gap-1.5
+        sm:gap-2
+      "
+    >
       {children}
     </div>
   </div>
@@ -78,104 +106,200 @@ const InventoryFilters = ({
   onTypeChange,
 }: InventoryFiltersProps) => {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 lg:p-6">
+    <div
+      className="
+        rounded-2xl
+        border
+        border-slate-200
+        bg-white
+        p-4
+        shadow-sm
+        sm:p-5
+        lg:p-6
+      "
+    >
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-      <div className="mb-6">
-        <h3 className="text-base font-semibold text-slate-900">
+      <div
+        className="
+          mb-5
+          sm:mb-6
+        "
+      >
+        <h3
+          className="
+            text-base
+            font-semibold
+            tracking-tight
+            text-slate-900
+          "
+        >
           Filters
         </h3>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Narrow down products using category, warehouse, type and status.
+        <p
+          className="
+            mt-1
+            max-w-2xl
+            text-xs
+            leading-5
+            text-slate-400
+            sm:text-sm
+            sm:text-slate-500
+          "
+        >
+          Narrow down products using
+          category, warehouse, type and
+          status.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* =====================================================
+          FILTER GROUPS
+      ===================================================== */}
 
-        {/* Category */}
+      <div
+        className="
+          grid
+          grid-cols-1
+          gap-5
+          sm:gap-6
+          lg:grid-cols-2
+          lg:gap-8
+        "
+      >
+        {/* ===================================================
+            CATEGORY
+        =================================================== */}
 
         <FilterSection title="Category">
-
           <button
-            onClick={() => onCategoryChange("All")}
-            className={chipStyle(selectedCategory === "All")}
+            type="button"
+            onClick={() =>
+              onCategoryChange("All")
+            }
+            className={chipStyle(
+              selectedCategory === "All"
+            )}
           >
             All
           </button>
 
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => onCategoryChange(category)}
-              className={chipStyle(selectedCategory === category)}
-            >
-              {category}
-            </button>
-          ))}
-
+          {categories.map(
+            (category) => (
+              <button
+                type="button"
+                key={category}
+                onClick={() =>
+                  onCategoryChange(
+                    category
+                  )
+                }
+                className={chipStyle(
+                  selectedCategory ===
+                    category
+                )}
+              >
+                <span className="max-w-full truncate">
+                  {category}
+                </span>
+              </button>
+            )
+          )}
         </FilterSection>
 
-        {/* Warehouse */}
+        {/* ===================================================
+            WAREHOUSE
+        =================================================== */}
 
         <FilterSection title="Warehouse">
-
           <button
-            onClick={() => onWarehouseChange("")}
-            className={chipStyle(selectedWarehouse === "")}
+            type="button"
+            onClick={() =>
+              onWarehouseChange("")
+            }
+            className={chipStyle(
+              selectedWarehouse === ""
+            )}
           >
             All
           </button>
 
-          {warehouses.map((warehouse) => (
-            <button
-              key={warehouse._id}
-              onClick={() => onWarehouseChange(warehouse._id)}
-              className={chipStyle(selectedWarehouse === warehouse._id)}
-            >
-              {warehouse.name}
-            </button>
-          ))}
-
+          {warehouses.map(
+            (warehouse) => (
+              <button
+                type="button"
+                key={warehouse._id}
+                onClick={() =>
+                  onWarehouseChange(
+                    warehouse._id
+                  )
+                }
+                className={chipStyle(
+                  selectedWarehouse ===
+                    warehouse._id
+                )}
+              >
+                <span className="max-w-full truncate">
+                  {warehouse.name}
+                </span>
+              </button>
+            )
+          )}
         </FilterSection>
 
-        {/* Product Type */}
+        {/* ===================================================
+            PRODUCT TYPE
+        =================================================== */}
 
         <FilterSection title="Product Type">
-
-          {productTypes.map((type) => (
-            <button
-              key={type}
-              onClick={() => onTypeChange(type)}
-              className={chipStyle(selectedType === type)}
-            >
-              {type === "RAW"
-                ? "Raw Material"
-                : type === "FINISHED"
-                ? "Finished Product"
-                : "All"}
-            </button>
-          ))}
-
+          {productTypes.map(
+            (type) => (
+              <button
+                type="button"
+                key={type}
+                onClick={() =>
+                  onTypeChange(type)
+                }
+                className={chipStyle(
+                  selectedType === type
+                )}
+              >
+                {type === "RAW"
+                  ? "Raw Material"
+                  : type === "FINISHED"
+                    ? "Finished Product"
+                    : "All"}
+              </button>
+            )
+          )}
         </FilterSection>
 
-        {/* Status */}
+        {/* ===================================================
+            STATUS
+        =================================================== */}
 
         <FilterSection title="Status">
-
-          {statuses.map((status) => (
-            <button
-              key={status}
-              onClick={() => onStatusChange(status)}
-              className={chipStyle(selectedStatus === status)}
-            >
-              {status}
-            </button>
-          ))}
-
+          {statuses.map(
+            (status) => (
+              <button
+                type="button"
+                key={status}
+                onClick={() =>
+                  onStatusChange(status)
+                }
+                className={chipStyle(
+                  selectedStatus === status
+                )}
+              >
+                {status}
+              </button>
+            )
+          )}
         </FilterSection>
-
       </div>
-
     </div>
   );
 };

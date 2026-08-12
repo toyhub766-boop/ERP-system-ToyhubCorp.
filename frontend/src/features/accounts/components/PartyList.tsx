@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Building2, Plus, Users } from "lucide-react";
 
 import PartyFilters from "./PartyFilters";
 import PartyCard from "./PartyCard";
@@ -17,214 +18,158 @@ const PartyList = ({
   onAddParty,
 }: Props) => {
   const [search, setSearch] = useState("");
-
   const [statusFilter, setStatusFilter] =
     useState("ALL");
-
   const [balanceFilter, setBalanceFilter] =
     useState("ALL");
-
   const [dueDateFilter, setDueDateFilter] =
     useState("ALL");
-
   const [sortBy, setSortBy] =
     useState("LATEST");
-
-  /* =====================================================
-     FILTER + SORT
-  ===================================================== */
 
   const filteredParties = useMemo(() => {
     const today = new Date();
 
     today.setHours(0, 0, 0, 0);
 
-    const filtered = parties.filter(
-      (party) => {
-        const query =
-          search.trim().toLowerCase();
+    const filtered = parties.filter((party) => {
+      const query =
+        search.trim().toLowerCase();
 
-        const matchesSearch =
-          !query ||
-          party.companyName
-            ?.toLowerCase()
-            .includes(query) ||
-          party.contactPerson
-            ?.toLowerCase()
-            .includes(query) ||
-          party.phone
-            ?.toLowerCase()
-            .includes(query) ||
-          party.partyCode
-            ?.toLowerCase()
-            .includes(query) ||
-          party.customerDetails?.transportPhone
-            ?.toLowerCase()
-            .includes(query);
+      const matchesSearch =
+        !query ||
+        party.companyName
+          ?.toLowerCase()
+          .includes(query) ||
+        party.contactPerson
+          ?.toLowerCase()
+          .includes(query) ||
+        party.phone
+          ?.toLowerCase()
+          .includes(query) ||
+        party.partyCode
+          ?.toLowerCase()
+          .includes(query) ||
+        party.customerDetails?.transportPhone
+          ?.toLowerCase()
+          .includes(query) ||
+        party.supplierDetails?.transportPhone
+          ?.toLowerCase()
+          .includes(query);
 
-        const matchesStatus =
-          statusFilter === "ALL" ||
-          party.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "ALL" ||
+        party.status === statusFilter;
 
-        const balance =
-          Number(
-            party.currentBalance || 0
+      const balance = Number(
+        party.currentBalance || 0
+      );
+
+      const matchesBalance =
+        balanceFilter === "ALL" ||
+        (balanceFilter === "GET" &&
+          balance > 0) ||
+        (balanceFilter === "GIVE" &&
+          balance < 0) ||
+        (balanceFilter === "ZERO" &&
+          balance === 0);
+
+      const dueDate =
+        party.customerDetails?.dueDate ||
+        party.supplierDetails?.dueDate ||
+        null;
+
+      let matchesDueDate = true;
+
+      if (dueDateFilter !== "ALL") {
+        if (!dueDate) {
+          matchesDueDate =
+            dueDateFilter === "NONE";
+        } else {
+          const due = new Date(dueDate);
+
+          due.setHours(0, 0, 0, 0);
+
+          const diffDays = Math.ceil(
+            (due.getTime() -
+              today.getTime()) /
+              (1000 * 60 * 60 * 24)
           );
 
-        const matchesBalance =
-          balanceFilter === "ALL" ||
-          (balanceFilter === "GET" &&
-            balance > 0) ||
-          (balanceFilter === "GIVE" &&
-            balance < 0) ||
-          (balanceFilter === "ZERO" &&
-            balance === 0);
-
-        const dueDate =
-          party.customerDetails?.dueDate ||
-          party.supplierDetails?.dueDate ||
-          null;
-
-        let matchesDueDate = true;
-
-        if (dueDateFilter !== "ALL") {
-          if (!dueDate) {
+          if (dueDateFilter === "OVERDUE") {
             matchesDueDate =
-              dueDateFilter === "NONE";
-          } else {
-            const due = new Date(
-              dueDate
-            );
+              diffDays < 0;
+          }
 
-            due.setHours(0, 0, 0, 0);
+          if (dueDateFilter === "TODAY") {
+            matchesDueDate =
+              diffDays === 0;
+          }
 
-            const diffDays =
-              Math.ceil(
-                (due.getTime() -
-                  today.getTime()) /
-                  (1000 *
-                    60 *
-                    60 *
-                    24)
-              );
+          if (dueDateFilter === "UPCOMING") {
+            matchesDueDate =
+              diffDays > 0;
+          }
 
-            if (
-              dueDateFilter ===
-              "OVERDUE"
-            ) {
-              matchesDueDate =
-                diffDays < 0;
-            }
-
-            if (
-              dueDateFilter ===
-              "TODAY"
-            ) {
-              matchesDueDate =
-                diffDays === 0;
-            }
-
-            if (
-              dueDateFilter ===
-              "UPCOMING"
-            ) {
-              matchesDueDate =
-                diffDays > 0;
-            }
-
-            if (
-              dueDateFilter ===
-              "NONE"
-            ) {
-              matchesDueDate = false;
-            }
+          if (dueDateFilter === "NONE") {
+            matchesDueDate = false;
           }
         }
+      }
 
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesBalance &&
+        matchesDueDate
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "A_Z") {
         return (
-          matchesSearch &&
-          matchesStatus &&
-          matchesBalance &&
-          matchesDueDate
+          (a.companyName || "").localeCompare(
+            b.companyName || ""
+          )
         );
       }
-    );
 
-    return [...filtered].sort(
-      (a, b) => {
-        if (
-          sortBy === "A_Z"
-        ) {
-          return (
-            (a.companyName || "")
-              .toLowerCase()
-              .localeCompare(
-                (
-                  b.companyName || ""
-                ).toLowerCase()
-              )
-          );
-        }
-
-        if (
-          sortBy === "Z_A"
-        ) {
-          return (
-            (b.companyName || "")
-              .toLowerCase()
-              .localeCompare(
-                (
-                  a.companyName || ""
-                ).toLowerCase()
-              )
-          );
-        }
-
-        if (
-          sortBy === "HIGH"
-        ) {
-          return (
-            Number(
-              b.currentBalance || 0
-            ) -
-            Number(
-              a.currentBalance || 0
-            )
-          );
-        }
-
-        if (
-          sortBy === "LOW"
-        ) {
-          return (
-            Number(
-              a.currentBalance || 0
-            ) -
-            Number(
-              b.currentBalance || 0
-            )
-          );
-        }
-
-        const dateA =
-          new Date(
-            a.createdAt || 0
-          ).getTime();
-
-        const dateB =
-          new Date(
-            b.createdAt || 0
-          ).getTime();
-
-        if (
-          sortBy === "OLDEST"
-        ) {
-          return dateA - dateB;
-        }
-
-        return dateB - dateA;
+      if (sortBy === "Z_A") {
+        return (
+          (b.companyName || "").localeCompare(
+            a.companyName || ""
+          )
+        );
       }
-    );
+
+      if (sortBy === "HIGH") {
+        return (
+          Number(b.currentBalance || 0) -
+          Number(a.currentBalance || 0)
+        );
+      }
+
+      if (sortBy === "LOW") {
+        return (
+          Number(a.currentBalance || 0) -
+          Number(b.currentBalance || 0)
+        );
+      }
+
+      const dateA = new Date(
+        a.createdAt || 0
+      ).getTime();
+
+      const dateB = new Date(
+        b.createdAt || 0
+      ).getTime();
+
+      if (sortBy === "OLDEST") {
+        return dateA - dateB;
+      }
+
+      return dateB - dateA;
+    });
   }, [
     parties,
     search,
@@ -234,48 +179,6 @@ const PartyList = ({
     sortBy,
   ]);
 
-  /* =====================================================
-     COUNTS
-  ===================================================== */
-
-  const customerCount =
-    parties.filter(
-      (party) =>
-        party.partyType ===
-        "CUSTOMER"
-    ).length;
-
-  const supplierCount =
-    parties.filter(
-      (party) =>
-        party.partyType ===
-        "SUPPLIER"
-    ).length;
-
-  const expenseCount =
-    parties.filter(
-      (party) =>
-        party.partyType ===
-        "COMPANY_EXPENSE"
-    ).length;
-
-  const activeCount =
-    parties.filter(
-      (party) =>
-        party.status === "Active"
-    ).length;
-
-  /* =====================================================
-     CLEAR FILTERS
-  ===================================================== */
-
-  const hasFilters =
-    search.trim() !== "" ||
-    statusFilter !== "ALL" ||
-    balanceFilter !== "ALL" ||
-    dueDateFilter !== "ALL" ||
-    sortBy !== "LATEST";
-
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("ALL");
@@ -284,32 +187,57 @@ const PartyList = ({
     setSortBy("LATEST");
   };
 
+  const hasFilters =
+    search.trim() !== "" ||
+    statusFilter !== "ALL" ||
+    balanceFilter !== "ALL" ||
+    dueDateFilter !== "ALL" ||
+    sortBy !== "LATEST";
+
+  const activeCount = parties.filter(
+    (party) =>
+      party.status === "Active"
+  ).length;
+
+  const customerCount = parties.filter(
+    (party) =>
+      party.partyType === "CUSTOMER"
+  ).length;
+
+  const supplierCount = parties.filter(
+    (party) =>
+      party.partyType === "SUPPLIER"
+  ).length;
+
+  const expenseCount = parties.filter(
+    (party) =>
+      party.partyType === "COMPANY_EXPENSE"
+  ).length;
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col bg-white">
 
-      {/* =================================================
+      {/* =====================================================
           HEADER
-      ================================================= */}
+      ===================================================== */}
 
-      <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-4">
+      <div className="shrink-0 border-b border-slate-200">
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#17357A]">
-              <span className="text-lg font-bold">
-                P
-              </span>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#17357A]/10 text-[#17357A]">
+              <Users size={18} />
             </div>
 
             <div className="min-w-0">
 
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="truncate text-sm font-bold text-slate-900 sm:text-base">
                 Parties
               </h2>
 
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-[11px] text-slate-400">
                 {parties.length} accounts in ledger
               </p>
 
@@ -335,104 +263,88 @@ const PartyList = ({
               shadow-sm
               transition
               hover:bg-[#10295d]
+              hover:shadow-md
               active:scale-[0.98]
+              sm:h-10
+              sm:px-3.5
+              sm:text-sm
             "
           >
-            <span className="text-base leading-none">
-              +
-            </span>
-
-            Add Party
+            <Plus size={15} />
+            <span>Add Party</span>
           </button>
 
         </div>
 
       </div>
 
-      {/* =================================================
+      {/* =====================================================
           FILTERS
-          IMPORTANT:
-          We are NOT redesigning PartyFilters.
-      ================================================= */}
+      ===================================================== */}
 
       <div className="shrink-0">
         <PartyFilters
           search={search}
           setSearch={setSearch}
           statusFilter={statusFilter}
-          setStatusFilter={
-            setStatusFilter
-          }
-          balanceFilter={
-            balanceFilter
-          }
-          setBalanceFilter={
-            setBalanceFilter
-          }
-          dueDateFilter={
-            dueDateFilter
-          }
-          setDueDateFilter={
-            setDueDateFilter
-          }
+          setStatusFilter={setStatusFilter}
+          balanceFilter={balanceFilter}
+          setBalanceFilter={setBalanceFilter}
+          dueDateFilter={dueDateFilter}
+          setDueDateFilter={setDueDateFilter}
           sortBy={sortBy}
           setSortBy={setSortBy}
         />
       </div>
 
-      {/* =================================================
-          FILTER SUMMARY
-      ================================================= */}
+      {/* =====================================================
+          QUICK SUMMARY
+      ===================================================== */}
 
-      <div className="shrink-0 border-b border-slate-100 bg-white px-4 pb-3">
+      <div className="shrink-0 border-b border-slate-100 bg-slate-50/60 px-3 py-2">
 
-        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
 
-          <span className="rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">
-            {filteredParties.length} of{" "}
-            {parties.length}
-          </span>
+          <SummaryPill
+            label={`${filteredParties.length} of ${parties.length}`}
+          />
 
-          <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
-            Customers {customerCount}
-          </span>
+          <SummaryPill
+            label={`Customers ${customerCount}`}
+            tone="blue"
+          />
 
-          <span className="rounded-lg bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-700">
-            Suppliers {supplierCount}
-          </span>
+          <SummaryPill
+            label={`Suppliers ${supplierCount}`}
+            tone="orange"
+          />
 
-          <span className="rounded-lg bg-purple-50 px-2.5 py-1 text-[10px] font-semibold text-purple-700">
-            Expenses {expenseCount}
-          </span>
+          <SummaryPill
+            label={`Expenses ${expenseCount}`}
+            tone="purple"
+          />
 
-          <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
-            Active {activeCount}
-          </span>
-
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="ml-auto shrink-0 text-[10px] font-semibold text-[#17357A] hover:underline"
-            >
-              Clear
-            </button>
-          )}
+          <SummaryPill
+            label={`Active ${activeCount}`}
+            tone="green"
+          />
 
         </div>
 
       </div>
 
-      {/* =================================================
-          PARTY CARDS
-          THIS IS THE ONLY SCROLL AREA
-      ================================================= */}
+      {/* =====================================================
+          SCROLL AREA
+
+          THIS is the only area that scrolls.
+      ===================================================== */}
 
       <div
         className="
           min-h-0
           flex-1
           overflow-y-auto
+          overflow-x-hidden
           overscroll-contain
           px-3
           py-3
@@ -443,67 +355,114 @@ const PartyList = ({
         "
       >
 
-        <div className="space-y-2">
+        {filteredParties.length === 0 ? (
 
-          {filteredParties.length === 0 ? (
+          <div className="flex min-h-[240px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5">
 
-            <div className="flex min-h-[240px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
+            <div className="max-w-[220px] text-center">
 
-              <div className="text-center">
-
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm">
-                  ?
-                </div>
-
-                <h3 className="mt-3 text-sm font-bold text-slate-800">
-                  No Parties Found
-                </h3>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Try changing your search or filters.
-                </p>
-
-                {hasFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="mt-3 text-xs font-semibold text-[#17357A] hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                )}
-
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm ring-1 ring-slate-200">
+                <Building2 size={19} />
               </div>
+
+              <h3 className="mt-3 text-sm font-bold text-slate-800">
+                No Parties Found
+              </h3>
+
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Try changing your search or filters.
+              </p>
+
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="
+                    mt-3
+                    text-xs
+                    font-semibold
+                    text-[#17357A]
+                    transition
+                    hover:text-[#10295d]
+                    hover:underline
+                  "
+                >
+                  Clear filters
+                </button>
+              )}
 
             </div>
 
-          ) : (
+          </div>
 
-            filteredParties.map(
-              (party) => (
-                <PartyCard
-                  key={party._id}
-                  party={party}
-                  selected={
-                    selectedParty?._id ===
-                    party._id
-                  }
-                  onClick={() =>
-                    setSelectedParty(
-                      party
-                    )
-                  }
-                />
-              )
-            )
+        ) : (
 
-          )}
+          <div className="space-y-2.5 pb-2">
 
-        </div>
+            {filteredParties.map((party) => (
+              <PartyCard
+                key={party._id}
+                party={party}
+                selected={
+                  selectedParty?._id ===
+                  party._id
+                }
+                onClick={() =>
+                  setSelectedParty(party)
+                }
+              />
+            ))}
+
+          </div>
+
+        )}
 
       </div>
 
     </div>
+  );
+};
+
+interface SummaryPillProps {
+  label: string;
+  tone?:
+    | "blue"
+    | "orange"
+    | "purple"
+    | "green";
+}
+
+const SummaryPill = ({
+  label,
+  tone,
+}: SummaryPillProps) => {
+  const toneClass =
+    tone === "blue"
+      ? "bg-blue-50 text-blue-600"
+      : tone === "orange"
+      ? "bg-orange-50 text-orange-600"
+      : tone === "purple"
+      ? "bg-purple-50 text-purple-600"
+      : tone === "green"
+      ? "bg-emerald-50 text-emerald-600"
+      : "bg-white text-slate-500";
+
+  return (
+    <span
+      className={`
+        inline-flex
+        h-7
+        shrink-0
+        items-center
+        rounded-full
+        px-2.5
+        text-[10px]
+        font-semibold
+        ${toneClass}
+      `}
+    >
+      {label}
+    </span>
   );
 };
 

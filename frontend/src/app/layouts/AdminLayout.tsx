@@ -11,7 +11,9 @@ const AdminLayout = ({ children }: Props) => {
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return (
-        localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true"
+        localStorage.getItem(
+          SIDEBAR_STORAGE_KEY
+        ) === "true"
       );
     } catch {
       return false;
@@ -43,16 +45,39 @@ const AdminLayout = ({ children }: Props) => {
 
       {/* =====================================================
           MAIN CONTENT
+
+          MOBILE:
+          No sidebar offset.
+
+          DESKTOP:
+          Preserve the existing 64 / 20 sidebar offset.
       ===================================================== */}
 
       <div
         className={`
-          min-w-0 flex-1
-          transition-all duration-300 ease-out
-          ${collapsed ? "ml-20" : "ml-64"}
+          min-w-0
+          flex-1
+          transition-all
+          duration-300
+          ease-out
+
+          ${
+            collapsed
+              ? "ml-0 lg:ml-20"
+              : "ml-0 lg:ml-64"
+          }
         `}
       >
-        <main className="w-full px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+        <main
+          className="
+            w-full
+            px-4
+            py-5
+            sm:px-6
+            lg:px-8
+            lg:py-8
+          "
+        >
           <div className="mx-auto w-full max-w-[1600px]">
             {children}
           </div>

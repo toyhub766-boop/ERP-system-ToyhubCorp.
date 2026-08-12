@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   FiHome,
@@ -18,6 +17,7 @@ import {
   FiUser,
   FiLogOut,
   FiMenu,
+  FiX,
 } from "react-icons/fi";
 
 import logo from "../../assets/images/logo.png";
@@ -94,7 +94,9 @@ const menuItems = [
 
 type SidebarProps = {
   collapsed: boolean;
-  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  setCollapsed: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
 };
 
 const Sidebar = ({
@@ -103,7 +105,12 @@ const Sidebar = ({
 }: SidebarProps) => {
   const navigate = useNavigate();
 
-  const navRef = useRef<HTMLElement | null>(null);
+  const navRef = useRef<HTMLElement | null>(
+    null
+  );
+
+  const [mobileOpen, setMobileOpen] =
+    useState(false);
 
   const user = JSON.parse(
     localStorage.getItem("user") || "{}"
@@ -117,249 +124,222 @@ const Sidebar = ({
     });
   };
 
+  /* ============================================================
+     RESTORE DESKTOP SIDEBAR SCROLL
+  ============================================================ */
+
   useEffect(() => {
-    const savedScroll = sessionStorage.getItem(
-      "sidebar-scroll-position"
-    );
+    const savedScroll =
+      sessionStorage.getItem(
+        "sidebar-scroll-position"
+      );
 
     if (navRef.current && savedScroll) {
-      navRef.current.scrollTop = Number(savedScroll);
+      navRef.current.scrollTop =
+        Number(savedScroll);
     }
   }, []);
+
+  /* ============================================================
+     CLOSE MOBILE DRAWER WHEN SCREEN BECOMES DESKTOP
+  ============================================================ */
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+    };
+  }, []);
+
+  /* ============================================================
+     CLOSE MOBILE DRAWER AFTER NAVIGATION
+  ============================================================ */
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [window.location.pathname]);
+
+  /* ============================================================
+     SIDEBAR SCROLL
+  ============================================================ */
 
   const handleSidebarScroll = (
     event: React.UIEvent<HTMLElement>
   ) => {
     sessionStorage.setItem(
       "sidebar-scroll-position",
-      String(event.currentTarget.scrollTop)
+      String(
+        event.currentTarget.scrollTop
+      )
     );
   };
+
   return (
-    <aside
-      className={`
-        fixed
-        inset-y-0
-        left-0
-        z-50
-        flex
-        h-screen
-        shrink-0
-        flex-col
-        overflow-hidden
-        bg-[#172B6B]
-        text-white
-        border-r
-        border-white/10
-        shadow-[4px_0_20px_rgba(15,23,42,0.06)]
-        transition-[width]
-        duration-300
-        ease-out
+    <>
+      {/* ========================================================
+          MOBILE MENU BUTTON
 
-        ${collapsed ? "w-20" : "w-64"}
-      `}
-    >
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+          Only exists below md.
+          Desktop is completely unaffected.
+      ======================================================== */}
 
-      <div
-        className={`
+      <button
+        type="button"
+        onClick={() =>
+          setMobileOpen(true)
+        }
+        aria-label="Open navigation"
+        className="
+          fixed
+          left-3
+          top-3
+          z-[60]
           flex
-          h-20
-          shrink-0
+          h-10
+          w-10
           items-center
-          border-b
-          border-white/10
+          justify-center
+          rounded-xl
+          border
+          border-slate-200
+          bg-white
+          text-[#17357A]
+          shadow-sm
+          transition
+          hover:bg-slate-50
+          active:scale-95
+          md:hidden
+        "
+      >
+        <FiMenu size={20} />
+      </button>
 
-          ${collapsed
-            ? "justify-center px-3"
-            : "px-5"
+      {/* ========================================================
+          MOBILE BACKDROP
+
+          Only exists below md.
+      ======================================================== */}
+
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() =>
+            setMobileOpen(false)
+          }
+          className="
+            fixed
+            inset-0
+            z-[65]
+            bg-slate-950/40
+            backdrop-blur-[2px]
+            md:hidden
+          "
+        />
+      )}
+
+      {/* ========================================================
+          MOBILE SIDEBAR
+
+          Completely separate from desktop sidebar.
+      ======================================================== */}
+
+      <aside
+        className={`
+          fixed
+          inset-y-0
+          left-0
+          z-[70]
+          flex
+          h-screen
+          w-[280px]
+          flex-col
+          overflow-hidden
+          bg-[#172B6B]
+          text-white
+          shadow-[8px_0_30px_rgba(15,23,42,0.22)]
+          transition-transform
+          duration-300
+          ease-out
+          md:hidden
+
+          ${
+            mobileOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
           }
         `}
       >
-        {/* Menu Button */}
+        {/* MOBILE HEADER */}
 
-        <button
-          type="button"
-          onClick={() =>
-            setCollapsed((value) => !value)
-          }
-          aria-label={
-            collapsed
-              ? "Expand sidebar"
-              : "Collapse sidebar"
-          }
-          title={
-            collapsed
-              ? "Expand sidebar"
-              : "Collapse sidebar"
-          }
+        <div
           className="
             flex
-            h-10
-            w-10
+            h-20
             shrink-0
             items-center
-            justify-center
-            rounded-xl
-            text-slate-200
-            transition
-            hover:bg-white/10
-            hover:text-white
-            active:scale-95
+            justify-between
+            border-b
+            border-white/10
+            px-5
           "
         >
-          <FiMenu size={20} />
-        </button>
-
-        {/* Brand */}
-
-        {!collapsed && (
-          <div className="ml-4 flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <img
               src={logo}
               alt="ToyHub"
-              className="h-10 w-auto shrink-0 object-contain"
+              className="
+                h-10
+                w-auto
+                shrink-0
+                object-contain
+              "
             />
 
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-bold tracking-wide">
+              <h2
+                className="
+                  truncate
+                  text-sm
+                  font-bold
+                  tracking-wide
+                "
+              >
                 TOYHUB
               </h2>
 
-              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+              <p
+                className="
+                  text-[10px]
+                  uppercase
+                  tracking-wider
+                  text-slate-400
+                "
+              >
                 Corporation
               </p>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* =====================================================
-          NAVIGATION
-      ===================================================== */}
-
-      <nav
-        ref={navRef}
-        onScroll={handleSidebarScroll}
-        className="
-    min-h-0
-    flex-1
-    overflow-y-auto
-    overflow-x-hidden
-    px-3
-    py-5
-    scrollbar-thin
-  "
-      >
-        <div className="space-y-1">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              title={
-                collapsed
-                  ? item.label
-                  : undefined
-              }
-              className={({ isActive }) => `
-                group
-                flex
-                h-11
-                items-center
-                rounded-xl
-                text-sm
-                font-medium
-                transition-all
-                duration-150
-
-                ${collapsed
-                  ? "justify-center"
-                  : "justify-start gap-3 px-4"
-                }
-
-                ${isActive
-                  ? `
-                      bg-white/10
-                      text-white
-                      shadow-sm
-                    `
-                  : `
-                      text-slate-300
-                      hover:bg-white/[0.06]
-                      hover:text-white
-                    `
-                }
-              `}
-            >
-              {({ isActive }) => (
-                <>
-                  {/* Icon */}
-
-                  <span
-                    className={`
-                      flex
-                      h-5
-                      w-5
-                      shrink-0
-                      items-center
-                      justify-center
-                      text-[18px]
-                      transition-colors
-
-                      ${isActive
-                        ? "text-[#FF8A1F]"
-                        : "text-slate-400 group-hover:text-slate-200"
-                      }
-                    `}
-                  >
-                    {item.icon}
-                  </span>
-
-                  {/* Label */}
-
-                  {!collapsed && (
-                    <span className="truncate">
-                      {item.label}
-                    </span>
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
-
-      {/* =====================================================
-          USER / FOOTER
-      ===================================================== */}
-
-      <div
-        className="
-          shrink-0
-          border-t
-          border-white/10
-          p-3
-        "
-      >
-        {/* User Card */}
-
-        <div
-          className={`
-            flex
-            items-center
-            rounded-xl
-            bg-white/[0.06]
-            p-2.5
-
-            ${collapsed
-              ? "justify-center"
-              : "gap-3"
+          <button
+            type="button"
+            onClick={() =>
+              setMobileOpen(false)
             }
-          `}
-        >
-          <div
+            aria-label="Close navigation"
             className="
               flex
               h-9
@@ -367,19 +347,145 @@ const Sidebar = ({
               shrink-0
               items-center
               justify-center
-              rounded-full
-              bg-[#FF8A1F]
-              text-sm
-              font-bold
-              text-white
+              rounded-xl
+              text-slate-300
+              transition
+              hover:bg-white/10
+              hover:text-white
+              active:scale-95
             "
           >
-            {user?.name?.[0]?.toUpperCase() ?? "A"}
-          </div>
+            <FiX size={20} />
+          </button>
+        </div>
 
-          {!collapsed && (
+        {/* MOBILE NAVIGATION */}
+
+        <nav
+          className="
+            min-h-0
+            flex-1
+            overflow-y-auto
+            overflow-x-hidden
+            px-3
+            py-5
+            scrollbar-thin
+          "
+        >
+          <div className="space-y-1">
+            {menuItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => `
+                  group
+                  flex
+                  h-11
+                  items-center
+                  gap-3
+                  rounded-xl
+                  px-4
+                  text-sm
+                  font-medium
+                  transition-all
+                  duration-150
+
+                  ${
+                    isActive
+                      ? `
+                        bg-white/10
+                        text-white
+                        shadow-sm
+                      `
+                      : `
+                        text-slate-300
+                        hover:bg-white/[0.06]
+                        hover:text-white
+                      `
+                  }
+                `}
+              >
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`
+                        flex
+                        h-5
+                        w-5
+                        shrink-0
+                        items-center
+                        justify-center
+                        text-[18px]
+                        transition-colors
+
+                        ${
+                          isActive
+                            ? "text-[#FF8A1F]"
+                            : "text-slate-400 group-hover:text-slate-200"
+                        }
+                      `}
+                    >
+                      {item.icon}
+                    </span>
+
+                    <span className="truncate">
+                      {item.label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+
+        {/* MOBILE USER / FOOTER */}
+
+        <div
+          className="
+            shrink-0
+            border-t
+            border-white/10
+            p-3
+          "
+        >
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+              rounded-xl
+              bg-white/[0.06]
+              p-2.5
+            "
+          >
+            <div
+              className="
+                flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                bg-[#FF8A1F]
+                text-sm
+                font-bold
+                text-white
+              "
+            >
+              {user?.name?.[0]?.toUpperCase() ??
+                "A"}
+            </div>
+
             <div className="min-w-0">
-              <h3 className="truncate text-sm font-semibold text-white">
+              <h3
+                className="
+                  truncate
+                  text-sm
+                  font-semibold
+                  text-white
+                "
+              >
                 {user?.name ?? "Admin"}
               </h3>
 
@@ -387,46 +493,356 @@ const Sidebar = ({
                 Founder
               </p>
             </div>
-          )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="
+              mt-2
+              flex
+              h-10
+              w-full
+              items-center
+              gap-3
+              rounded-xl
+              px-3
+              text-sm
+              text-slate-300
+              transition
+              hover:bg-white/[0.06]
+              hover:text-white
+            "
+          >
+            <FiLogOut size={17} />
+            <span>Sign Out</span>
+          </button>
         </div>
+      </aside>
 
-        {/* Logout */}
+      {/* ========================================================
+          DESKTOP SIDEBAR
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          title={
-            collapsed
-              ? "Sign Out"
-              : undefined
-          }
+          THIS IS YOUR EXISTING DESKTOP SIDEBAR.
+          Do not change its behavior.
+      ======================================================== */}
+
+      <aside
+        className={`
+          fixed
+          inset-y-0
+          left-0
+          z-50
+          hidden
+          h-screen
+          shrink-0
+          flex-col
+          overflow-hidden
+          border-r
+          border-white/10
+          bg-[#172B6B]
+          text-white
+          shadow-[4px_0_20px_rgba(15,23,42,0.06)]
+          transition-[width]
+          duration-300
+          ease-out
+          md:flex
+
+          ${collapsed ? "w-20" : "w-64"}
+        `}
+      >
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
+
+        <div
           className={`
-            mt-2
             flex
-            h-10
-            w-full
+            h-20
+            shrink-0
             items-center
-            rounded-xl
-            text-sm
-            text-slate-300
-            transition
-            hover:bg-white/[0.06]
-            hover:text-white
+            border-b
+            border-white/10
 
-            ${collapsed
-              ? "justify-center"
-              : "gap-3 px-3"
+            ${
+              collapsed
+                ? "justify-center px-3"
+                : "px-5"
             }
           `}
         >
-          <FiLogOut size={17} />
+          <button
+            type="button"
+            onClick={() =>
+              setCollapsed(
+                (value) => !value
+              )
+            }
+            aria-label={
+              collapsed
+                ? "Expand sidebar"
+                : "Collapse sidebar"
+            }
+            title={
+              collapsed
+                ? "Expand sidebar"
+                : "Collapse sidebar"
+            }
+            className="
+              flex
+              h-10
+              w-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              text-slate-200
+              transition
+              hover:bg-white/10
+              hover:text-white
+              active:scale-95
+            "
+          >
+            <FiMenu size={20} />
+          </button>
 
           {!collapsed && (
-            <span>Sign Out</span>
+            <div className="ml-4 flex min-w-0 items-center gap-3">
+              <img
+                src={logo}
+                alt="ToyHub"
+                className="
+                  h-10
+                  w-auto
+                  shrink-0
+                  object-contain
+                "
+              />
+
+              <div className="min-w-0">
+                <h2
+                  className="
+                    truncate
+                    text-sm
+                    font-bold
+                    tracking-wide
+                  "
+                >
+                  TOYHUB
+                </h2>
+
+                <p
+                  className="
+                    text-[10px]
+                    uppercase
+                    tracking-wider
+                    text-slate-400
+                  "
+                >
+                  Corporation
+                </p>
+              </div>
+            </div>
           )}
-        </button>
-      </div>
-    </aside>
+        </div>
+
+        {/* =====================================================
+            NAVIGATION
+        ===================================================== */}
+
+        <nav
+          ref={navRef}
+          onScroll={handleSidebarScroll}
+          className="
+            min-h-0
+            flex-1
+            overflow-y-auto
+            overflow-x-hidden
+            px-3
+            py-5
+            scrollbar-thin
+          "
+        >
+          <div className="space-y-1">
+            {menuItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                title={
+                  collapsed
+                    ? item.label
+                    : undefined
+                }
+                className={({ isActive }) => `
+                  group
+                  flex
+                  h-11
+                  items-center
+                  rounded-xl
+                  text-sm
+                  font-medium
+                  transition-all
+                  duration-150
+
+                  ${
+                    collapsed
+                      ? "justify-center"
+                      : "justify-start gap-3 px-4"
+                  }
+
+                  ${
+                    isActive
+                      ? `
+                        bg-white/10
+                        text-white
+                        shadow-sm
+                      `
+                      : `
+                        text-slate-300
+                        hover:bg-white/[0.06]
+                        hover:text-white
+                      `
+                  }
+                `}
+              >
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`
+                        flex
+                        h-5
+                        w-5
+                        shrink-0
+                        items-center
+                        justify-center
+                        text-[18px]
+                        transition-colors
+
+                        ${
+                          isActive
+                            ? "text-[#FF8A1F]"
+                            : "text-slate-400 group-hover:text-slate-200"
+                        }
+                      `}
+                    >
+                      {item.icon}
+                    </span>
+
+                    {!collapsed && (
+                      <span className="truncate">
+                        {item.label}
+                      </span>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+
+        {/* =====================================================
+            USER / FOOTER
+        ===================================================== */}
+
+        <div
+          className="
+            shrink-0
+            border-t
+            border-white/10
+            p-3
+          "
+        >
+          <div
+            className={`
+              flex
+              items-center
+              rounded-xl
+              bg-white/[0.06]
+              p-2.5
+
+              ${
+                collapsed
+                  ? "justify-center"
+                  : "gap-3"
+              }
+            `}
+          >
+            <div
+              className="
+                flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
+                rounded-full
+                bg-[#FF8A1F]
+                text-sm
+                font-bold
+                text-white
+              "
+            >
+              {user?.name?.[0]?.toUpperCase() ??
+                "A"}
+            </div>
+
+            {!collapsed && (
+              <div className="min-w-0">
+                <h3
+                  className="
+                    truncate
+                    text-sm
+                    font-semibold
+                    text-white
+                  "
+                >
+                  {user?.name ?? "Admin"}
+                </h3>
+
+                <p className="text-xs text-slate-400">
+                  Founder
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={
+              collapsed
+                ? "Sign Out"
+                : undefined
+            }
+            className={`
+              mt-2
+              flex
+              h-10
+              w-full
+              items-center
+              rounded-xl
+              text-sm
+              text-slate-300
+              transition
+              hover:bg-white/[0.06]
+              hover:text-white
+
+              ${
+                collapsed
+                  ? "justify-center"
+                  : "gap-3 px-3"
+              }
+            `}
+          >
+            <FiLogOut size={17} />
+
+            {!collapsed && (
+              <span>Sign Out</span>
+            )}
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 

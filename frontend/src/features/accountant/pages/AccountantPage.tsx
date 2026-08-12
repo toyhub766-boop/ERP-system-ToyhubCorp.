@@ -21,8 +21,9 @@ import {
 import { exportPartyLedgerPdf } from "../../../utils/exportPartyLedgerPdf";
 import { exportPartyLedgerExcel } from "../../../utils/exportPartyLedgerExcel";
 
-const AccountsPage = () => {
+import { ArrowLeft } from "lucide-react";
 
+const AccountsPage = () => {
   const [parties, setParties] =
     useState<any[]>([]);
 
@@ -49,6 +50,10 @@ const AccountsPage = () => {
       "MONEY_IN"
     );
 
+  /* ============================================================
+     COUNTS
+  ============================================================ */
+
   const customers = parties.filter(
     (p) => p.partyType === "CUSTOMER"
   );
@@ -58,70 +63,83 @@ const AccountsPage = () => {
   );
 
   const companyExpenses = parties.filter(
-    (p) => p.partyType === "COMPANY_EXPENSE"
+    (p) =>
+      p.partyType === "COMPANY_EXPENSE"
   );
 
+  /* ============================================================
+     SUMMARY
+  ============================================================ */
+
   const youllGet = parties
-    .filter((p) => p.currentBalance > 0)
+    .filter(
+      (p) => Number(p.currentBalance || 0) > 0
+    )
     .reduce(
-      (sum, p) => sum + p.currentBalance,
+      (sum, p) =>
+        sum + Number(p.currentBalance || 0),
       0
     );
 
   const youllGive = parties
-    .filter((p) => p.currentBalance < 0)
+    .filter(
+      (p) => Number(p.currentBalance || 0) < 0
+    )
     .reduce(
-      (sum, p) => sum + Math.abs(p.currentBalance),
+      (sum, p) =>
+        sum +
+        Math.abs(
+          Number(p.currentBalance || 0)
+        ),
       0
     );
 
+  /* ============================================================
+     LOAD PARTIES
+  ============================================================ */
+
   const loadParties = async () => {
     try {
-
       const data = await getParties();
 
       setParties(data);
 
       return data;
-
     } catch (error) {
-
       console.error(error);
 
       return [];
-
     }
   };
+
+  /* ============================================================
+     LOAD LEDGER
+  ============================================================ */
 
   const loadLedger = async (
     partyId: string
   ) => {
-
     try {
-
       setLoading(true);
 
       const data =
         await getPartyLedger(partyId);
 
       setLedger(data);
-
     } catch (error) {
-
       console.error(error);
 
       setLedger([]);
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
-  const refreshAccounts = async () => {
+  /* ============================================================
+     REFRESH ACCOUNTS
+  ============================================================ */
 
+  const refreshAccounts = async () => {
     const updated =
       await loadParties();
 
@@ -134,254 +152,519 @@ const AccountsPage = () => {
       );
 
     if (!latest) {
-
       setSelectedParty(null);
-
       setLedger([]);
 
       return;
-
     }
 
     setSelectedParty(latest);
 
-    await loadLedger(latest._id);
-
+    await loadLedger(
+      latest._id
+    );
   };
 
-    useEffect(() => {
-  loadParties();
-}, []);
+  /* ============================================================
+     INITIAL LOAD
+  ============================================================ */
 
-return (
-  <AccountantLayout>
+  useEffect(() => {
+    loadParties();
+  }, []);
 
-    <PageContainer className="space-y-6">
+  /* ============================================================
+     SELECT PARTY
+  ============================================================ */
 
-      <PageHeader
-        title="Accounts"
-        subtitle="Customer, Supplier & Company Expense Ledger"
-      />
+  const handleSelectParty = async (
+    party: any
+  ) => {
+    setSelectedParty(party);
 
-      {/* ================= SUMMARY ================= */}
+    await loadLedger(
+      party._id
+    );
+  };
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+  /* ============================================================
+     MOBILE BACK
+  ============================================================ */
 
-        <div className="rounded-xl border bg-white p-5">
-          <p className="text-sm text-slate-500">
-            You'll Get
-          </p>
+  const handleMobileBack = () => {
+    setSelectedParty(null);
+    setLedger([]);
+  };
 
-          <h2 className="mt-2 text-3xl font-bold text-green-600">
-            ₹{youllGet}
-          </h2>
-        </div>
+  /* ============================================================
+     PARTY SUCCESS
+  ============================================================ */
 
-        <div className="rounded-xl border bg-white p-5">
-          <p className="text-sm text-slate-500">
-            You'll Give
-          </p>
+  const handlePartySuccess =
+    async () => {
+      const updated =
+        await loadParties();
 
-          <h2 className="mt-2 text-3xl font-bold text-red-600">
-            ₹{youllGive}
-          </h2>
-        </div>
+      if (editParty) {
+        const latest =
+          updated.find(
+            (p: any) =>
+              p._id === editParty._id
+          );
 
-        <div className="rounded-xl border bg-white p-5">
-          <p className="text-sm text-slate-500">
-            Customers
-          </p>
+        if (latest) {
+          setSelectedParty(
+            latest
+          );
 
-          <h2 className="mt-2 text-3xl font-bold">
-            {customers.length}
-          </h2>
-        </div>
+          await loadLedger(
+            latest._id
+          );
+        }
+      }
 
-        <div className="rounded-xl border bg-white p-5">
-          <p className="text-sm text-slate-500">
-            Suppliers
-          </p>
+      setPartyModalOpen(false);
+      setEditParty(null);
+    };
 
-          <h2 className="mt-2 text-3xl font-bold">
-            {suppliers.length}
-          </h2>
-        </div>
+  return (
+    <AccountantLayout>
+      <PageContainer className="space-y-6">
 
-        <div className="rounded-xl border bg-white p-5">
-          <p className="text-sm text-slate-500">
-            Company Expense
-          </p>
+        {/* ======================================================
+            HEADER
+        ====================================================== */}
 
-          <h2 className="mt-2 text-3xl font-bold">
-            {companyExpenses.length}
-          </h2>
-        </div>
+        <PageHeader
+          title="Accounts"
+          subtitle="Customer, Supplier & Company Expense Ledger"
+        />
 
-      </div>
+        {/* ======================================================
+            SUMMARY
+        ====================================================== */}
 
-      {/* ================= CONTENT ================= */}
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
 
-      <div className="grid gap-6 xl:grid-cols-12">
+          <div className="rounded-xl border bg-white p-5">
+            <p className="text-sm text-slate-500">
+              You'll Get
+            </p>
 
-        {/* LEFT */}
+            <h2 className="mt-2 text-3xl font-bold text-green-600">
+              ₹{youllGet}
+            </h2>
+          </div>
 
-        <div className="xl:col-span-4">
+          <div className="rounded-xl border bg-white p-5">
+            <p className="text-sm text-slate-500">
+              You'll Give
+            </p>
 
-          <div className="h-[74vh] overflow-hidden rounded-2xl border bg-white">
+            <h2 className="mt-2 text-3xl font-bold text-red-600">
+              ₹{youllGive}
+            </h2>
+          </div>
 
-            <PartyList
-              parties={parties}
-              selectedParty={selectedParty}
-              setSelectedParty={async (party) => {
+          <div className="rounded-xl border bg-white p-5">
+            <p className="text-sm text-slate-500">
+              Customers
+            </p>
 
-                setSelectedParty(party);
+            <h2 className="mt-2 text-3xl font-bold">
+              {customers.length}
+            </h2>
+          </div>
 
-                await loadLedger(party._id);
+          <div className="rounded-xl border bg-white p-5">
+            <p className="text-sm text-slate-500">
+              Suppliers
+            </p>
 
-              }}
-              onAddParty={() => {
+            <h2 className="mt-2 text-3xl font-bold">
+              {suppliers.length}
+            </h2>
+          </div>
 
-                setEditParty(null);
+          <div className="rounded-xl border bg-white p-5">
+            <p className="text-sm text-slate-500">
+              Company Expense
+            </p>
 
-                setPartyModalOpen(true);
-
-              }}
-            />
-
+            <h2 className="mt-2 text-3xl font-bold">
+              {companyExpenses.length}
+            </h2>
           </div>
 
         </div>
 
-        {/* RIGHT */}
+        {/* ======================================================
+            DESKTOP / LARGE SCREEN
 
-        <div className="xl:col-span-8">
+            IMPORTANT:
+            This is the existing two-panel workspace.
 
-          <div className="h-[74vh] overflow-hidden rounded-2xl border bg-white">
+            Only shown at xl and above.
+        ====================================================== */}
 
-  <LedgerPanel
-  selectedParty={selectedParty}
-  ledger={ledger}
-  loading={loading}
+        <div
+          className="
+            hidden
+            gap-6
+            xl:grid
+            xl:grid-cols-12
+          "
+        >
 
-  onMoneyIn={() => {
-    setTransactionType("MONEY_IN");
-    setModalOpen(true);
-  }}
+          {/* LEFT — PARTY LIST */}
 
-  onMoneyOut={() => {
-    setTransactionType("MONEY_OUT");
-    setModalOpen(true);
-  }}
-
-  onEditParty={() => {
-    setEditParty(selectedParty);
-    setPartyModalOpen(true);
-  }}
-
-  onViewReport={() => {}}
-
-  onExportPdf={() => {
-    if (!selectedParty) return;
-
-    exportPartyLedgerPdf(
-      selectedParty,
-      ledger
-    );
-  }}
-
-  onExportExcel={() => {
-    if (!selectedParty) return;
-
-    exportPartyLedgerExcel(
-      selectedParty,
-      ledger
-    );
-  }}
-/>
+          <div className="xl:col-span-4">
+            <div
+              className="
+                h-[74vh]
+                overflow-hidden
+                rounded-2xl
+                border
+                bg-white
+              "
+            >
+              <PartyList
+                parties={parties}
+                selectedParty={
+                  selectedParty
+                }
+                setSelectedParty={
+                  handleSelectParty
+                }
+                onAddParty={() => {
+                  setEditParty(null);
+                  setPartyModalOpen(
+                    true
+                  );
+                }}
+              />
+            </div>
           </div>
+
+          {/* RIGHT — LEDGER */}
+
+          <div className="xl:col-span-8">
+            <div
+              className="
+                h-[74vh]
+                overflow-hidden
+                rounded-2xl
+                border
+                bg-white
+              "
+            >
+              <LedgerPanel
+                selectedParty={
+                  selectedParty
+                }
+                ledger={ledger}
+                loading={loading}
+
+                onMoneyIn={() => {
+                  setTransactionType(
+                    "MONEY_IN"
+                  );
+
+                  setModalOpen(true);
+                }}
+
+                onMoneyOut={() => {
+                  setTransactionType(
+                    "MONEY_OUT"
+                  );
+
+                  setModalOpen(true);
+                }}
+
+                onEditParty={() => {
+                  setEditParty(
+                    selectedParty
+                  );
+
+                  setPartyModalOpen(
+                    true
+                  );
+                }}
+
+                onViewReport={() => {}}
+
+                onExportPdf={() => {
+                  if (!selectedParty)
+                    return;
+
+                  exportPartyLedgerPdf(
+                    selectedParty,
+                    ledger
+                  );
+                }}
+
+                onExportExcel={() => {
+                  if (!selectedParty)
+                    return;
+
+                  exportPartyLedgerExcel(
+                    selectedParty,
+                    ledger
+                  );
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ======================================================
+            MOBILE / TABLET
+
+            Below xl we use a list → detail experience.
+
+            IMPORTANT:
+            Desktop above is completely separate.
+        ====================================================== */}
+
+        <div className="xl:hidden">
+
+          {/* ====================================================
+              MOBILE PARTY LIST
+          ==================================================== */}
+
+          {!selectedParty && (
+            <div
+              className="
+                h-[calc(100vh-13rem)]
+                min-h-[480px]
+                overflow-hidden
+                rounded-2xl
+                border
+                bg-white
+              "
+            >
+              <PartyList
+                parties={parties}
+                selectedParty={
+                  selectedParty
+                }
+                setSelectedParty={
+                  handleSelectParty
+                }
+                onAddParty={() => {
+                  setEditParty(null);
+                  setPartyModalOpen(
+                    true
+                  );
+                }}
+              />
+            </div>
+          )}
+
+          {/* ====================================================
+              MOBILE PARTY DETAIL
+          ==================================================== */}
+
+          {selectedParty && (
+            <div
+              className="
+                flex
+                h-[calc(100vh-13rem)]
+                min-h-[480px]
+                flex-col
+                overflow-hidden
+                rounded-2xl
+                border
+                bg-white
+              "
+            >
+
+              {/* MOBILE BACK BAR */}
+
+              <div
+                className="
+                  flex
+                  h-12
+                  shrink-0
+                  items-center
+                  border-b
+                  border-slate-200
+                  bg-white
+                  px-3
+                "
+              >
+                <button
+                  type="button"
+                  onClick={
+                    handleMobileBack
+                  }
+                  className="
+                    inline-flex
+                    h-9
+                    items-center
+                    gap-1.5
+                    rounded-lg
+                    px-2.5
+                    text-xs
+                    font-semibold
+                    text-slate-600
+                    transition
+                    hover:bg-slate-100
+                    hover:text-slate-900
+                    active:scale-[0.98]
+                  "
+                >
+                  <ArrowLeft
+                    size={15}
+                  />
+
+                  <span>
+                    Parties
+                  </span>
+                </button>
+
+                <div
+                  className="
+                    ml-2
+                    min-w-0
+                    flex-1
+                  "
+                >
+                  <p
+                    className="
+                      truncate
+                      text-xs
+                      font-semibold
+                      text-slate-800
+                    "
+                  >
+                    {selectedParty.companyName}
+                  </p>
+
+                  <p
+                    className="
+                      truncate
+                      text-[10px]
+                      text-slate-400
+                    "
+                  >
+                    {selectedParty.partyCode}
+                  </p>
+                </div>
+              </div>
+
+              {/* MOBILE LEDGER */}
+
+              <div
+                className="
+                  min-h-0
+                  flex-1
+                  overflow-hidden
+                "
+              >
+                <LedgerPanel
+                  selectedParty={
+                    selectedParty
+                  }
+                  ledger={ledger}
+                  loading={loading}
+
+                  onMoneyIn={() => {
+                    setTransactionType(
+                      "MONEY_IN"
+                    );
+
+                    setModalOpen(true);
+                  }}
+
+                  onMoneyOut={() => {
+                    setTransactionType(
+                      "MONEY_OUT"
+                    );
+
+                    setModalOpen(true);
+                  }}
+
+                  onEditParty={() => {
+                    setEditParty(
+                      selectedParty
+                    );
+
+                    setPartyModalOpen(
+                      true
+                    );
+                  }}
+
+                  onViewReport={() => {}}
+
+                  onExportPdf={() => {
+                    if (!selectedParty)
+                      return;
+
+                    exportPartyLedgerPdf(
+                      selectedParty,
+                      ledger
+                    );
+                  }}
+
+                  onExportExcel={() => {
+                    if (!selectedParty)
+                      return;
+
+                    exportPartyLedgerExcel(
+                      selectedParty,
+                      ledger
+                    );
+                  }}
+                />
+              </div>
+
+            </div>
+          )}
 
         </div>
 
-      </div>
-
-              {/* ================= ADD / EDIT PARTY ================= */}
+        {/* ======================================================
+            ADD / EDIT PARTY
+        ====================================================== */}
 
         <AddPartyModal
           open={partyModalOpen}
           editParty={editParty}
           onClose={() => {
-
             setPartyModalOpen(false);
-
             setEditParty(null);
-
           }}
-          onSuccess={async () => {
-
-            const updated =
-              await loadParties();
-
-            if (editParty) {
-
-              const latest =
-                updated.find(
-                  (p: any) =>
-                    p._id === editParty._id
-                );
-
-              if (latest) {
-
-                setSelectedParty(latest);
-
-                await loadLedger(
-                  latest._id
-                );
-
-              }
-
-            }
-
-            setPartyModalOpen(false);
-
-            setEditParty(null);
-
-          }}
+          onSuccess={
+            handlePartySuccess
+          }
         />
 
-        {/* ================= MONEY IN / MONEY OUT ================= */}
+        {/* ======================================================
+            MONEY IN / MONEY OUT
+        ====================================================== */}
 
         <TransactionModal
           open={modalOpen}
-
           onClose={() => {
-
             setModalOpen(false);
-
           }}
-
           partyId={
             selectedParty?._id || ""
           }
-
           transactionType={
             transactionType
           }
-
           onSuccess={async () => {
-
             await refreshAccounts();
 
             setModalOpen(false);
-
           }}
         />
 
       </PageContainer>
-
     </AccountantLayout>
-
   );
-
 };
 
 export default AccountsPage;

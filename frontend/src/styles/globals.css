@@ -6,7 +6,7 @@
 
 /* =========================================================
    TOY HUB — GLOBAL DESIGN SYSTEM
-   ========================================================= */
+========================================================= */
 
 @theme {
   --color-brand: #17357a;
@@ -38,7 +38,7 @@
 
 /* =========================================================
    RESET
-   ========================================================= */
+========================================================= */
 
 *,
 *::before,
@@ -77,15 +77,68 @@ body {
 
 /* =========================================================
    ROOT
-   ========================================================= */
+========================================================= */
 
 #root {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* =========================================================
+   IMPORTANT RESPONSIVE FOUNDATION
+========================================================= */
+
+/*
+   Prevent flex/grid children from creating unexpected
+   horizontal overflow.
+
+   This is especially important for:
+   - Dashboard
+   - Accounts
+   - CRM
+   - Inventory
+   - Production
+   - Dispatch
+*/
+
+main,
+section,
+article,
+aside,
+header,
+footer,
+nav,
+div {
+  min-width: 0;
+}
+
+/*
+   Never allow normal content to create viewport overflow.
+   We intentionally do NOT add overflow-y rules here.
+*/
+
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* =========================================================
+   MEDIA
+========================================================= */
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 /* =========================================================
    TEXT
-   ========================================================= */
+========================================================= */
 
 button,
 input,
@@ -104,11 +157,13 @@ button:disabled {
 
 /* =========================================================
    FORM CONTROLS
-   ========================================================= */
+========================================================= */
 
 input,
 textarea,
 select {
+  max-width: 100%;
+
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease,
@@ -126,9 +181,19 @@ select:focus {
   outline: none;
 }
 
+/*
+   Prevent long form controls from breaking mobile layouts.
+*/
+
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
 /* =========================================================
    GLOBAL INTERACTION
-   ========================================================= */
+========================================================= */
 
 button,
 a,
@@ -146,7 +211,7 @@ a {
 
 /* =========================================================
    SELECTION
-   ========================================================= */
+========================================================= */
 
 ::selection {
   background: rgb(23 53 122 / 0.14);
@@ -155,7 +220,7 @@ a {
 
 /* =========================================================
    SCROLLBARS
-   ========================================================= */
+========================================================= */
 
 * {
   scrollbar-width: thin;
@@ -181,16 +246,35 @@ a {
 }
 
 /* =========================================================
-   COMMON CARD FEEL
-   ========================================================= */
+   HORIZONTAL SCROLL CONTAINERS
+========================================================= */
 
 /*
-  These target the common utility combinations already used
-  throughout the ERP.
+   Existing components already using:
+   overflow-x-auto
 
-  !important is intentionally limited to visual properties.
-  It does NOT affect layout or functionality.
+   will now behave better on mobile without changing
+   their actual layout or functionality.
 */
+
+.overflow-x-auto {
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/*
+   Tables should scroll horizontally instead of pushing
+   the entire page wider.
+*/
+
+.overflow-x-auto table {
+  width: max-content;
+  min-width: 100%;
+}
+
+/* =========================================================
+   COMMON CARD FEEL
+========================================================= */
 
 .rounded-xl.border.bg-white,
 .rounded-2xl.border.bg-white {
@@ -205,7 +289,7 @@ a {
 
 /* =========================================================
    COMMON BUTTON POLISH
-   ========================================================= */
+========================================================= */
 
 button {
   transition:
@@ -223,11 +307,12 @@ button:not(:disabled):active {
 
 /* =========================================================
    DAISYUI / TOY HUB BASE
-   ========================================================= */
+========================================================= */
 
 .btn {
   border-radius: var(--radius-control);
   font-weight: 600;
+
   transition:
     background-color 150ms ease,
     border-color 150ms ease,
@@ -255,8 +340,59 @@ button:not(:disabled):active {
 }
 
 /* =========================================================
-   STATUS / MICRO INTERACTION
-   ========================================================= */
+   RESPONSIVE GRID SAFETY
+========================================================= */
+
+/*
+   Allows grid children to shrink instead of overflowing.
+*/
+
+.grid > *,
+.flex > * {
+  min-width: 0;
+}
+
+/* =========================================================
+   LONG CONTENT SAFETY
+========================================================= */
+
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.text-wrap-safe {
+  overflow-wrap: break-word;
+}
+
+/*
+   Prevent long IDs, phone numbers, order numbers etc.
+   from destroying mobile cards.
+*/
+
+[class*="font-mono"],
+[class*="tracking-"] {
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   MODAL RESPONSIVE FOUNDATION
+========================================================= */
+
+/*
+   Does NOT impose a height on every modal.
+   It only prevents a modal from becoming wider than
+   the viewport.
+*/
+
+.fixed.inset-0 > [class*="max-w-"],
+.fixed.inset-0 > div {
+  max-width: calc(100vw - 2rem);
+}
+
+/* =========================================================
+   HOVER LIFT
+========================================================= */
 
 .hover-lift {
   transition:
@@ -271,8 +407,166 @@ button:not(:disabled):active {
 }
 
 /* =========================================================
+   MOBILE — <= 640px
+========================================================= */
+
+@media (max-width: 640px) {
+
+  /*
+     Prevent accidental oversized typography from making
+     cards unnecessarily tall.
+  */
+
+  h1 {
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  h3 {
+    line-height: 1.3;
+  }
+
+  /*
+     Buttons remain comfortable to tap.
+     We don't force every button to full width.
+  */
+
+  button {
+    min-height: 40px;
+  }
+
+  /*
+     Tables remain functional through their existing
+     overflow-x-auto wrappers.
+  */
+
+  .overflow-x-auto {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /*
+     Inputs should never exceed their parent.
+  */
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  /*
+     Existing fixed-width content should never exceed
+     the viewport.
+  */
+
+  [class*="w-["] {
+    max-width: 100%;
+  }
+
+  /*
+     Protect cards containing long text.
+  */
+
+  .rounded-xl,
+  .rounded-2xl,
+  .rounded-3xl {
+    min-width: 0;
+  }
+
+  /*
+     Modals get safe mobile margins.
+  */
+
+  .fixed.inset-0 {
+    padding: 1rem;
+  }
+
+  .fixed.inset-0 > * {
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE — <= 480px
+========================================================= */
+
+@media (max-width: 480px) {
+
+  body {
+    font-size: 13px;
+  }
+
+  /*
+     Reduce excessive card padding only where Tailwind
+     utilities are already being used.
+  */
+
+  .p-6 {
+    padding: 1rem;
+  }
+
+  .px-6 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .py-6 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  /*
+     Keep modal content inside viewport.
+  */
+
+  .fixed.inset-0 {
+    padding: 0.75rem;
+  }
+
+  .fixed.inset-0 > * {
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
+/* =========================================================
+   TABLET — 641px → 1024px
+========================================================= */
+
+@media (min-width: 641px) and (max-width: 1024px) {
+
+  /*
+     Keep dashboard / module grids from becoming
+     unnecessarily cramped.
+  */
+
+  .grid {
+    min-width: 0;
+  }
+
+  .overflow-x-auto {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+:focus-visible {
+  outline: 2px solid rgb(23 53 122 / 0.65);
+  outline-offset: 2px;
+}
+
+/* =========================================================
    REDUCED MOTION
-   ========================================================= */
+========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
   *,

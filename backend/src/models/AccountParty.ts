@@ -3,10 +3,7 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface IAccountParty extends Document {
   partyCode: string;
 
-  partyType:
-    | "CUSTOMER"
-    | "SUPPLIER"
-    | "COMPANY_EXPENSE";
+  partyType: "CUSTOMER" | "SUPPLIER" | "COMPANY_EXPENSE";
 
   companyName: string;
   contactPerson: string;
@@ -66,11 +63,7 @@ const accountPartySchema = new Schema<IAccountParty>(
 
     partyType: {
       type: String,
-      enum: [
-        "CUSTOMER",
-        "SUPPLIER",
-        "COMPANY_EXPENSE",
-      ],
+      enum: ["CUSTOMER", "SUPPLIER", "COMPANY_EXPENSE"],
       required: true,
     },
 
@@ -115,7 +108,6 @@ const accountPartySchema = new Schema<IAccountParty>(
       type: String,
       default: "",
       trim: true,
-      match: [/^\d{6}$/, "Pincode must contain exactly 6 digits"],
     },
 
     // Opening balance cannot be negative.
@@ -183,10 +175,6 @@ const accountPartySchema = new Schema<IAccountParty>(
         type: String,
         default: "",
         trim: true,
-        match: [
-          /^(?:\+91[\s-]?)?[6-9]\d{9}$/,
-          "Invalid transport phone number",
-        ],
       },
 
       marka: {
@@ -281,10 +269,10 @@ const accountPartySchema = new Schema<IAccountParty>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model<IAccountParty>(
   "AccountParty",
-  accountPartySchema
+  accountPartySchema,
 );

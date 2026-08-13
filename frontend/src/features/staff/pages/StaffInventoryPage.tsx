@@ -2,7 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getCategories } from "../../categories/services/category.service";
-// import { getWarehouses } from "../../warehouses/services/warehouse.service";
+
+import {
+  X,
+  Package,
+  SlidersHorizontal,
+  Plus,
+  MapPin,
+  Warehouse,
+  Search,
+} from "lucide-react";
 
 import { getProducts } from "../services/inventory.service";
 import type { Product } from "../types/inventory.types";
@@ -20,17 +29,11 @@ import AddCategoryModal from "../components/AddCategoryModal";
 const StaffInventoryPage = () => {
   const navigate = useNavigate();
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [showFilters, setShowFilters] =
-    useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [selectedCategory, setSelectedCategory] =
     useState("All");
@@ -47,38 +50,47 @@ const StaffInventoryPage = () => {
   const [categories, setCategories] =
     useState<any[]>([]);
 
-  const [warehouses] =
-    useState<any[]>([]);
-
   const [showCategoryModal, setShowCategoryModal] =
     useState(false);
 
   const [showProductModal, setShowProductModal] =
     useState(false);
 
+  const [previewImage, setPreviewImage] =
+    useState<string | null>(null);
+
+  /* =========================================================
+     FETCH PRODUCTS
+  ========================================================= */
+
   const fetchProducts = async () => {
     try {
       setLoading(true);
 
-      const data =
-        await getProducts();
+      const data = await getProducts();
 
       setProducts(data);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to fetch products:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  /* =========================================================
+     FETCH FILTER DATA
+  ========================================================= */
+
   const fetchFilters = async () => {
     try {
-      const categoryData =
-        await getCategories();
+      const categoryData = await getCategories();
 
       setCategories(categoryData);
-    } catch (err) {
-      console.error("Filter Error:", err);
+    } catch (error) {
+      console.error(
+        "Failed to fetch filter data:",
+        error
+      );
     }
   };
 
@@ -87,12 +99,49 @@ const StaffInventoryPage = () => {
     fetchFilters();
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const searchTerm =
-        search.toLowerCase();
+  /* =========================================================
+     DERIVED WAREHOUSES
+     We derive these from the products so the filter actually
+     works without requiring another API request.
+  ========================================================= */
 
+  const warehouses = useMemo(() => {
+    const warehouseMap = new Map<
+      string,
+      string
+    >();
+
+    products.forEach((product) => {
+      if (
+        product.warehouse?._id &&
+        product.warehouse?.name
+      ) {
+        warehouseMap.set(
+          product.warehouse._id,
+          product.warehouse.name
+        );
+      }
+    });
+
+    return Array.from(
+      warehouseMap.entries()
+    ).map(([id, name]) => ({
+      id,
+      name,
+    }));
+  }, [products]);
+
+  /* =========================================================
+     FILTER PRODUCTS
+  ========================================================= */
+
+  const filteredProducts = useMemo(() => {
+    const searchTerm =
+      search.trim().toLowerCase();
+
+    return products.filter((product) => {
       const matchesSearch =
+        !searchTerm ||
         product.name
           .toLowerCase()
           .includes(searchTerm) ||
@@ -102,12 +151,12 @@ const StaffInventoryPage = () => {
 
       const matchesCategory =
         selectedCategory === "All" ||
-        product.category.name ===
+        product.category?.name ===
           selectedCategory;
 
       const matchesWarehouse =
         selectedWarehouse === "All" ||
-        product.warehouse.name ===
+        product.warehouse?.name ===
           selectedWarehouse;
 
       const matchesStatus =
@@ -135,6 +184,40 @@ const StaffInventoryPage = () => {
     selectedType,
   ]);
 
+  /* =========================================================
+     STATS
+  ========================================================= */
+
+  const lowStockCount = products.filter(
+    (product) =>
+      product.currentStock <=
+      product.minimumStock
+  ).length;
+
+  const criticalStockCount = products.filter(
+    (product) =>
+      product.status === "Critical"
+  ).length;
+
+  /* =========================================================
+     CLEAR FILTERS
+  ========================================================= */
+
+  const clearFilters = () => {
+    setSelectedCategory("All");
+    setSelectedWarehouse("All");
+    setSelectedStatus("All");
+    setSelectedType("All");
+    setSearch("");
+  };
+
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    selectedCategory !== "All" ||
+    selectedWarehouse !== "All" ||
+    selectedStatus !== "All" ||
+    selectedType !== "All";
+
   return (
     <div
       className="
@@ -148,7 +231,7 @@ const StaffInventoryPage = () => {
           className="
             mx-auto
             w-full
-            max-w-4xl
+            max-w-5xl
             space-y-5
             sm:space-y-6
             lg:space-y-8
@@ -160,11 +243,15 @@ const StaffInventoryPage = () => {
 
           <PageHeader
             title="Inventory"
-            subtitle={`${filteredProducts.length} products available`}
+            subtitle={`${filteredProducts.length} ${
+              filteredProducts.length === 1
+                ? "product"
+                : "products"
+            } available`}
           />
 
           {/* =====================================================
-              STATS
+              SUMMARY
           ===================================================== */}
 
           <div
@@ -172,23 +259,28 @@ const StaffInventoryPage = () => {
               grid
               grid-cols-2
               gap-3
-              sm:gap-5
+              sm:grid-cols-4
+              sm:gap-4
             "
           >
             <StatCard
               title="Products"
-              value={filteredProducts.length}
+              value={products.length}
             />
 
             <StatCard
               title="Low Stock"
-              value={
-                products.filter(
-                  (p) =>
-                    p.currentStock <=
-                    p.minimumStock
-                ).length
-              }
+              value={lowStockCount}
+            />
+
+            <StatCard
+              title="Critical"
+              value={criticalStockCount}
+            />
+
+            <StatCard
+              title="Warehouses"
+              value={warehouses.length}
             />
           </div>
 
@@ -202,16 +294,19 @@ const StaffInventoryPage = () => {
               sm:space-y-5
             "
           >
-            <InventorySearch
-              value={search}
-              onChange={setSearch}
-            />
+            <div className="relative">
+              <InventorySearch
+                value={search}
+                onChange={setSearch}
+              />
+            </div>
 
             <div
               className="
                 grid
                 grid-cols-2
                 gap-2.5
+                sm:grid-cols-3
                 sm:gap-3
               "
             >
@@ -221,7 +316,11 @@ const StaffInventoryPage = () => {
                   setShowCategoryModal(true)
                 }
                 className="
+                  flex
                   min-h-11
+                  items-center
+                  justify-center
+                  gap-2
                   rounded-xl
                   border
                   border-slate-200
@@ -232,12 +331,14 @@ const StaffInventoryPage = () => {
                   font-semibold
                   text-slate-700
                   transition
-                  hover:bg-slate-100
+                  hover:border-slate-300
+                  hover:bg-white
                   active:scale-[0.98]
                   sm:text-sm
                 "
               >
-                + Add Category
+                <Plus size={16} />
+                Add Category
               </button>
 
               <button
@@ -246,7 +347,11 @@ const StaffInventoryPage = () => {
                   setShowProductModal(true)
                 }
                 className="
+                  flex
                   min-h-11
+                  items-center
+                  justify-center
+                  gap-2
                   rounded-xl
                   bg-[#17357A]
                   px-3
@@ -261,42 +366,72 @@ const StaffInventoryPage = () => {
                   sm:text-sm
                 "
               >
-                + Add Product
+                <Plus size={16} />
+                Add Product
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowFilters(
+                    (current) => !current
+                  )
+                }
+                className="
+                  col-span-2
+                  flex
+                  min-h-11
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-4
+                  py-3
+                  text-sm
+                  font-medium
+                  text-slate-700
+                  transition
+                  hover:bg-slate-50
+                  active:scale-[0.99]
+                  sm:col-span-1
+                "
+              >
+                <SlidersHorizontal
+                  size={17}
+                />
+
+                {showFilters
+                  ? "Hide Filters"
+                  : "Filters"}
+
+                {hasActiveFilters && (
+                  <span
+                    className="
+                      flex
+                      h-5
+                      min-w-5
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-[#17357A]
+                      px-1.5
+                      text-[10px]
+                      font-bold
+                      text-white
+                    "
+                  >
+                    !
+                  </span>
+                )}
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowFilters(
-                  !showFilters
-                )
-              }
-              className="
-                min-h-11
-                w-full
-                rounded-xl
-                border
-                border-slate-200
-                bg-white
-                px-4
-                py-3
-                text-sm
-                font-medium
-                text-slate-700
-                transition
-                hover:bg-slate-50
-                active:scale-[0.99]
-              "
-            >
-              {showFilters
-                ? "Hide Filters"
-                : "Show Filters"}
-            </button>
           </SectionCard>
 
           {/* =====================================================
-              FILTERS
+              FILTER PANEL
           ===================================================== */}
 
           {showFilters && (
@@ -306,33 +441,71 @@ const StaffInventoryPage = () => {
                 sm:space-y-7
               "
             >
-              <div>
-                <h3
-                  className="
-                    text-base
-                    font-semibold
-                    text-slate-800
-                  "
-                >
-                  Filters
-                </h3>
+              <div
+                className="
+                  flex
+                  items-start
+                  justify-between
+                  gap-4
+                "
+              >
+                <div>
+                  <div
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                    "
+                  >
+                    <SlidersHorizontal
+                      size={17}
+                      className="text-[#17357A]"
+                    />
 
-                <p
-                  className="
-                    mt-1
-                    text-xs
-                    leading-5
-                    text-slate-500
-                    sm:text-sm
-                  "
-                >
-                  Narrow down products using
-                  category, warehouse, product
-                  type and stock status.
-                </p>
+                    <h3
+                      className="
+                        text-base
+                        font-semibold
+                        text-slate-900
+                      "
+                    >
+                      Inventory Filters
+                    </h3>
+                  </div>
+
+                  <p
+                    className="
+                      mt-1
+                      text-xs
+                      leading-5
+                      text-slate-500
+                      sm:text-sm
+                    "
+                  >
+                    Narrow down the inventory
+                    using the available filters.
+                  </p>
+                </div>
+
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="
+                      shrink-0
+                      text-xs
+                      font-semibold
+                      text-[#17357A]
+                      hover:underline
+                      sm:text-sm
+                    "
+                  >
+                    Clear all
+                  </button>
+                )}
               </div>
 
-              {/* Category */}
+              {/* CATEGORY */}
 
               <div className="space-y-3">
                 <p
@@ -353,7 +526,8 @@ const StaffInventoryPage = () => {
                   {[
                     "All",
                     ...categories.map(
-                      (c) => c.name
+                      (category) =>
+                        category.name
                     ),
                   ].map((item) => (
                     <button
@@ -365,7 +539,6 @@ const StaffInventoryPage = () => {
                         )
                       }
                       className={`
-                        min-h-9
                         rounded-full
                         px-3
                         py-2
@@ -389,28 +562,42 @@ const StaffInventoryPage = () => {
                 </div>
               </div>
 
-              {/* Warehouse */}
+              {/* WAREHOUSE */}
 
               <div className="space-y-3">
-                <p
+                <div
                   className="
-                    text-[10px]
-                    font-semibold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                    sm:text-xs
-                    sm:tracking-wide
+                    flex
+                    items-center
+                    gap-2
                   "
                 >
-                  Warehouse
-                </p>
+                  <Warehouse
+                    size={14}
+                    className="text-slate-400"
+                  />
+
+                  <p
+                    className="
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-[0.08em]
+                      text-slate-400
+                      sm:text-xs
+                      sm:tracking-wide
+                    "
+                  >
+                    Warehouse
+                  </p>
+                </div>
 
                 <div className="flex flex-wrap gap-2">
                   {[
                     "All",
                     ...warehouses.map(
-                      (w) => w.name
+                      (warehouse) =>
+                        warehouse.name
                     ),
                   ].map((item) => (
                     <button
@@ -422,7 +609,6 @@ const StaffInventoryPage = () => {
                         )
                       }
                       className={`
-                        min-h-9
                         rounded-full
                         px-3
                         py-2
@@ -446,7 +632,7 @@ const StaffInventoryPage = () => {
                 </div>
               </div>
 
-              {/* Product Type */}
+              {/* PRODUCT TYPE */}
 
               <div className="space-y-3">
                 <p
@@ -473,12 +659,9 @@ const StaffInventoryPage = () => {
                       type="button"
                       key={item}
                       onClick={() =>
-                        setSelectedType(
-                          item
-                        )
+                        setSelectedType(item)
                       }
                       className={`
-                        min-h-9
                         rounded-full
                         px-3
                         py-2
@@ -489,8 +672,7 @@ const StaffInventoryPage = () => {
                         sm:px-4
                         sm:text-sm
                         ${
-                          selectedType ===
-                          item
+                          selectedType === item
                             ? "bg-[#17357A] text-white shadow-sm"
                             : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                         }
@@ -506,7 +688,7 @@ const StaffInventoryPage = () => {
                 </div>
               </div>
 
-              {/* Status */}
+              {/* STATUS */}
 
               <div className="space-y-3">
                 <p
@@ -539,7 +721,6 @@ const StaffInventoryPage = () => {
                         )
                       }
                       className={`
-                        min-h-9
                         rounded-full
                         px-3
                         py-2
@@ -566,13 +747,71 @@ const StaffInventoryPage = () => {
           )}
 
           {/* =====================================================
-              PRODUCTS
+              PRODUCTS HEADER
+          ===================================================== */}
+
+          <div
+            className="
+              flex
+              items-end
+              justify-between
+              gap-4
+            "
+          >
+            <div>
+              <p
+                className="
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.1em]
+                  text-[#17357A]
+                  sm:text-xs
+                "
+              >
+                Stock Overview
+              </p>
+
+              <h2
+                className="
+                  mt-1
+                  text-xl
+                  font-bold
+                  tracking-tight
+                  text-slate-900
+                  sm:text-2xl
+                "
+              >
+                Products
+              </h2>
+            </div>
+
+            <p
+              className="
+                text-xs
+                font-medium
+                text-slate-500
+                sm:text-sm
+              "
+            >
+              {filteredProducts.length} found
+            </p>
+          </div>
+
+          {/* =====================================================
+              PRODUCT LIST
           ===================================================== */}
 
           <div className="space-y-4">
             {loading ? (
               <SectionCard>
-                <div className="py-14 text-center sm:py-16">
+                <div
+                  className="
+                    py-14
+                    text-center
+                    sm:py-16
+                  "
+                >
                   <div
                     className="
                       mx-auto
@@ -598,38 +837,59 @@ const StaffInventoryPage = () => {
                   </p>
                 </div>
               </SectionCard>
-            ) : filteredProducts.length === 0 ? (
+            ) : filteredProducts.length ===
+              0 ? (
               <SectionCard>
-                <div className="py-14 text-center sm:py-16">
+                <div
+                  className="
+                    py-14
+                    text-center
+                    sm:py-16
+                  "
+                >
                   <div
                     className="
                       mx-auto
-                      mb-4
+                      mb-5
                       flex
-                      h-14
-                      w-14
+                      h-16
+                      w-16
                       items-center
                       justify-center
-                      rounded-full
-                      bg-slate-100
-                      text-2xl
-                      sm:h-16
-                      sm:w-16
-                      sm:text-3xl
+                      rounded-2xl
+                      bg-[#17357A]/10
                     "
                   >
-                    📦
+                    {hasActiveFilters ? (
+                      <Search
+                        className="
+                          h-7
+                          w-7
+                          text-[#17357A]
+                        "
+                      />
+                    ) : (
+                      <Package
+                        className="
+                          h-7
+                          w-7
+                          text-[#17357A]
+                        "
+                      />
+                    )}
                   </div>
 
                   <h3
                     className="
                       text-base
                       font-semibold
-                      text-slate-800
+                      text-slate-900
                       sm:text-lg
                     "
                   >
-                    No Products Found
+                    {hasActiveFilters
+                      ? "No matching products"
+                      : "No products available"}
                   </h3>
 
                   <p
@@ -643,9 +903,32 @@ const StaffInventoryPage = () => {
                       sm:text-sm
                     "
                   >
-                    Try changing your search
-                    or filter selection.
+                    {hasActiveFilters
+                      ? "Try changing your search or clearing some filters."
+                      : "Products added to inventory will appear here."}
                   </p>
+
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="
+                        mt-5
+                        rounded-xl
+                        bg-[#17357A]
+                        px-4
+                        py-2.5
+                        text-sm
+                        font-semibold
+                        text-white
+                        shadow-sm
+                        transition
+                        hover:bg-[#23428f]
+                      "
+                    >
+                      Clear Filters
+                    </button>
+                  )}
                 </div>
               </SectionCard>
             ) : (
@@ -654,226 +937,386 @@ const StaffInventoryPage = () => {
                   <SectionCard
                     key={product._id}
                     className="
-                      space-y-4
-                      sm:space-y-5
+                      overflow-hidden
+                      p-0
                     "
                   >
-                    {/* Product Header */}
+                    {/* =================================================
+                        PRODUCT TOP
+                    ================================================= */}
 
                     <div
                       className="
-                        flex
-                        items-start
-                        gap-3
-                        sm:gap-4
+                        p-4
+                        sm:p-5
                       "
                     >
                       <div
                         className="
                           flex
-                          h-12
-                          w-12
-                          shrink-0
-                          items-center
-                          justify-center
-                          rounded-xl
-                          bg-slate-100
-                          text-xl
-                          sm:h-14
-                          sm:w-14
-                          sm:rounded-2xl
-                          sm:text-2xl
+                          items-start
+                          gap-3
+                          sm:gap-4
                         "
                       >
-                        📦
-                      </div>
+                        {/* PRODUCT IMAGE */}
 
-                      <div className="min-w-0 flex-1">
-                        <h2
+                        <button
+                          type="button"
+                          disabled={!product.image}
+                          onClick={() => {
+                            if (
+                              product.image
+                            ) {
+                              setPreviewImage(
+                                product.image
+                              );
+                            }
+                          }}
                           className="
-                            truncate
-                            text-base
-                            font-bold
-                            text-slate-900
-                            sm:text-lg
+                            group
+                            relative
+                            flex
+                            h-16
+                            w-16
+                            shrink-0
+                            items-center
+                            justify-center
+                            overflow-hidden
+                            rounded-2xl
+                            border
+                            border-slate-200
+                            bg-slate-100
+                            shadow-sm
+                            transition
+                            sm:h-20
+                            sm:w-20
                           "
-                        >
-                          {product.name}
-                        </h2>
-
-                        <p
-                          className="
-                            mt-1
-                            truncate
-                            text-xs
-                            text-slate-500
-                            sm:text-sm
-                          "
-                        >
-                          {product.sku}
-                        </p>
-
-                        <p
-                          className="
-                            truncate
-                            text-xs
-                            text-slate-500
-                            sm:text-sm
-                          "
-                        >
-                          {product.warehouse.name}
-                        </p>
-                      </div>
-
-                      <span
-                        className={`
-                          shrink-0
-                          rounded-full
-                          px-2.5
-                          py-1
-                          text-[10px]
-                          font-semibold
-                          sm:px-3
-                          sm:text-xs
-                          ${
-                            product.status ===
-                            "Healthy"
-                              ? "bg-green-100 text-green-700"
-                              : product.status ===
-                                "Low Stock"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-red-100 text-red-700"
+                          aria-label={
+                            product.image
+                              ? `View ${product.name} image`
+                              : undefined
                           }
-                        `}
-                      >
-                        {product.status}
-                      </span>
-                    </div>
+                        >
+                          {product.image ? (
+                            <>
+                              <img
+                                src={
+                                  product.image
+                                }
+                                alt={
+                                  product.name
+                                }
+                                className="
+                                  h-full
+                                  w-full
+                                  object-cover
+                                  transition
+                                  duration-300
+                                  group-hover:scale-105
+                                "
+                              />
 
-                    {/* Stats */}
+                              <span
+                                className="
+                                  absolute
+                                  inset-0
+                                  flex
+                                  items-center
+                                  justify-center
+                                  bg-black/0
+                                  text-xs
+                                  font-semibold
+                                  text-white
+                                  opacity-0
+                                  transition
+                                  group-hover:bg-black/20
+                                  group-hover:opacity-100
+                                "
+                              >
+                                View
+                              </span>
+                            </>
+                          ) : (
+                            <Package
+                              className="
+                                h-7
+                                w-7
+                                text-[#17357A]
+                                sm:h-8
+                                sm:w-8
+                              "
+                            />
+                          )}
+                        </button>
 
-                    <div
-                      className="
-                        grid
-                        grid-cols-3
-                        gap-2
-                        sm:gap-3
-                      "
-                    >
-                      <div
-                        className="
-                          rounded-xl
-                          bg-slate-50
-                          p-2.5
-                          text-center
-                          sm:p-3
-                        "
-                      >
-                        <p
+                        {/* PRODUCT INFORMATION */}
+
+                        <div
                           className="
-                            text-[9px]
-                            uppercase
-                            tracking-wide
-                            text-slate-500
-                            sm:text-xs
+                            min-w-0
+                            flex-1
                           "
                         >
-                          Current
-                        </p>
+                          <div
+                            className="
+                              flex
+                              flex-wrap
+                              items-center
+                              gap-2
+                            "
+                          >
+                            <h3
+                              className="
+                                min-w-0
+                                max-w-full
+                                truncate
+                                text-base
+                                font-bold
+                                text-slate-900
+                                sm:text-lg
+                              "
+                            >
+                              {product.name}
+                            </h3>
 
-                        <h3
-                          className="
-                            mt-1
-                            text-xl
+                            <span
+                              className={`
+                                shrink-0
+                                rounded-full
+                                px-2
+                                py-1
+                                text-[9px]
+                                font-bold
+                                uppercase
+                                tracking-wide
+                                sm:text-[10px]
+                                ${
+                                  product.type ===
+                                  "FINISHED"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-orange-100 text-orange-700"
+                                }
+                              `}
+                            >
+                              {product.type ===
+                              "FINISHED"
+                                ? "Finished"
+                                : "Raw"}
+                            </span>
+                          </div>
+
+                          <p
+                            className="
+                              mt-1
+                              truncate
+                              text-xs
+                              font-medium
+                              text-slate-500
+                              sm:text-sm
+                            "
+                          >
+                            SKU {product.sku}
+                          </p>
+
+                          <div
+                            className="
+                              mt-2
+                              flex
+                              min-w-0
+                              items-center
+                              gap-1.5
+                              text-xs
+                              text-slate-500
+                            "
+                          >
+                            <MapPin
+                              size={13}
+                              className="
+                                shrink-0
+                                text-[#17357A]
+                              "
+                            />
+
+                            <span className="truncate">
+                              {product.warehouse
+                                ?.name ||
+                                "Warehouse not assigned"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* STATUS */}
+
+                        <span
+                          className={`
+                            shrink-0
+                            rounded-full
+                            px-2.5
+                            py-1.5
+                            text-[9px]
                             font-bold
-                            text-[#17357A]
-                            sm:text-2xl
-                          "
+                            sm:px-3
+                            sm:text-[10px]
+                            ${
+                              product.status ===
+                              "Healthy"
+                                ? "bg-green-100 text-green-700"
+                                : product.status ===
+                                  "Low Stock"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                            }
+                          `}
                         >
-                          {product.currentStock}
-                        </h3>
+                          {product.status}
+                        </span>
                       </div>
+
+                      {/* =================================================
+                          STOCK INFORMATION
+                      ================================================= */}
 
                       <div
                         className="
-                          rounded-xl
-                          bg-slate-50
-                          p-2.5
-                          text-center
-                          sm:p-3
+                          mt-5
+                          grid
+                          grid-cols-2
+                          gap-2.5
+                          sm:grid-cols-3
+                          sm:gap-3
                         "
                       >
-                        <p
+                        <div
                           className="
-                            text-[9px]
-                            uppercase
-                            tracking-wide
-                            text-slate-500
-                            sm:text-xs
+                            rounded-2xl
+                            border
+                            border-slate-100
+                            bg-slate-50
+                            p-3
+                            sm:p-4
                           "
                         >
-                          Minimum
-                        </p>
+                          <p
+                            className="
+                              text-[9px]
+                              font-semibold
+                              uppercase
+                              tracking-[0.08em]
+                              text-slate-400
+                              sm:text-[10px]
+                            "
+                          >
+                            Current Stock
+                          </p>
 
-                        <h3
-                          className="
-                            mt-1
-                            text-lg
-                            font-semibold
-                            text-slate-800
-                            sm:text-xl
-                          "
-                        >
-                          {product.minimumStock}
-                        </h3>
-                      </div>
+                          <p
+                            className="
+                              mt-1
+                              text-2xl
+                              font-bold
+                              tracking-tight
+                              text-[#17357A]
+                              sm:text-3xl
+                            "
+                          >
+                            {product.currentStock}
+                          </p>
+                        </div>
 
-                      <div
-                        className="
-                          rounded-xl
-                          bg-slate-50
-                          p-2.5
-                          text-center
-                          sm:p-3
-                        "
-                      >
-                        <p
+                        <div
                           className="
-                            text-[9px]
-                            uppercase
-                            tracking-wide
-                            text-slate-500
-                            sm:text-xs
+                            rounded-2xl
+                            border
+                            border-slate-100
+                            bg-slate-50
+                            p-3
+                            sm:p-4
                           "
                         >
-                          Type
-                        </p>
+                          <p
+                            className="
+                              text-[9px]
+                              font-semibold
+                              uppercase
+                              tracking-[0.08em]
+                              text-slate-400
+                              sm:text-[10px]
+                            "
+                          >
+                            Minimum
+                          </p>
 
-                        <h3
+                          <p
+                            className="
+                              mt-1
+                              text-2xl
+                              font-bold
+                              tracking-tight
+                              text-slate-800
+                              sm:text-3xl
+                            "
+                          >
+                            {product.minimumStock}
+                          </p>
+                        </div>
+
+                        <div
                           className="
-                            mt-1
-                            text-xs
-                            font-semibold
-                            text-slate-800
-                            sm:text-sm
+                            col-span-2
+                            rounded-2xl
+                            border
+                            border-slate-100
+                            bg-slate-50
+                            p-3
+                            sm:col-span-1
+                            sm:p-4
                           "
                         >
-                          {product.type ===
-                          "RAW"
-                            ? "Raw"
-                            : "Finished"}
-                        </h3>
+                          <p
+                            className="
+                              text-[9px]
+                              font-semibold
+                              uppercase
+                              tracking-[0.08em]
+                              text-slate-400
+                              sm:text-[10px]
+                            "
+                          >
+                            Unit
+                          </p>
+
+                          <p
+                            className="
+                              mt-2
+                              truncate
+                              text-sm
+                              font-bold
+                              text-slate-800
+                              sm:text-base
+                            "
+                          >
+                            {product.unit}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Actions */}
+                    {/* =================================================
+                        ACTIONS
+                    ================================================= */}
 
                     <div
                       className="
                         grid
                         grid-cols-2
-                        gap-2.5
+                        gap-2
+                        border-t
+                        border-slate-100
+                        bg-slate-50/70
+                        p-3
                         sm:gap-3
+                        sm:p-4
                       "
                     >
                       <button
@@ -884,7 +1327,11 @@ const StaffInventoryPage = () => {
                           )
                         }
                         className="
+                          flex
                           min-h-11
+                          items-center
+                          justify-center
+                          gap-2
                           rounded-xl
                           bg-green-100
                           px-3
@@ -909,7 +1356,11 @@ const StaffInventoryPage = () => {
                           )
                         }
                         className="
+                          flex
                           min-h-11
+                          items-center
+                          justify-center
+                          gap-2
                           rounded-xl
                           bg-red-100
                           px-3
@@ -935,9 +1386,9 @@ const StaffInventoryPage = () => {
           </div>
         </div>
 
-        {/* =====================================================
+        {/* =========================================================
             MODALS
-        ===================================================== */}
+        ========================================================= */}
 
         <AddProductModal
           open={showProductModal}
@@ -957,6 +1408,97 @@ const StaffInventoryPage = () => {
             setShowCategoryModal(false);
           }}
         />
+
+        {/* =========================================================
+            IMAGE PREVIEW
+        ========================================================= */}
+
+        {previewImage && (
+          <div
+            className="
+              fixed
+              inset-0
+              z-[9999]
+              flex
+              items-center
+              justify-center
+              bg-slate-950/85
+              p-4
+              backdrop-blur-md
+              sm:p-6
+            "
+            onClick={() =>
+              setPreviewImage(null)
+            }
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setPreviewImage(null)
+              }
+              aria-label="Close image preview"
+              className="
+                absolute
+                right-3
+                top-3
+                z-10
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-white/20
+                bg-white
+                text-slate-700
+                shadow-xl
+                transition
+                hover:bg-slate-100
+                active:scale-95
+                sm:right-6
+                sm:top-6
+              "
+            >
+              <X size={18} />
+            </button>
+
+            <div
+              className="
+                relative
+                flex
+                max-h-[90vh]
+                max-w-[95vw]
+                items-center
+                justify-center
+                overflow-hidden
+                rounded-2xl
+                bg-white
+                p-1
+                shadow-2xl
+                sm:max-w-[90vw]
+                sm:rounded-3xl
+                sm:p-2
+              "
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+              <img
+                src={previewImage}
+                alt="Product Preview"
+                className="
+                  max-h-[86vh]
+                  max-w-[92vw]
+                  rounded-xl
+                  object-contain
+                  sm:max-h-[88vh]
+                  sm:max-w-[88vw]
+                "
+              />
+            </div>
+          </div>
+        )}
       </PageContainer>
 
       <BottomNavigation />

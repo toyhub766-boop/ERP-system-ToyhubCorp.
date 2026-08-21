@@ -1,19 +1,15 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-
 import logo from "../assets/images/logo.png";
 
 interface AccountExportRow {
-  date: string | Date;
   partyCode: string;
   partyName: string;
-  partyType: string;
   contactPerson: string;
-  transactionType: string;
-  paymentMethod: string;
-  amount: number;
+  openingBalance: number;
+  youllGive: number;
+  youllGet: number;
   balance: number;
-  remarks: string;
 }
 
 interface AccountExportSummary {
@@ -29,421 +25,481 @@ const getImageData = async (
   imagePath: string
 ): Promise<ArrayBuffer> => {
   const response = await fetch(imagePath);
-
   return await response.arrayBuffer();
 };
 
-const formatDate = (
-  value: string | Date
+// const formatNumber = (value: number) => {
+//   return Number(value || 0).toLocaleString("en-IN", {
+//     minimumFractionDigits: 2,
+//     maximumFractionDigits: 2,
+//   });
+// };
+
+export const exportAccountsExcel = async (
+  rows: AccountExportRow[],
+  summary: AccountExportSummary,
+  fileName: string
 ) => {
-  const date = new Date(value);
+  const workbook = new ExcelJS.Workbook();
 
-  if (Number.isNaN(date.getTime())) {
-    return "--";
-  }
+  workbook.creator = "Toy Hub Corporation";
+  workbook.created = new Date();
 
-  return date.toLocaleDateString("en-IN");
-};
+  const sheet = workbook.addWorksheet(
+    "Whole Ledger"
+  );
 
-export const exportAccountsExcel =
-  async (
-    rows: AccountExportRow[],
-    summary: AccountExportSummary,
-    fileName: string
-  ) => {
-    const workbook =
-      new ExcelJS.Workbook();
+  // ============================================================
+  // COLUMN WIDTHS
+  // ============================================================
 
-    workbook.creator =
-      "Toy Hub Corporation";
+  sheet.columns = [
+    {
+      key: "partyCode",
+      width: 16,
+    },
+    {
+      key: "partyName",
+      width: 30,
+    },
+    {
+      key: "contactPerson",
+      width: 24,
+    },
+    {
+      key: "openingBalance",
+      width: 18,
+    },
+    {
+      key: "youllGive",
+      width: 17,
+    },
+    {
+      key: "youllGet",
+      width: 17,
+    },
+    {
+      key: "balance",
+      width: 18,
+    },
+  ];
 
-    workbook.created =
-      new Date();
+  // ============================================================
+  // LOGO
+  // ============================================================
 
-    // ========================================
-    // SUMMARY SHEET
-    // ========================================
+  try {
+    const logoBuffer =
+      await getImageData(logo);
 
-    const summarySheet =
-      workbook.addWorksheet(
-        "Summary"
-      );
+    const imageId =
+      workbook.addImage({
+        buffer: logoBuffer,
+        extension: "png",
+      });
 
-    summarySheet.columns = [
+    sheet.addImage(
+      imageId,
       {
-        width: 28,
-      },
-      {
-        width: 22,
-      },
-    ];
-
-    // ========================================
-    // LOGO
-    // ========================================
-
-    try {
-      const logoBuffer =
-        await getImageData(logo);
-
-      const imageId =
-        workbook.addImage({
-          buffer: logoBuffer,
-          extension: "png",
-        });
-
-      summarySheet.addImage(
-        imageId,
-        {
-          tl: {
-            col: 0,
-            row: 0,
-          },
-          ext: {
-            width: 180,
-            height: 70,
-          },
-        }
-      );
-    } catch (error) {
-      console.error(
-        "Failed to load logo:",
-        error
-      );
-    }
-
-    // ========================================
-    // TITLE
-    // ========================================
-
-    summarySheet.mergeCells(
-      "A5:B5"
-    );
-
-    const title =
-      summarySheet.getCell("A5");
-
-    title.value =
-      "TOY HUB CORPORATION";
-
-    title.font = {
-      bold: true,
-      size: 18,
-    };
-
-    title.alignment = {
-      horizontal: "center",
-    };
-
-    summarySheet.mergeCells(
-      "A6:B6"
-    );
-
-    const subtitle =
-      summarySheet.getCell("A6");
-
-    subtitle.value =
-      "Accounts Ledger Report";
-
-    subtitle.font = {
-      bold: true,
-      size: 12,
-    };
-
-    subtitle.alignment = {
-      horizontal: "center",
-    };
-
-    summarySheet.mergeCells(
-      "A7:B7"
-    );
-
-    const generated =
-      summarySheet.getCell("A7");
-
-    generated.value =
-      `Generated: ${new Date().toLocaleString(
-        "en-IN"
-      )}`;
-
-    generated.font = {
-      size: 9,
-      italic: true,
-    };
-
-    generated.alignment = {
-      horizontal: "center",
-    };
-
-    // ========================================
-    // SUMMARY
-    // ========================================
-
-    const summaryStart = 9;
-
-    const summaryData = [
-      [
-        "Total Parties",
-        summary.totalParties,
-      ],
-      [
-        "Customers",
-        summary.customers,
-      ],
-      [
-        "Suppliers",
-        summary.suppliers,
-      ],
-      [
-        "Company Expenses",
-        summary.companyExpenses,
-      ],
-      [
-        "You'll Get",
-        summary.youllGet,
-      ],
-      [
-        "You'll Give",
-        summary.youllGive,
-      ],
-    ];
-
-    summaryData.forEach(
-      ([label, value], index) => {
-        const row =
-          summarySheet.getRow(
-            summaryStart + index
-          );
-
-        row.getCell(1).value =
-          label;
-
-        row.getCell(2).value =
-          value;
-
-        row.getCell(1).font = {
-          bold: true,
-        };
-
-        row.getCell(2).font = {
-          bold: true,
-        };
-
-        if (
-          typeof value ===
-          "number"
-        ) {
-          row.getCell(2).numFmt =
-            "#,##0.00";
-        }
+        tl: {
+          col: 0,
+          row: 0,
+        },
+        ext: {
+          width: 150,
+          height: 55,
+        },
       }
     );
+  } catch (error) {
+    console.error(
+      "Failed to load logo:",
+      error
+    );
+  }
 
-    // ========================================
-    // TRANSACTION SHEET
-    // ========================================
+  // ============================================================
+  // TITLE
+  // ============================================================
 
-    const sheet =
-      workbook.addWorksheet(
-        "Transactions"
-      );
+  sheet.mergeCells("A1:G1");
 
-    sheet.columns = [
-      {
-        header: "Date",
-        key: "date",
-        width: 15,
-      },
-      {
-        header: "Party Code",
-        key: "partyCode",
-        width: 18,
-      },
-      {
-        header: "Party",
-        key: "partyName",
-        width: 30,
-      },
-      {
-        header: "Party Type",
-        key: "partyType",
-        width: 22,
-      },
-      {
-        header: "Contact Person",
-        key: "contactPerson",
-        width: 24,
-      },
-      {
-        header: "Transaction",
-        key: "transactionType",
-        width: 20,
-      },
-      {
-        header: "Payment Method",
-        key: "paymentMethod",
-        width: 20,
-      },
-      {
-        header: "Amount",
-        key: "amount",
-        width: 18,
-      },
-      {
-        header: "Balance",
-        key: "balance",
-        width: 18,
-      },
-      {
-        header: "Remarks",
-        key: "remarks",
-        width: 35,
-      },
-    ];
+  const companyTitle =
+    sheet.getCell("A1");
 
-    // ========================================
-    // HEADER
-    // ========================================
+  companyTitle.value =
+    "TOY HUB CORPORATION";
 
-    const headerRow =
-      sheet.getRow(1);
+  companyTitle.font = {
+    bold: true,
+    size: 18,
+  };
 
-    headerRow.height = 24;
+  companyTitle.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
 
-    headerRow.eachCell(
-      (cell) => {
-        cell.font = {
-          bold: true,
-        };
+  sheet.getRow(1).height = 28;
 
+  // ============================================================
+  // REPORT TITLE
+  // ============================================================
+
+  sheet.mergeCells("A2:G2");
+
+  const reportTitle =
+    sheet.getCell("A2");
+
+  reportTitle.value =
+    "Whole Accounts Ledger";
+
+  reportTitle.font = {
+    bold: true,
+    size: 12,
+  };
+
+  reportTitle.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
+
+  sheet.getRow(2).height = 22;
+
+  // ============================================================
+  // GENERATED DATE
+  // ============================================================
+
+  sheet.mergeCells("A3:G3");
+
+  const generated =
+    sheet.getCell("A3");
+
+  generated.value =
+    `Generated: ${new Date().toLocaleString(
+      "en-IN"
+    )}`;
+
+  generated.font = {
+    size: 9,
+    italic: true,
+  };
+
+  generated.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
+
+  sheet.getRow(3).height = 18;
+
+  // ============================================================
+  // SUMMARY TITLE
+  // ============================================================
+
+  sheet.mergeCells("A5:G5");
+
+  const summaryTitle =
+    sheet.getCell("A5");
+
+  summaryTitle.value =
+    "Ledger Summary";
+
+  summaryTitle.font = {
+    bold: true,
+    size: 11,
+  };
+
+  summaryTitle.alignment = {
+    horizontal: "left",
+    vertical: "middle",
+  };
+
+  // ============================================================
+  // SUMMARY
+  // ============================================================
+
+  const summaryRow =
+    sheet.getRow(6);
+
+  summaryRow.values = [
+    "Total Parties",
+    summary.totalParties,
+    "Customers",
+    summary.customers,
+    "Suppliers",
+    summary.suppliers,
+    "Company Expenses",
+    summary.companyExpenses,
+  ];
+
+  summaryRow.height = 24;
+
+  summaryRow.eachCell(
+    (cell) => {
+      cell.font = {
+        bold: true,
+        size: 9,
+      };
+
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
+
+      cell.border = {
+        top: {
+          style: "thin",
+        },
+        bottom: {
+          style: "thin",
+        },
+        left: {
+          style: "thin",
+        },
+        right: {
+          style: "thin",
+        },
+      };
+    }
+  );
+
+  // ============================================================
+  // TABLE HEADER
+  // ============================================================
+
+  const headerRow =
+    sheet.getRow(8);
+
+  headerRow.values = [
+    "Party Code",
+    "Party Name",
+    "Contact Person",
+    "Opening Balance",
+    "You Gave",
+    "You Got",
+    "Balance",
+  ];
+
+  headerRow.height = 28;
+
+  headerRow.eachCell(
+    (cell) => {
+      cell.font = {
+        bold: true,
+        size: 9,
+      };
+
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "center",
+        wrapText: true,
+      };
+
+      cell.border = {
+        top: {
+          style: "thin",
+        },
+        bottom: {
+          style: "thin",
+        },
+        left: {
+          style: "thin",
+        },
+        right: {
+          style: "thin",
+        },
+      };
+    }
+  );
+
+  // ============================================================
+  // PARTY DATA
+  // ============================================================
+
+  rows.forEach((row) => {
+    const excelRow =
+      sheet.addRow([
+        row.partyCode || "--",
+        row.partyName || "--",
+        row.contactPerson || "--",
+        Number(
+          row.openingBalance || 0
+        ),
+        Number(
+          row.youllGive || 0
+        ),
+        Number(
+          row.youllGet || 0
+        ),
+        Number(
+          row.balance || 0
+        ),
+      ]);
+
+    excelRow.height = 22;
+
+    excelRow.eachCell(
+      (cell, columnNumber) => {
         cell.alignment = {
           vertical: "middle",
-          horizontal: "center",
+          horizontal:
+            columnNumber >= 4
+              ? "right"
+              : "left",
         };
 
         cell.border = {
           top: {
-            style: "thin",
+            style: "hair",
           },
           bottom: {
-            style: "thin",
+            style: "hair",
           },
           left: {
-            style: "thin",
+            style: "hair",
           },
           right: {
-            style: "thin",
+            style: "hair",
           },
         };
+
+        if (columnNumber >= 4) {
+          cell.numFmt =
+            "#,##0.00;[Red]-#,##0.00";
+        }
       }
     );
+  });
 
-    // ========================================
-    // DATA
-    // ========================================
+  // ============================================================
+  // TOTAL
+  // ============================================================
 
-    rows.forEach((row) => {
-      const excelRow =
-        sheet.addRow({
-          date: formatDate(
-            row.date
-          ),
+  const totalRow =
+    sheet.addRow([]);
 
-          partyCode:
-            row.partyCode || "--",
+  totalRow.height = 24;
 
-          partyName:
-            row.partyName || "--",
+  totalRow.getCell(1).value =
+    "TOTAL";
 
-          partyType:
-            row.partyType || "--",
+  totalRow.getCell(1).font = {
+    bold: true,
+  };
 
-          contactPerson:
-            row.contactPerson ||
-            "--",
+  totalRow.getCell(4).value =
+    rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row.openingBalance || 0
+        ),
+      0
+    );
 
-          transactionType:
-            row.transactionType ||
-            "--",
+  totalRow.getCell(5).value =
+    rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row.youllGive || 0
+        ),
+      0
+    );
 
-          paymentMethod:
-            row.paymentMethod ||
-            "--",
+  totalRow.getCell(6).value =
+    rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row.youllGet || 0
+        ),
+      0
+    );
 
-          amount:
-            Number(row.amount || 0),
+  totalRow.getCell(7).value =
+    rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row.balance || 0
+        ),
+      0
+    );
 
-          balance:
-            Number(row.balance || 0),
-
-          remarks:
-            row.remarks || "--",
-        });
-
-      excelRow.getCell(
-        8
-      ).numFmt =
-        "#,##0.00;[Red]-#,##0.00";
-
-      excelRow.getCell(
-        9
-      ).numFmt =
-        "#,##0.00;[Red]-#,##0.00";
-    });
-
-    // ========================================
-    // TABLE / FILTER
-    // ========================================
-
-    if (rows.length > 0) {
-      sheet.autoFilter = {
-        from: "A1",
-        to: "J1",
+  totalRow.eachCell(
+    (cell, columnNumber) => {
+      cell.font = {
+        bold: true,
       };
+
+      cell.border = {
+        top: {
+          style: "medium",
+        },
+        bottom: {
+          style: "double",
+        },
+      };
+
+      if (columnNumber >= 4) {
+        cell.numFmt =
+          "#,##0.00;[Red]-#,##0.00";
+
+        cell.alignment = {
+          horizontal: "right",
+        };
+      }
     }
+  );
 
-    sheet.views = [
-      {
-        state: "frozen",
-        ySplit: 1,
-      },
-    ];
+  // ============================================================
+  // FREEZE HEADER
+  // ============================================================
 
-    // ========================================
-    // TOTALS
-    // ========================================
+  sheet.views = [
+    {
+      state: "frozen",
+      ySplit: 8,
+    },
+  ];
 
-    const totalRow =
-      sheet.addRow([]);
+  // ============================================================
+  // AUTO FILTER
+  // ============================================================
 
-    totalRow.getCell(1).value =
-      "TOTAL";
-
-    totalRow.getCell(1).font = {
-      bold: true,
+  if (rows.length > 0) {
+    sheet.autoFilter = {
+      from: "A8",
+      to: "G8",
     };
+  }
 
-    totalRow.getCell(8).value = {
-      formula: `SUM(H2:H${
-        rows.length + 1
-      })`,
-    };
+  // ============================================================
+  // PRINT SETTINGS
+  // ============================================================
 
-    totalRow.getCell(8).numFmt =
-      "#,##0.00";
+  sheet.pageSetup.orientation =
+    "portrait";
 
-    totalRow.getCell(8).font = {
-      bold: true,
-    };
+  sheet.pageSetup.paperSize =
+    9;
 
-    // ========================================
-    // DOWNLOAD
-    // ========================================
+  sheet.pageSetup.fitToPage = true;
 
-    const buffer =
-      await workbook.xlsx.writeBuffer();
+  sheet.pageSetup.fitToWidth = 1;
 
-    const blob = new Blob(
+  sheet.pageSetup.fitToHeight = 0;
+
+  // ============================================================
+  // DOWNLOAD
+  // ============================================================
+
+  const buffer =
+    await workbook.xlsx.writeBuffer();
+
+  const blob =
+    new Blob(
       [buffer],
       {
         type:
@@ -451,8 +507,8 @@ export const exportAccountsExcel =
       }
     );
 
-    saveAs(
-      blob,
-      `${fileName}.xlsx`
-    );
-  };
+  saveAs(
+    blob,
+    `${fileName}.xlsx`
+  );
+};

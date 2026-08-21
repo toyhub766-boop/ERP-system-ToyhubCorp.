@@ -5,6 +5,8 @@ export interface IAccountParty extends Document {
 
   partyType: "CUSTOMER" | "SUPPLIER" | "COMPANY_EXPENSE";
 
+  firmName?: string;
+
   companyName: string;
   contactPerson: string;
 
@@ -66,6 +68,17 @@ const accountPartySchema = new Schema<IAccountParty>(
       enum: ["CUSTOMER", "SUPPLIER", "COMPANY_EXPENSE"],
       required: true,
     },
+
+    firmName: {
+  type: String,
+  enum: [
+    "Mehak Enterprises",
+    "ToyHub Corp",
+    "Firm 3",
+  ],
+  default: "",
+  trim: true,
+},
 
     companyName: {
       type: String,

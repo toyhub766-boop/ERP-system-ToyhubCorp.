@@ -619,30 +619,33 @@ const LedgerPanel = ({
               Edit Party
             </button>
 
-            {onDeleteParty && (
-              <button
-                type="button"
-                onClick={onDeleteParty}
-                title="Delete party"
-                aria-label="Delete party"
-                className="
-                  inline-flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-lg
-                  bg-white
-                  text-red-500
-                  shadow-sm
-                  transition
-                  hover:bg-red-50
-                  active:scale-[0.98]
-                "
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
+            <button
+  type="button"
+  onClick={() => {
+  console.log("DELETE BUTTON CLICKED");
+  console.log("onDeleteParty:", onDeleteParty);
+
+  onDeleteParty?.();
+}}
+  title="Delete party"
+  aria-label="Delete party"
+  className="
+    inline-flex
+    h-8
+    w-8
+    items-center
+    justify-center
+    rounded-lg
+    bg-white
+    text-red-500
+    shadow-sm
+    transition
+    hover:bg-red-50
+    active:scale-[0.98]
+  "
+>
+  <Trash2 size={14} />
+</button>
 
             <button
               type="button"
@@ -843,190 +846,202 @@ const LedgerPanel = ({
           "
         >
           {/* ====================================================
-              CONTACT INFORMATION
+              RECORD TRANSACTION
           ==================================================== */}
 
           <InfoSection
-            title="Contact Information"
-            description="Party contact and address details."
+            title="Record Transaction"
+            description="Record money given to or received from this party."
           >
             <div
               className="
                 grid
                 grid-cols-1
-                gap-x-8
-                gap-y-5
+                gap-3
                 sm:grid-cols-2
               "
             >
-              <InfoItem
-                label="Contact Person"
-                value={
-                  selectedParty.contactPerson ||
-                  "--"
-                }
+              <TransactionAction
+                type="out"
+                onClick={onMoneyOut}
               />
 
-              <InfoItem
-                label="Email"
-                value={
-                  selectedParty.email ||
-                  "--"
-                }
+              <TransactionAction
+                type="in"
+                onClick={onMoneyIn}
               />
-
-              {isCustomer && (
-                <InfoItem
-                  label="Transport Phone"
-                  value={
-                    customer?.transportPhone ||
-                    "--"
-                  }
-                />
-              )}
-
-              <InfoItem
-                label="City"
-                value={
-                  selectedParty.city ||
-                  "--"
-                }
-              />
-
-              <InfoItem
-                label="State"
-                value={
-                  selectedParty.state ||
-                  "--"
-                }
-              />
-
-              <InfoItem
-                label="Pincode"
-                value={
-                  selectedParty.pincode ||
-                  "--"
-                }
-              />
-
-              <div className="sm:col-span-2">
-                <InfoItem
-                  label="Address"
-                  value={
-                    selectedParty.address ||
-                    "--"
-                  }
-                />
-              </div>
             </div>
           </InfoSection>
 
           {/* ====================================================
-              BUSINESS INFORMATION
+              ACCOUNT LEDGER
           ==================================================== */}
 
-          <InfoSection
-            title="Business Information"
-            description="Registration and business-specific details."
+          <section
+            className="
+              overflow-hidden
+              rounded-2xl
+              border
+              border-slate-200
+              bg-white
+              shadow-[0_2px_12px_rgba(15,23,42,0.04)]
+            "
           >
-            {!isExpense ? (
+            <div
+              className="
+                flex
+                flex-col
+                gap-3
+                border-b
+                border-slate-200
+                px-4
+                py-4
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+                sm:px-5
+              "
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Wallet
+                    size={16}
+                    className="shrink-0 text-[#17357A]"
+                  />
+
+                  <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                    Account Ledger
+                  </h2>
+                </div>
+
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Complete transaction history for this party.
+                </p>
+              </div>
+
               <div
                 className="
-                  grid
-                  grid-cols-1
-                  gap-x-8
-                  gap-y-5
-                  sm:grid-cols-2
+                  w-fit
+                  rounded-lg
+                  bg-slate-50
+                  px-3
+                  py-2
+                  sm:text-right
                 "
               >
-                <InfoItem
-                  label="GST Number"
-                  value={gstNumber}
-                />
+                <p
+                  className="
+                    text-[9px]
+                    font-semibold
+                    uppercase
+                    tracking-[0.08em]
+                    text-slate-400
+                  "
+                >
+                  Transactions
+                </p>
 
-                {isCustomer && (
-                  <>
-                    <InfoItem
-                      label="Billing Name"
-                      value={
-                        customer?.billingName ||
-                        "--"
-                      }
-                    />
-
-                    <InfoItem
-                      label="Transport Name"
-                      value={
-                        customer?.transportName ||
-                        "--"
-                      }
-                    />
-
-                    <InfoItem
-                      label="Transport Number"
-                      value={
-                        customer?.transportNumber ||
-                        "--"
-                      }
-                    />
-
-                    <InfoItem
-                      label="Marka"
-                      value={
-                        customer?.marka ||
-                        "--"
-                      }
-                    />
-
-                    <InfoItem
-                      label="Station"
-                      value={
-                        customer?.station ||
-                        "--"
-                      }
-                    />
-                  </>
-                )}
-
-                {isSupplier && (
-                  <InfoItem
-                    label="Party Type"
-                    value="Supplier"
-                  />
-                )}
-
-                <InfoItem
-                  label="Status"
-                  value={
-                    selectedParty.status ||
-                    "--"
-                  }
-                />
+                <p className="mt-0.5 text-sm font-bold text-slate-900">
+                  {ledger.length}
+                </p>
               </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2">
-                <InfoItem
-                  label="Expense Category"
-                  value={
-                    selectedParty
-                      .companyExpenseDetails
-                      ?.expenseCategory ||
-                    "--"
-                  }
-                />
+            </div>
 
-                <InfoItem
-                  label="Description"
-                  value={
-                    selectedParty
-                      .companyExpenseDetails
-                      ?.description ||
-                    "--"
-                  }
-                />
-              </div>
-            )}
-          </InfoSection>
+            <div className="p-3 sm:p-4">
+              {loading ? (
+                <div
+                  className="
+                    flex
+                    min-h-[180px]
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-slate-50
+                  "
+                >
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-slate-600">
+                      Loading transactions...
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Please wait.
+                    </p>
+                  </div>
+                </div>
+              ) : ledger.length === 0 ? (
+                <div
+                  className="
+                    flex
+                    min-h-[180px]
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-dashed
+                    border-slate-200
+                    bg-slate-50/70
+                    p-6
+                  "
+                >
+                  <div className="max-w-sm text-center">
+                    <div
+                      className="
+                        mx-auto
+                        flex
+                        h-11
+                        w-11
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-white
+                        text-slate-400
+                        shadow-sm
+                        ring-1
+                        ring-slate-200
+                      "
+                    >
+                      <Wallet size={17} />
+                    </div>
+
+                    <h3 className="mt-3 text-sm font-bold text-slate-900">
+                      No Transactions Yet
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Record the first transaction
+                      using the buttons above.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="
+                    overflow-hidden
+                    rounded-xl
+                    border
+                    border-slate-100
+                  "
+                >
+                  {ledger.map(
+                    (transaction: any) => (
+                      <LedgerEntryCard
+                        key={
+                          transaction._id
+                        }
+                        transaction={
+                          transaction
+                        }
+                        onDelete={
+                          onDelete
+                        }
+                      />
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
 
           {/* ====================================================
               COMMERCIAL INFORMATION
@@ -1286,202 +1301,198 @@ const LedgerPanel = ({
           </InfoSection>
 
           {/* ====================================================
-              RECORD TRANSACTION
+              BUSINESS INFORMATION
           ==================================================== */}
 
           <InfoSection
-            title="Record Transaction"
-            description="Record money given to or received from this party."
+            title="Business Information"
+            description="Registration and business-specific details."
+          >
+            {!isExpense ? (
+              <div
+                className="
+                  grid
+                  grid-cols-1
+                  gap-x-8
+                  gap-y-5
+                  sm:grid-cols-2
+                "
+              >
+                <InfoItem
+                  label="Firm Name"
+                  value={
+                    selectedParty.firmName ||
+                    "--"
+                  }
+                />
+
+                <InfoItem
+                  label="GST Number"
+                  value={gstNumber}
+                />
+
+                {isCustomer && (
+                  <>
+                    <InfoItem
+                      label="Billing Name"
+                      value={
+                        customer?.billingName ||
+                        "--"
+                      }
+                    />
+
+                    <InfoItem
+                      label="Transport Name"
+                      value={
+                        customer?.transportName ||
+                        "--"
+                      }
+                    />
+
+                    <InfoItem
+                      label="Transport Number"
+                      value={
+                        customer?.transportNumber ||
+                        "--"
+                      }
+                    />
+
+                    <InfoItem
+                      label="Marka"
+                      value={
+                        customer?.marka ||
+                        "--"
+                      }
+                    />
+
+                    <InfoItem
+                      label="Station"
+                      value={
+                        customer?.station ||
+                        "--"
+                      }
+                    />
+                  </>
+                )}
+
+                {isSupplier && (
+                  <InfoItem
+                    label="Party Type"
+                    value="Supplier"
+                  />
+                )}
+
+                <InfoItem
+                  label="Status"
+                  value={
+                    selectedParty.status ||
+                    "--"
+                  }
+                />
+              </div>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <InfoItem
+                  label="Expense Category"
+                  value={
+                    selectedParty
+                      .companyExpenseDetails
+                      ?.expenseCategory ||
+                    "--"
+                  }
+                />
+
+                <InfoItem
+                  label="Description"
+                  value={
+                    selectedParty
+                      .companyExpenseDetails
+                      ?.description ||
+                    "--"
+                  }
+                />
+              </div>
+            )}
+          </InfoSection>
+
+          {/* ====================================================
+              CONTACT INFORMATION
+          ==================================================== */}
+
+          <InfoSection
+            title="Contact Information"
+            description="Party contact and address details."
           >
             <div
               className="
                 grid
                 grid-cols-1
-                gap-3
+                gap-x-8
+                gap-y-5
                 sm:grid-cols-2
               "
             >
-              <TransactionAction
-                type="out"
-                onClick={onMoneyOut}
+              <InfoItem
+                label="Contact Person"
+                value={
+                  selectedParty.contactPerson ||
+                  "--"
+                }
               />
 
-              <TransactionAction
-                type="in"
-                onClick={onMoneyIn}
+              <InfoItem
+                label="Email"
+                value={
+                  selectedParty.email ||
+                  "--"
+                }
               />
+
+              {isCustomer && (
+                <InfoItem
+                  label="Transport Phone"
+                  value={
+                    customer?.transportPhone ||
+                    "--"
+                  }
+                />
+              )}
+
+              <InfoItem
+                label="City"
+                value={
+                  selectedParty.city ||
+                  "--"
+                }
+              />
+
+              <InfoItem
+                label="State"
+                value={
+                  selectedParty.state ||
+                  "--"
+                }
+              />
+
+              <InfoItem
+                label="Pincode"
+                value={
+                  selectedParty.pincode ||
+                  "--"
+                }
+              />
+
+              <div className="sm:col-span-2">
+                <InfoItem
+                  label="Address"
+                  value={
+                    selectedParty.address ||
+                    "--"
+                  }
+                />
+              </div>
             </div>
           </InfoSection>
-
-          {/* ====================================================
-              ACCOUNT LEDGER
-          ==================================================== */}
-
-          <section
-            className="
-              overflow-hidden
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              shadow-[0_2px_12px_rgba(15,23,42,0.04)]
-            "
-          >
-            <div
-              className="
-                flex
-                flex-col
-                gap-3
-                border-b
-                border-slate-200
-                px-4
-                py-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-                sm:px-5
-              "
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <Wallet
-                    size={16}
-                    className="shrink-0 text-[#17357A]"
-                  />
-
-                  <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                    Account Ledger
-                  </h2>
-                </div>
-
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Complete transaction history for this party.
-                </p>
-              </div>
-
-              <div
-                className="
-                  w-fit
-                  rounded-lg
-                  bg-slate-50
-                  px-3
-                  py-2
-                  sm:text-right
-                "
-              >
-                <p
-                  className="
-                    text-[9px]
-                    font-semibold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
-                  Transactions
-                </p>
-
-                <p className="mt-0.5 text-sm font-bold text-slate-900">
-                  {ledger.length}
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 sm:p-4">
-              {loading ? (
-                <div
-                  className="
-                    flex
-                    min-h-[180px]
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-slate-50
-                  "
-                >
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-slate-600">
-                      Loading transactions...
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      Please wait.
-                    </p>
-                  </div>
-                </div>
-              ) : ledger.length === 0 ? (
-                <div
-                  className="
-                    flex
-                    min-h-[180px]
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-dashed
-                    border-slate-200
-                    bg-slate-50/70
-                    p-6
-                  "
-                >
-                  <div className="max-w-sm text-center">
-                    <div
-                      className="
-                        mx-auto
-                        flex
-                        h-11
-                        w-11
-                        items-center
-                        justify-center
-                        rounded-xl
-                        bg-white
-                        text-slate-400
-                        shadow-sm
-                        ring-1
-                        ring-slate-200
-                      "
-                    >
-                      <Wallet size={17} />
-                    </div>
-
-                    <h3 className="mt-3 text-sm font-bold text-slate-900">
-                      No Transactions Yet
-                    </h3>
-
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Record the first transaction
-                      using the buttons above.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-slate-100
-                  "
-                >
-                  {ledger.map(
-                    (transaction: any) => (
-                      <LedgerEntryCard
-                        key={
-                          transaction._id
-                        }
-                        transaction={
-                          transaction
-                        }
-                        onDelete={
-                          onDelete
-                        }
-                      />
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
         </div>
       </main>
 

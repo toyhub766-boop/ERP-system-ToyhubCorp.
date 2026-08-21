@@ -62,20 +62,42 @@ export const createParty = async (
   res: Response
 ) => {
   try {
-    const count =
-      await AccountParty.countDocuments();
+    const lastParty =
+  await AccountParty.findOne()
+    .sort({ createdAt: -1 })
+    .select("partyCode");
+
+let nextNumber = 1;
+
+if (lastParty?.partyCode) {
+  const match =
+    lastParty.partyCode.match(
+      /PARTY-(\d+)/
+    );
+
+  if (match) {
+    nextNumber =
+      Number(match[1]) + 1;
+  }
+}
+
+const partyCode =
+  `PARTY-${String(
+    nextNumber
+  ).padStart(3, "0")}`;
 
     const openingBalance = Number(
       req.body.openingBalance || 0
     );
 
     const party = await AccountParty.create({
-      partyCode: `PARTY-${String(
-        count + 1
-      ).padStart(3, "0")}`,
+      partyCode,
 
       partyType:
         req.body.partyType || "CUSTOMER",
+
+      firmName:
+        req.body.firmName || "",
 
       companyName:
         req.body.companyName,
@@ -191,11 +213,14 @@ export const updateParty = async (
 ) => {
   try {
     const updateData = {
-      partyType:
-        req.body.partyType,
+  partyType:
+    req.body.partyType,
 
-      companyName:
-        req.body.companyName,
+  firmName:
+    req.body.firmName || "",
+
+  companyName:
+    req.body.companyName,
 
       contactPerson:
         req.body.contactPerson,

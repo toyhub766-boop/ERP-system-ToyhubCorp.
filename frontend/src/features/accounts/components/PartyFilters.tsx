@@ -2,6 +2,11 @@ interface Props {
   search: string;
   setSearch: (value: string) => void;
 
+  firmNameFilter: string;
+  setFirmNameFilter: (value: string) => void;
+
+  firmNames: string[];
+
   statusFilter: string;
   setStatusFilter: (value: string) => void;
 
@@ -18,12 +23,20 @@ interface Props {
 const PartyFilters = ({
   search,
   setSearch,
+
+  firmNameFilter,
+  setFirmNameFilter,
+  firmNames,
+
   statusFilter,
   setStatusFilter,
+
   balanceFilter,
   setBalanceFilter,
+
   dueDateFilter,
   setDueDateFilter,
+
   sortBy,
   setSortBy,
 }: Props) => {
@@ -31,7 +44,6 @@ const PartyFilters = ({
     <div className="space-y-3 border-b border-slate-200 bg-white p-3">
 
       {/* SEARCH */}
-
       <input
         value={search}
         onChange={(e) =>
@@ -57,9 +69,46 @@ const PartyFilters = ({
       />
 
       {/* FILTERS */}
-
       <div className="grid grid-cols-2 gap-2">
 
+        {/* FIRM NAME */}
+        <select
+          value={firmNameFilter}
+          onChange={(e) =>
+            setFirmNameFilter(
+              e.target.value
+            )
+          }
+          className="
+            h-9
+            min-w-0
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            px-2.5
+            text-xs
+            font-medium
+            text-slate-600
+            outline-none
+            focus:border-[#17357A]
+          "
+        >
+          <option value="ALL">
+            All Firms
+          </option>
+
+          {firmNames.map((firm) => (
+            <option
+              key={firm}
+              value={firm}
+            >
+              {firm}
+            </option>
+          ))}
+        </select>
+
+        {/* STATUS */}
         <select
           value={statusFilter}
           onChange={(e) =>
@@ -95,6 +144,7 @@ const PartyFilters = ({
           </option>
         </select>
 
+        {/* BALANCE */}
         <select
           value={balanceFilter}
           onChange={(e) =>
@@ -134,6 +184,7 @@ const PartyFilters = ({
           </option>
         </select>
 
+        {/* DUE DATE */}
         <select
           value={dueDateFilter}
           onChange={(e) =>
@@ -177,6 +228,7 @@ const PartyFilters = ({
           </option>
         </select>
 
+        {/* SORT */}
         <select
           value={sortBy}
           onChange={(e) =>
@@ -225,7 +277,6 @@ const PartyFilters = ({
         </select>
 
       </div>
-
     </div>
   );
 };

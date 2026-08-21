@@ -34,7 +34,13 @@ import {
 } from "lucide-react";
 
 const AccountsPage = () => {
-  const [parties, setParties] =
+  const [parties, setParties] = useState<any[]>([]);
+
+  /*
+   * This is the exact list currently visible
+   * after PartyList filters are applied.
+   */
+  const [filteredParties, setFilteredParties] =
     useState<any[]>([]);
 
   const [selectedParty, setSelectedParty] =
@@ -121,6 +127,15 @@ const AccountsPage = () => {
 
       setParties(data);
 
+      /*
+       * Keep filtered parties initially aligned
+       * with the complete list.
+       *
+       * PartyList will immediately replace this
+       * with its actual filtered result.
+       */
+      setFilteredParties(data);
+
       return data;
     } catch (error) {
       console.error(
@@ -129,6 +144,7 @@ const AccountsPage = () => {
       );
 
       setParties([]);
+      setFilteredParties([]);
 
       return [];
     }
@@ -401,132 +417,182 @@ const AccountsPage = () => {
      WHOLE ACCOUNTS EXPORT
   ============================================================ */
 
-  const handleExportAccounts =
-    async (
-      format: "PDF" | "EXCEL"
-    ) => {
-      setAccountsExportOpen(false);
+  const handleExportAccounts = async (
+  format: "PDF" | "EXCEL"
+) => {
+  setAccountsExportOpen(false);
+
+  try {
+    // IMPORTANT:
+    // Export exactly the parties currently visible
+    // after all filters.
+    const partiesToExport = filteredParties;
+
+    if (partiesToExport.length === 0) {
+      alert("There are no accounts to export.");
+      return;
+    }
+
+    const rows: any[] = [];
+
+    for (const party of partiesToExport) {
+      let youllGive = 0;
+      let youllGet = 0;
+
+      // ----------------------------------------------------------
+      // Load transactions only to calculate You Gave / You Got.
+      // The PARTY itself is always exported, even with zero
+      // transactions.
+      // ----------------------------------------------------------
 
       try {
-        if (!parties.length) {
-          alert(
-            "There are no accounts to export."
-          );
-
-          return;
-        }
-
-        const rows: any[] = [];
-
-        for (const party of parties) {
-          try {
-            const partyLedger =
-              await getPartyLedger(
-                party._id
-              );
-
-            partyLedger.forEach(
-              (transaction: any) => {
-                rows.push({
-                  date:
-                    transaction.createdAt ||
-                    transaction.date,
-
-                  partyCode:
-                    party.partyCode || "--",
-
-                  partyName:
-                    party.companyName || "--",
-
-                  partyType:
-                    party.partyType || "--",
-
-                  contactPerson:
-                    party.contactPerson || "--",
-
-                  transactionType:
-                    transaction.transactionType ===
-                    "MONEY_IN"
-                      ? "Money In"
-                      : "Money Out",
-
-                  paymentMethod:
-                    transaction.paymentMethod ||
-                    "--",
-
-                  amount:
-                    Number(
-                      transaction.amount || 0
-                    ),
-
-                  balance:
-                    Number(
-                      transaction.balanceAfterTransaction ||
-                        0
-                    ),
-
-                  remarks:
-                    transaction.remarks ||
-                    "--",
-                });
-              }
-            );
-          } catch (error) {
-            console.error(
-              `Failed loading ledger for ${party.companyName}`,
-              error
-            );
-          }
-        }
-
-        rows.sort(
-          (a, b) =>
-            new Date(a.date).getTime() -
-            new Date(b.date).getTime()
+        const partyLedger = await getPartyLedger(
+          party._id
         );
 
-        const summary = {
-          totalParties:
-            parties.length,
+        if (Array.isArray(partyLedger)) {
+          partyLedger.forEach(
+            (transaction: any) => {
+              const amount = Number(
+                transaction.amount || 0
+              );
 
-          customers:
-            customers.length,
+              if (
+                transaction.transactionType ===
+                "MONEY_OUT"
+              ) {
+                youllGive += amount;
+              }
 
-          suppliers:
-            suppliers.length,
-
-          companyExpenses:
-            companyExpenses.length,
-
-          youllGet,
-          youllGive,
-        };
-
-        if (format === "PDF") {
-          await exportAccountsPdf(
-            rows,
-            summary,
-            "toy-hub-accounts-ledger"
-          );
-        } else {
-          await exportAccountsExcel(
-            rows,
-            summary,
-            "toy-hub-accounts-ledger"
+              if (
+                transaction.transactionType ===
+                "MONEY_IN"
+              ) {
+                youllGet += amount;
+              }
+            }
           );
         }
       } catch (error) {
         console.error(
-          "Accounts export failed:",
+          `Failed to load ledger for ${party.companyName}:`,
           error
         );
 
-        alert(
-          "Failed to export whole accounts ledger."
-        );
+        // Do NOT remove the party from the export.
+        // It simply gets zero transaction values.
       }
+
+      // ----------------------------------------------------------
+      // ONE ROW PER PARTY
+      // ----------------------------------------------------------
+
+      rows.push({
+        partyCode:
+          party.partyCode || "--",
+
+        partyName:
+          party.companyName || "--",
+
+        contactPerson:
+          party.contactPerson || "--",
+
+        openingBalance: Number(
+          party.openingBalance || 0
+        ),
+
+        youllGive,
+
+        youllGet,
+
+        balance: Number(
+          party.currentBalance || 0
+        ),
+      });
+    }
+
+    // ----------------------------------------------------------
+    // SUMMARY
+    // ----------------------------------------------------------
+
+    const customers =
+      partiesToExport.filter(
+        (party) =>
+          party.partyType === "CUSTOMER"
+      ).length;
+
+    const suppliers =
+      partiesToExport.filter(
+        (party) =>
+          party.partyType === "SUPPLIER"
+      ).length;
+
+    const companyExpenses =
+      partiesToExport.filter(
+        (party) =>
+          party.partyType ===
+          "COMPANY_EXPENSE"
+      ).length;
+
+    const totalYoullGet =
+      rows.reduce(
+        (sum, row) =>
+          sum + Number(row.youllGet || 0),
+        0
+      );
+
+    const totalYoullGive =
+      rows.reduce(
+        (sum, row) =>
+          sum + Number(row.youllGive || 0),
+        0
+      );
+
+    const summary = {
+      totalParties:
+        partiesToExport.length,
+
+      customers,
+
+      suppliers,
+
+      companyExpenses,
+
+      youllGet:
+        totalYoullGet,
+
+      youllGive:
+        totalYoullGive,
     };
 
+    // ----------------------------------------------------------
+    // EXPORT
+    // ----------------------------------------------------------
+
+    if (format === "PDF") {
+      await exportAccountsPdf(
+        rows,
+        summary,
+        "toy-hub-whole-accounts-ledger"
+      );
+    } else {
+      await exportAccountsExcel(
+        rows,
+        summary,
+        "toy-hub-whole-accounts-ledger"
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Accounts export failed:",
+      error
+    );
+
+    alert(
+      "Failed to export whole accounts ledger."
+    );
+  }
+};
   /* ============================================================
      EFFECTS
   ============================================================ */
@@ -754,8 +820,6 @@ const AccountsPage = () => {
 
         {/* ======================================================
             SUMMARY
-
-            Desktop remains exactly as before.
         ====================================================== */}
 
         <div
@@ -801,30 +865,25 @@ const AccountsPage = () => {
 
         {/* ======================================================
             DESKTOP WORKSPACE
-
-            IMPORTANT:
-            Existing desktop structure is isolated here.
-
-            DO NOT CHANGE THIS SECTION.
         ====================================================== */}
 
         <div
           className="
             hidden
             min-h-0
-            h-[680px]
+            h-[720px]
             grid-cols-12
             gap-5
             xl:grid
           "
         >
-
-          {/* PARTY LIST */}
-
           <section
             className="
+              flex
+              h-full
               min-h-0
               min-w-0
+              flex-col
               overflow-hidden
               rounded-2xl
               border
@@ -845,15 +904,19 @@ const AccountsPage = () => {
               onAddParty={
                 handleAddParty
               }
+              onFilteredPartiesChange={
+                setFilteredParties
+              }
             />
           </section>
 
-          {/* LEDGER */}
-
           <section
             className="
+              flex
+              h-full
               min-h-0
               min-w-0
+              flex-col
               overflow-hidden
               rounded-2xl
               border
@@ -893,19 +956,10 @@ const AccountsPage = () => {
               }
             />
           </section>
-
         </div>
 
         {/* ======================================================
             MOBILE / TABLET WORKSPACE
-
-            Below xl we switch between:
-            PARTY LIST
-            OR
-            PARTY DETAIL
-
-            This prevents PartyList and LedgerPanel from
-            stacking endlessly.
         ====================================================== */}
 
         <div
@@ -914,11 +968,6 @@ const AccountsPage = () => {
             xl:hidden
           "
         >
-
-          {/* ====================================================
-              MOBILE PARTY LIST
-          ==================================================== */}
-
           {!selectedParty && (
             <section
               className="
@@ -946,13 +995,12 @@ const AccountsPage = () => {
                 onAddParty={
                   handleAddParty
                 }
+                onFilteredPartiesChange={
+                  setFilteredParties
+                }
               />
             </section>
           )}
-
-          {/* ====================================================
-              MOBILE PARTY DETAIL
-          ==================================================== */}
 
           {selectedParty && (
             <section
@@ -970,9 +1018,6 @@ const AccountsPage = () => {
                 sm:h-[620px]
               "
             >
-
-              {/* MOBILE BACK BAR */}
-
               <div
                 className="
                   flex
@@ -1050,8 +1095,6 @@ const AccountsPage = () => {
                 </div>
               </div>
 
-              {/* LEDGER DETAIL */}
-
               <div
                 className="
                   min-h-0
@@ -1089,10 +1132,8 @@ const AccountsPage = () => {
                   }
                 />
               </div>
-
             </section>
           )}
-
         </div>
 
         {/* ======================================================

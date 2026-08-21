@@ -1,19 +1,15 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-
 import logo from "../assets/images/logo.png";
 
 interface AccountExportRow {
-  date: string | Date;
   partyCode: string;
   partyName: string;
-  partyType: string;
   contactPerson: string;
-  transactionType: string;
-  paymentMethod: string;
-  amount: number;
+  openingBalance: number;
+  youllGive: number;
+  youllGet: number;
   balance: number;
-  remarks: string;
 }
 
 interface AccountExportSummary {
@@ -25,299 +21,475 @@ interface AccountExportSummary {
   youllGive: number;
 }
 
-const formatAmount = (value: number) =>
-  Number(value || 0).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-const formatDate = (value: string | Date) => {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "--";
-  }
-
-  return date.toLocaleDateString("en-IN");
+const formatAmount = (
+  value: number
+) => {
+  return Number(value || 0).toLocaleString(
+    "en-IN",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
 };
 
 const getImageData = async (
   imagePath: string
 ): Promise<string> => {
-  const response = await fetch(imagePath);
-  const blob = await response.blob();
+  const response =
+    await fetch(imagePath);
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+  const blob =
+    await response.blob();
 
-    reader.onloadend = () => {
-      resolve(reader.result as string);
-    };
+  return new Promise(
+    (resolve, reject) => {
+      const reader =
+        new FileReader();
 
-    reader.onerror = reject;
+      reader.onloadend = () => {
+        resolve(
+          reader.result as string
+        );
+      };
 
-    reader.readAsDataURL(blob);
-  });
-};
+      reader.onerror = reject;
 
-export const exportAccountsPdf = async (
-  rows: AccountExportRow[],
-  summary: AccountExportSummary,
-  fileName: string
-) => {
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "mm",
-    format: "a4",
-  });
-
-  // ==========================================
-  // LOGO
-  // ==========================================
-
-  try {
-    const logoData = await getImageData(logo);
-
-    doc.addImage(
-      logoData,
-      "PNG",
-      14,
-      10,
-      28,
-      16
-    );
-  } catch (error) {
-    console.error(
-      "Failed to load logo:",
-      error
-    );
-  }
-
-  // ==========================================
-  // HEADER
-  // ==========================================
-
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-
-  doc.text(
-    "TOY HUB CORPORATION",
-    48,
-    17
-  );
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-
-  doc.text(
-    "Accounts Ledger Report",
-    48,
-    24
-  );
-
-  doc.setFontSize(8);
-
-  doc.text(
-    `Generated: ${new Date().toLocaleString(
-      "en-IN"
-    )}`,
-    283,
-    17,
-    {
-      align: "right",
+      reader.readAsDataURL(blob);
     }
   );
+};
 
-  // ==========================================
-  // SUMMARY
-  // ==========================================
+export const exportAccountsPdf =
+  async (
+    rows: AccountExportRow[],
+    summary: AccountExportSummary,
+    fileName: string
+  ) => {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
 
-  const summaryY = 34;
-
-  autoTable(doc, {
-    startY: summaryY,
-
-    theme: "grid",
-
-    head: [[
-      "Total Parties",
-      "Customers",
-      "Suppliers",
-      "Company Expenses",
-      "You'll Get",
-      "You'll Give",
-    ]],
-
-    body: [[
-      summary.totalParties,
-      summary.customers,
-      summary.suppliers,
-      summary.companyExpenses,
-      formatAmount(summary.youllGet),
-      formatAmount(summary.youllGive),
-    ]],
-
-    styles: {
-      fontSize: 8,
-      cellPadding: 4,
-      halign: "center",
-      valign: "middle",
-    },
-
-    headStyles: {
-      fontStyle: "bold",
-    },
-  });
-
-  // ==========================================
-  // TRANSACTIONS
-  // ==========================================
-
-  const transactionRows =
-    rows.map((row) => [
-      formatDate(row.date),
-      row.partyCode || "--",
-      row.partyName || "--",
-      row.partyType || "--",
-      row.contactPerson || "--",
-      row.transactionType || "--",
-      row.paymentMethod || "--",
-      formatAmount(row.amount),
-      formatAmount(row.balance),
-      row.remarks || "--",
-    ]);
-
-  const finalY =
-    (doc as any).lastAutoTable?.finalY ||
-    55;
-
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-
-  doc.text(
-    "Transaction Details",
-    14,
-    finalY + 10
-  );
-
-  autoTable(doc, {
-    startY: finalY + 14,
-
-    theme: "striped",
-
-    head: [[
-      "Date",
-      "Party Code",
-      "Party",
-      "Type",
-      "Contact",
-      "Transaction",
-      "Payment",
-      "Amount",
-      "Balance",
-      "Remarks",
-    ]],
-
-    body: transactionRows,
-
-    styles: {
-      fontSize: 7,
-      cellPadding: 3,
-      valign: "middle",
-    },
-
-    headStyles: {
-      fontStyle: "bold",
-      halign: "center",
-    },
-
-    columnStyles: {
-      0: {
-        cellWidth: 22,
-      },
-      1: {
-        cellWidth: 24,
-      },
-      2: {
-        cellWidth: 40,
-      },
-      3: {
-        cellWidth: 27,
-      },
-      4: {
-        cellWidth: 30,
-      },
-      5: {
-        cellWidth: 27,
-      },
-      6: {
-        cellWidth: 24,
-      },
-      7: {
-        cellWidth: 27,
-        halign: "right",
-      },
-      8: {
-        cellWidth: 27,
-        halign: "right",
-      },
-      9: {
-        cellWidth: 40,
-      },
-    },
-
-    didParseCell: (data) => {
-      if (
-        data.section === "body" &&
-        (data.column.index === 7 ||
-          data.column.index === 8)
-      ) {
-        data.cell.styles.halign =
-          "right";
-      }
-    },
-  });
-
-  // ==========================================
-  // FOOTER
-  // ==========================================
-
-  const pageCount =
-    (doc as any).internal
-      .getNumberOfPages();
-
-  for (
-    let page = 1;
-    page <= pageCount;
-    page++
-  ) {
-    doc.setPage(page);
+    const pageWidth =
+      doc.internal.pageSize.getWidth();
 
     const pageHeight =
-      doc.internal.pageSize.height;
+      doc.internal.pageSize.getHeight();
 
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    // ==========================================================
+    // LOGO
+    // ==========================================================
+
+    try {
+      const logoData =
+        await getImageData(logo);
+
+      doc.addImage(
+        logoData,
+        "PNG",
+        14,
+        10,
+        27,
+        15
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load logo:",
+        error
+      );
+    }
+
+    // ==========================================================
+    // HEADER
+    // ==========================================================
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setFontSize(17);
 
     doc.text(
-      `Page ${page} of ${pageCount}`,
-      283,
-      pageHeight - 8,
+      "TOY HUB CORPORATION",
+      47,
+      17
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(10);
+
+    doc.text(
+      "Whole Accounts Ledger",
+      47,
+      23
+    );
+
+    doc.setFontSize(7.5);
+
+    doc.text(
+      `Generated: ${new Date().toLocaleString(
+        "en-IN"
+      )}`,
+      pageWidth - 14,
+      16,
       {
         align: "right",
       }
     );
 
-    doc.text(
-      "Toy Hub Corporation — Accounts",
-      14,
-      pageHeight - 8
+    // ==========================================================
+    // DIVIDER
+    // ==========================================================
+
+    doc.setDrawColor(
+      190,
+      198,
+      210
     );
-  }
 
-  // ==========================================
-  // SAVE
-  // ==========================================
+    doc.line(
+      14,
+      30,
+      pageWidth - 14,
+      30
+    );
 
-  doc.save(`${fileName}.pdf`);
-};
+    // ==========================================================
+    // SUMMARY
+    // ==========================================================
+
+    autoTable(doc, {
+      startY: 35,
+
+      theme: "grid",
+
+      head: [[
+        "Total Parties",
+        "Customers",
+        "Suppliers",
+        "Company Expenses",
+      ]],
+
+      body: [[
+        summary.totalParties,
+        summary.customers,
+        summary.suppliers,
+        summary.companyExpenses,
+      ]],
+
+      margin: {
+        left: 14,
+        right: 14,
+      },
+
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 3,
+        halign: "center",
+        valign: "middle",
+      },
+
+      headStyles: {
+        fontStyle: "bold",
+      },
+    });
+
+    const summaryFinalY =
+      (doc as any).lastAutoTable
+        ?.finalY || 52;
+
+    // ==========================================================
+    // REPORT TITLE
+    // ==========================================================
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setFontSize(11);
+
+    doc.text(
+      "Party Ledger",
+      14,
+      summaryFinalY + 10
+    );
+
+    // ==========================================================
+    // PARTY TABLE
+    // ==========================================================
+
+    const tableRows =
+      rows.map((row) => [
+        row.partyCode || "--",
+        row.partyName || "--",
+        row.contactPerson || "--",
+        formatAmount(
+          row.openingBalance
+        ),
+        formatAmount(
+          row.youllGive
+        ),
+        formatAmount(
+          row.youllGet
+        ),
+        formatAmount(
+          row.balance
+        ),
+      ]);
+
+    autoTable(doc, {
+      startY:
+        summaryFinalY + 14,
+
+      theme: "striped",
+
+      head: [[
+        "Party Code",
+        "Party Name",
+        "Contact Person",
+        "Opening",
+        "You Gave",
+        "You Got",
+        "Balance",
+      ]],
+
+      body: tableRows,
+
+      margin: {
+        left: 14,
+        right: 14,
+        top: 10,
+        bottom: 15,
+      },
+
+      styles: {
+        fontSize: 7,
+        cellPadding: 2.5,
+        valign: "middle",
+        overflow: "linebreak",
+      },
+
+      headStyles: {
+        fontStyle: "bold",
+        halign: "center",
+      },
+
+      columnStyles: {
+        0: {
+          cellWidth: 24,
+        },
+
+        1: {
+          cellWidth: 40,
+        },
+
+        2: {
+          cellWidth: 31,
+        },
+
+        3: {
+          cellWidth: 24,
+          halign: "right",
+        },
+
+        4: {
+          cellWidth: 24,
+          halign: "right",
+        },
+
+        5: {
+          cellWidth: 24,
+          halign: "right",
+        },
+
+        6: {
+          cellWidth: 25,
+          halign: "right",
+        },
+      },
+
+      didParseCell: (
+        data
+      ) => {
+        if (
+          data.section ===
+            "body" &&
+          data.column.index >= 3
+        ) {
+          data.cell.styles.halign =
+            "right";
+        }
+      },
+
+      didDrawPage: () => {
+        doc.setFontSize(7);
+
+        doc.setFont(
+          "helvetica",
+          "normal"
+        );
+
+        doc.setTextColor(
+          100,
+          100,
+          100
+        );
+
+        doc.text(
+          "Toy Hub Corporation — Whole Accounts Ledger",
+          14,
+          pageHeight - 8
+        );
+
+        doc.text(
+          `Page ${doc.getNumberOfPages()}`,
+          pageWidth - 14,
+          pageHeight - 8,
+          {
+            align: "right",
+          }
+        );
+
+        doc.setTextColor(
+          0,
+          0,
+          0
+        );
+      },
+    });
+
+    // ==========================================================
+    // TOTAL
+    // ==========================================================
+
+    const totalOpening =
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          Number(
+            row.openingBalance || 0
+          ),
+        0
+      );
+
+    const totalGive =
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          Number(
+            row.youllGive || 0
+          ),
+        0
+      );
+
+    const totalGet =
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          Number(
+            row.youllGet || 0
+          ),
+        0
+      );
+
+    const totalBalance =
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          Number(
+            row.balance || 0
+          ),
+        0
+      );
+
+    const finalY =
+      (doc as any).lastAutoTable
+        ?.finalY || 60;
+
+    if (
+      finalY < pageHeight - 35
+    ) {
+      autoTable(doc, {
+        startY: finalY + 5,
+
+        theme: "grid",
+
+        body: [[
+          "TOTAL",
+          "",
+          "",
+          formatAmount(
+            totalOpening
+          ),
+          formatAmount(
+            totalGive
+          ),
+          formatAmount(
+            totalGet
+          ),
+          formatAmount(
+            totalBalance
+          ),
+        ]],
+
+        margin: {
+          left: 14,
+          right: 14,
+        },
+
+        styles: {
+          fontSize: 7.5,
+          cellPadding: 3,
+          fontStyle: "bold",
+          halign: "right",
+        },
+
+        columnStyles: {
+          0: {
+            cellWidth: 24,
+            halign: "left",
+          },
+
+          1: {
+            cellWidth: 40,
+          },
+
+          2: {
+            cellWidth: 31,
+          },
+
+          3: {
+            cellWidth: 24,
+          },
+
+          4: {
+            cellWidth: 24,
+          },
+
+          5: {
+            cellWidth: 24,
+          },
+
+          6: {
+            cellWidth: 25,
+          },
+        },
+      });
+    }
+
+    // ==========================================================
+    // SAVE
+    // ==========================================================
+
+    doc.save(
+      `${fileName}.pdf`
+    );
+  };

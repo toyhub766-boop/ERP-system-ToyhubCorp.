@@ -25,6 +25,7 @@ const AddPartyModal = ({
   >("CUSTOMER");
 
   const initialForm = {
+    firmName: "",
     companyName: "",
     contactPerson: "",
     email: "",
@@ -76,7 +77,7 @@ const AddPartyModal = ({
 
     return new Date(
       date.getTime() -
-        date.getTimezoneOffset() * 60000
+      date.getTimezoneOffset() * 60000
     )
       .toISOString()
       .split("T")[0];
@@ -107,10 +108,13 @@ const AddPartyModal = ({
         editParty.partyType === "CUSTOMER"
           ? editParty.customerDetails
           : editParty.partyType === "SUPPLIER"
-          ? editParty.supplierDetails
-          : editParty.companyExpenseDetails;
+            ? editParty.supplierDetails
+            : editParty.companyExpenseDetails;
 
       setForm({
+        firmName:
+          editParty.firmName || "",
+
         companyName:
           editParty.companyName || "",
 
@@ -226,6 +230,9 @@ const AddPartyModal = ({
     const payload = {
       partyType,
 
+      firmName:
+        form.firmName.trim(),
+
       companyName:
         form.companyName.trim(),
 
@@ -313,11 +320,11 @@ const AddPartyModal = ({
 
       alert(
         error?.response?.data?.message ||
-          (
-            editParty
-              ? "Failed to update party."
-              : "Failed to create party."
-          )
+        (
+          editParty
+            ? "Failed to update party."
+            : "Failed to create party."
+        )
       );
     } finally {
       setSaving(false);
@@ -406,20 +413,18 @@ const AddPartyModal = ({
               onClick={() =>
                 setPartyType(
                   tab.value as
-                    | "CUSTOMER"
-                    | "SUPPLIER"
-                    | "COMPANY_EXPENSE"
+                  | "CUSTOMER"
+                  | "SUPPLIER"
+                  | "COMPANY_EXPENSE"
                 )
               }
-              className={`flex-1 px-3 py-3 text-sm font-semibold transition ${
-                partyType === tab.value
+              className={`flex-1 px-3 py-3 text-sm font-semibold transition ${partyType === tab.value
                   ? "border-b-2 border-[#17357A] text-[#17357A]"
                   : "text-slate-500 hover:text-slate-700"
-              } ${
-                editParty
+                } ${editParty
                   ? "cursor-not-allowed opacity-70"
                   : ""
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -454,6 +459,31 @@ const AddPartyModal = ({
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
                 <div>
+  <label className={labelClass}>
+    Firm Name
+  </label>
+
+  <select
+    value={form.firmName}
+    onChange={(e) =>
+      updateField("firmName", e.target.value)
+    }
+    className={inputClass}
+  >
+    <option value="">Select firm</option>
+    <option value="Mehak Enterprises">
+      Mehak Enterprises
+    </option>
+    <option value="ToyHub Corp">
+      ToyHub Corp
+    </option>
+    <option value="Firm 3">
+      Firm 3
+    </option>
+  </select>
+</div>
+
+                <div>
                   <label className={labelClass}>
                     Company Name *
                   </label>
@@ -470,6 +500,8 @@ const AddPartyModal = ({
                     className={inputClass}
                   />
                 </div>
+
+
 
                 <div>
                   <label className={labelClass}>
@@ -998,63 +1030,63 @@ const AddPartyModal = ({
 
             {partyType ===
               "COMPANY_EXPENSE" && (
-              <section>
+                <section>
 
-                <div className="mb-5">
-                  <h3 className="text-lg font-bold text-slate-900">
-                    Company Expense
-                  </h3>
+                  <div className="mb-5">
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Company Expense
+                    </h3>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    Information about this company expense account.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-5">
-
-                  <div>
-                    <label className={labelClass}>
-                      Expense Category
-                    </label>
-
-                    <input
-                      value={
-                        form.expenseCategory
-                      }
-                      onChange={(e) =>
-                        updateField(
-                          "expenseCategory",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Expense category"
-                      className={inputClass}
-                    />
+                    <p className="mt-1 text-sm text-slate-500">
+                      Information about this company expense account.
+                    </p>
                   </div>
 
-                  <div>
-                    <label className={labelClass}>
-                      Description
-                    </label>
+                  <div className="grid grid-cols-1 gap-5">
 
-                    <textarea
-                      rows={4}
-                      value={form.description}
-                      onChange={(e) =>
-                        updateField(
-                          "description",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Describe the expense account..."
-                      className={`${inputClass} resize-none`}
-                    />
+                    <div>
+                      <label className={labelClass}>
+                        Expense Category
+                      </label>
+
+                      <input
+                        value={
+                          form.expenseCategory
+                        }
+                        onChange={(e) =>
+                          updateField(
+                            "expenseCategory",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Expense category"
+                        className={inputClass}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>
+                        Description
+                      </label>
+
+                      <textarea
+                        rows={4}
+                        value={form.description}
+                        onChange={(e) =>
+                          updateField(
+                            "description",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Describe the expense account..."
+                        className={`${inputClass} resize-none`}
+                      />
+                    </div>
+
                   </div>
 
-                </div>
-
-              </section>
-            )}
+                </section>
+              )}
 
           </div>
         </div>
@@ -1083,8 +1115,8 @@ const AddPartyModal = ({
             {saving
               ? "Saving..."
               : editParty
-              ? "Update Party"
-              : "Create Party"}
+                ? "Update Party"
+                : "Create Party"}
           </button>
 
         </div>

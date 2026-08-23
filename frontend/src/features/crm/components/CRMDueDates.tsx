@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   FiAlertCircle,
   FiCalendar,
@@ -6,11 +11,12 @@ import {
   FiSearch,
   FiUsers,
   FiX,
-  FiArrowUpRight,
 } from "react-icons/fi";
 
-import { getCRMDueDates } from "../services/crmDue.service";
-
+import {
+  getCRMDueDates,
+  updateCRMDueDate,
+} from "../services/crmDue.service";
 
 type DueStatus =
   | "OVERDUE"
@@ -18,35 +24,45 @@ type DueStatus =
   | "UPCOMING"
   | "NO_DUE_DATE";
 
-
 const CRMDueDates = () => {
-  const [parties, setParties] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [parties, setParties] =
+    useState<any[]>([]);
 
+  const [search, setSearch] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(true);
+
+  /* =========================================================
+     INLINE EDITING
+  ========================================================= */
+
+  const [editingPartyId, setEditingPartyId] =
+    useState<string | null>(null);
+
+  const [dueDateInput, setDueDateInput] =
+    useState("");
+
+  const [savingDueDate, setSavingDueDate] =
+    useState(false);
 
   /* =========================================================
      LOAD DATA
   ========================================================= */
 
-  useEffect(() => {
-    loadDueDates();
-  }, []);
-
-
   const loadDueDates = async () => {
     try {
       setLoading(true);
 
-      const data = await getCRMDueDates();
+      const data =
+        await getCRMDueDates();
 
-      const customers = data.filter(
-        (party: any) =>
-          party.partyType === "CUSTOMER"
+      setParties(
+        Array.isArray(data)
+          ? data
+          : []
       );
-
-      setParties(customers);
-
     } catch (error) {
       console.error(
         "Failed to load CRM due dates:",
@@ -57,35 +73,107 @@ const CRMDueDates = () => {
     }
   };
 
+  useEffect(() => {
+    loadDueDates();
+  }, []);
+
+  /* =========================================================
+     DATE HELPERS
+  ========================================================= */
+
+  const formatInputDate = (
+    value?: string | null
+  ) => {
+    if (!value) {
+      return "";
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "";
+    }
+
+    return new Date(
+      date.getTime() -
+      date.getTimezoneOffset() *
+      60000
+    )
+      .toISOString()
+      .split("T")[0];
+  };
+
+  const formatDate = (
+    value?: string | null
+  ) => {
+    if (!value) {
+      return "No due date";
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "Invalid date";
+    }
+
+    return date.toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
+  };
 
   /* =========================================================
      TODAY
   ========================================================= */
 
   const today = useMemo(() => {
-    const date = new Date();
+    const date =
+      new Date();
 
-    date.setHours(0, 0, 0, 0);
+    date.setHours(
+      0,
+      0,
+      0,
+      0
+    );
 
     return date;
   }, []);
-
 
   /* =========================================================
      STATUS
   ========================================================= */
 
   const getDueStatus = (
-    dueDate?: string
+    dueDate?: string | null
   ): DueStatus => {
-
     if (!dueDate) {
       return "NO_DUE_DATE";
     }
 
-    const date = new Date(dueDate);
+    const date =
+      new Date(dueDate);
 
-    date.setHours(0, 0, 0, 0);
+    date.setHours(
+      0,
+      0,
+      0,
+      0
+    );
 
     if (date < today) {
       return "OVERDUE";
@@ -101,107 +189,166 @@ const CRMDueDates = () => {
     return "UPCOMING";
   };
 
+  /* =========================================================
+     INLINE EDIT START
+  ========================================================= */
+
+  const startDueDateEdit = (
+    party: any
+  ) => {
+    setEditingPartyId(
+      party._id
+    );
+
+    setDueDateInput(
+      formatInputDate(
+        party.dueDate
+      )
+    );
+  };
+
+  /* =========================================================
+     CANCEL INLINE EDIT
+  ========================================================= */
+
+  const cancelDueDateEdit = () => {
+    setEditingPartyId(null);
+    setDueDateInput("");
+  };
+
+  /* =========================================================
+     SAVE INLINE DUE DATE
+  ========================================================= */
+
+  const saveDueDate = async (
+    partyId: string
+  ) => {
+    try {
+      setSavingDueDate(true);
+
+      const updatedParty =
+        await updateCRMDueDate(
+          partyId,
+          dueDateInput || null
+        );
+
+      const updatedDueDate =
+        updatedParty
+          ?.customerDetails
+          ?.dueDate ||
+        null;
+
+      setParties(
+        (current) =>
+          current.map(
+            (party) =>
+              party._id === partyId
+                ? {
+                  ...party,
+                  dueDate:
+                    updatedDueDate,
+                }
+                : party
+          )
+      );
+
+      setEditingPartyId(null);
+      setDueDateInput("");
+    } catch (error) {
+      console.error(
+        "Failed to update CRM due date:",
+        error
+      );
+
+      alert(
+        "Failed to update due date."
+      );
+    } finally {
+      setSavingDueDate(false);
+    }
+  };
 
   /* =========================================================
      FILTER
   ========================================================= */
 
-  const filteredParties = useMemo(() => {
+  const filteredParties =
+    useMemo(() => {
+      const query =
+        search
+          .trim()
+          .toLowerCase();
 
-    const query =
-      search.trim().toLowerCase();
+      if (!query) {
+        return parties;
+      }
 
-    if (!query) {
-      return parties;
-    }
-
-    return parties.filter(
-      (party) =>
-        party.companyName
-          ?.toLowerCase()
-          .includes(query) ||
-        party.contactPerson
-          ?.toLowerCase()
-          .includes(query) ||
-        party.phone
-          ?.toLowerCase()
-          .includes(query)
-    );
-
-  }, [parties, search]);
-
+      return parties.filter(
+        (party) =>
+          party.companyName
+            ?.toLowerCase()
+            .includes(query) ||
+          party.contactPerson
+            ?.toLowerCase()
+            .includes(query) ||
+          party.phone
+            ?.toLowerCase()
+            .includes(query)
+      );
+    }, [
+      parties,
+      search,
+    ]);
 
   /* =========================================================
      STATUS GROUPS
   ========================================================= */
 
-  const overdue = filteredParties.filter(
-    (party) =>
-      getDueStatus(
-        party.customerDetails?.dueDate
-      ) === "OVERDUE"
-  );
+  const overdue =
+    filteredParties.filter(
+      (party) =>
+        getDueStatus(
+          party.dueDate
+        ) === "OVERDUE"
+    );
 
-  const dueToday = filteredParties.filter(
-    (party) =>
-      getDueStatus(
-        party.customerDetails?.dueDate
-      ) === "DUE_TODAY"
-  );
+  const dueToday =
+    filteredParties.filter(
+      (party) =>
+        getDueStatus(
+          party.dueDate
+        ) === "DUE_TODAY"
+    );
 
-  const upcoming = filteredParties.filter(
-    (party) =>
-      getDueStatus(
-        party.customerDetails?.dueDate
-      ) === "UPCOMING"
-  );
+  const upcoming =
+    filteredParties.filter(
+      (party) =>
+        getDueStatus(
+          party.dueDate
+        ) === "UPCOMING"
+    );
 
-  const noDueDate = filteredParties.filter(
-    (party) =>
-      getDueStatus(
-        party.customerDetails?.dueDate
-      ) === "NO_DUE_DATE"
-  );
-
+  const noDueDate =
+    filteredParties.filter(
+      (party) =>
+        getDueStatus(
+          party.dueDate
+        ) === "NO_DUE_DATE"
+    );
 
   /* =========================================================
-     FORMATTERS
+     AMOUNT
   ========================================================= */
-
-  const formatDate = (
-    date?: string
-  ) => {
-
-    if (!date) {
-      return "No due date";
-    }
-
-    const parsed = new Date(date);
-
-    if (Number.isNaN(parsed.getTime())) {
-      return "Invalid date";
-    }
-
-    return parsed.toLocaleDateString(
-      "en-IN",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
-  };
-
 
   const formatAmount = (
     value: number
   ) => {
-
     return Math.abs(
       Number(value || 0)
-    ).toLocaleString("en-IN");
+    ).toLocaleString(
+      "en-IN"
+    );
   };
-
 
   /* =========================================================
      STATUS CONFIG
@@ -210,9 +357,7 @@ const CRMDueDates = () => {
   const getStatusConfig = (
     status: DueStatus
   ) => {
-
     switch (status) {
-
       case "OVERDUE":
         return {
           label: "Overdue",
@@ -251,6 +396,9 @@ const CRMDueDates = () => {
     }
   };
 
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
     <div className="space-y-7">
@@ -269,7 +417,6 @@ const CRMDueDates = () => {
           lg:justify-between
         "
       >
-
         <div>
 
           <div
@@ -296,7 +443,6 @@ const CRMDueDates = () => {
             </span>
           </div>
 
-
           <h1
             className="
               text-3xl
@@ -309,7 +455,6 @@ const CRMDueDates = () => {
             Due Dates
           </h1>
 
-
           <p
             className="
               mt-2
@@ -320,13 +465,13 @@ const CRMDueDates = () => {
               sm:text-base
             "
           >
-            Monitor customer payment deadlines,
-            outstanding balances and upcoming
+            Monitor customer payment
+            deadlines, outstanding
+            balances and upcoming
             collection dates.
           </p>
 
         </div>
-
 
         <div
           className="
@@ -346,7 +491,6 @@ const CRMDueDates = () => {
             shadow-sm
           "
         >
-
           <FiUsers
             size={15}
             className="text-[#172B6B]"
@@ -358,11 +502,8 @@ const CRMDueDates = () => {
           {filteredParties.length !== 1
             ? "s"
             : ""}
-
         </div>
-
       </section>
-
 
       {/* =====================================================
           SEARCH
@@ -379,13 +520,7 @@ const CRMDueDates = () => {
           sm:p-4
         "
       >
-
-        <div
-          className="
-            relative
-            max-w-xl
-          "
-        >
+        <div className="relative max-w-xl">
 
           <FiSearch
             size={18}
@@ -402,9 +537,13 @@ const CRMDueDates = () => {
           <input
             value={search}
             onChange={(e) =>
-              setSearch(e.target.value)
+              setSearch(
+                e.target.value
+              )
             }
-            placeholder="Search customer, contact or phone..."
+            placeholder="
+              Search customer, contact or phone...
+            "
             className="
               h-11
               w-full
@@ -454,9 +593,7 @@ const CRMDueDates = () => {
           )}
 
         </div>
-
       </section>
-
 
       {/* =====================================================
           STAT CARDS
@@ -472,355 +609,159 @@ const CRMDueDates = () => {
         "
       >
 
-        {/* OVERDUE */}
-
         <div
           className="
-            group
             rounded-2xl
             border
             border-red-100
             bg-white
             p-5
             shadow-sm
-            transition-all
-            duration-200
-            hover:-translate-y-0.5
-            hover:shadow-md
           "
         >
-
-          <div className="flex items-start justify-between">
-
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-xl
-                bg-red-50
-                text-red-600
-              "
-            >
-              <FiAlertCircle
-                size={18}
-              />
-            </div>
-
-            <FiArrowUpRight
-              size={17}
-              className="
-                text-slate-300
-                transition
-                group-hover:text-red-400
-              "
-            />
-
-          </div>
-
-
-          <p
+          <div
             className="
-              mt-5
-              text-xs
-              font-semibold
-              uppercase
-              tracking-wide
-              text-slate-500
-            "
-          >
-            Overdue
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              tracking-tight
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              bg-red-50
               text-red-600
             "
           >
+            <FiAlertCircle size={18} />
+          </div>
+
+          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Overdue
+          </p>
+
+          <p className="mt-1 text-3xl font-bold text-red-600">
             {overdue.length}
           </p>
 
-          <p
-            className="
-              mt-1
-              text-xs
-              text-slate-400
-            "
-          >
+          <p className="mt-1 text-xs text-slate-400">
             Requires attention
           </p>
-
         </div>
-
-
-        {/* TODAY */}
 
         <div
           className="
-            group
             rounded-2xl
             border
             border-amber-100
             bg-white
             p-5
             shadow-sm
-            transition-all
-            duration-200
-            hover:-translate-y-0.5
-            hover:shadow-md
           "
         >
-
-          <div className="flex items-start justify-between">
-
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-xl
-                bg-amber-50
-                text-amber-600
-              "
-            >
-              <FiCalendar
-                size={18}
-              />
-            </div>
-
-            <FiArrowUpRight
-              size={17}
-              className="
-                text-slate-300
-                transition
-                group-hover:text-amber-400
-              "
-            />
-
-          </div>
-
-
-          <p
+          <div
             className="
-              mt-5
-              text-xs
-              font-semibold
-              uppercase
-              tracking-wide
-              text-slate-500
-            "
-          >
-            Due Today
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              tracking-tight
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              bg-amber-50
               text-amber-600
             "
           >
+            <FiCalendar size={18} />
+          </div>
+
+          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Due Today
+          </p>
+
+          <p className="mt-1 text-3xl font-bold text-amber-600">
             {dueToday.length}
           </p>
 
-          <p
-            className="
-              mt-1
-              text-xs
-              text-slate-400
-            "
-          >
+          <p className="mt-1 text-xs text-slate-400">
             Due before end of day
           </p>
-
         </div>
-
-
-        {/* UPCOMING */}
 
         <div
           className="
-            group
             rounded-2xl
             border
             border-emerald-100
             bg-white
             p-5
             shadow-sm
-            transition-all
-            duration-200
-            hover:-translate-y-0.5
-            hover:shadow-md
           "
         >
-
-          <div className="flex items-start justify-between">
-
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-xl
-                bg-emerald-50
-                text-emerald-600
-              "
-            >
-              <FiClock
-                size={18}
-              />
-            </div>
-
-            <FiArrowUpRight
-              size={17}
-              className="
-                text-slate-300
-                transition
-                group-hover:text-emerald-400
-              "
-            />
-
-          </div>
-
-
-          <p
+          <div
             className="
-              mt-5
-              text-xs
-              font-semibold
-              uppercase
-              tracking-wide
-              text-slate-500
-            "
-          >
-            Upcoming
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              tracking-tight
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              bg-emerald-50
               text-emerald-600
             "
           >
+            <FiClock size={18} />
+          </div>
+
+          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Upcoming
+          </p>
+
+          <p className="mt-1 text-3xl font-bold text-emerald-600">
             {upcoming.length}
           </p>
 
-          <p
-            className="
-              mt-1
-              text-xs
-              text-slate-400
-            "
-          >
+          <p className="mt-1 text-xs text-slate-400">
             Future payment dates
           </p>
-
         </div>
-
-
-        {/* NO DATE */}
 
         <div
           className="
-            group
             rounded-2xl
             border
             border-slate-200
             bg-white
             p-5
             shadow-sm
-            transition-all
-            duration-200
-            hover:-translate-y-0.5
-            hover:shadow-md
           "
         >
-
-          <div className="flex items-start justify-between">
-
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-xl
-                bg-slate-100
-                text-slate-500
-              "
-            >
-              <FiCalendar
-                size={18}
-              />
-            </div>
-
-            <FiArrowUpRight
-              size={17}
-              className="
-                text-slate-300
-                transition
-                group-hover:text-slate-500
-              "
-            />
-
-          </div>
-
-
-          <p
+          <div
             className="
-              mt-5
-              text-xs
-              font-semibold
-              uppercase
-              tracking-wide
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              bg-slate-100
               text-slate-500
             "
           >
+            <FiCalendar size={18} />
+          </div>
+
+          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
             No Due Date
           </p>
 
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              tracking-tight
-              text-slate-800
-            "
-          >
+          <p className="mt-1 text-3xl font-bold text-slate-800">
             {noDueDate.length}
           </p>
 
-          <p
-            className="
-              mt-1
-              text-xs
-              text-slate-400
-            "
-          >
+          <p className="mt-1 text-xs text-slate-400">
             Payment terms not configured
           </p>
-
         </div>
 
       </section>
-
 
       {/* =====================================================
           TABLE
@@ -837,8 +778,6 @@ const CRMDueDates = () => {
         "
       >
 
-        {/* TABLE HEADER */}
-
         <div
           className="
             flex
@@ -853,40 +792,17 @@ const CRMDueDates = () => {
             sm:justify-between
           "
         >
-
           <div>
-
-            <h2
-              className="
-                text-sm
-                font-bold
-                text-slate-900
-              "
-            >
+            <h2 className="text-sm font-bold text-slate-900">
               Customer Payment Schedule
             </h2>
 
-            <p
-              className="
-                mt-0.5
-                text-xs
-                text-slate-400
-              "
-            >
-              Outstanding balances and
-              payment deadlines
+            <p className="mt-0.5 text-xs text-slate-400">
+              Outstanding balances and payment deadlines
             </p>
-
           </div>
 
-
-          <div
-            className="
-              text-xs
-              font-medium
-              text-slate-400
-            "
-          >
+          <div className="text-xs font-medium text-slate-400">
             {filteredParties.length}
             {" "}
             record
@@ -894,21 +810,18 @@ const CRMDueDates = () => {
               ? "s"
               : ""}
           </div>
-
         </div>
-
 
         <div className="overflow-x-auto">
 
           <table
             className="
-              min-w-[1000px]
+              min-w-[1100px]
               w-full
             "
           >
 
             <thead>
-
               <tr
                 className="
                   border-b
@@ -917,119 +830,46 @@ const CRMDueDates = () => {
                   text-left
                 "
               >
-
-                <th
-                  className="
-                    px-5
-                    py-3.5
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
+                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                   Customer
                 </th>
 
-                <th
-                  className="
-                    px-5
-                    py-3.5
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
+                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                   Contact
                 </th>
 
-                <th
-                  className="
-                    px-5
-                    py-3.5
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
+                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                   Outstanding
                 </th>
 
-                <th
-                  className="
-                    px-5
-                    py-3.5
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
+                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                   Payment Terms
                 </th>
 
-                <th
-                  className="
-                    px-5
-                    py-3.5
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
+                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                   Due Date
                 </th>
 
-                <th
-                  className="
-                    px-5
-                    py-3.5
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
+                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                   Status
                 </th>
-
               </tr>
-
             </thead>
-
 
             <tbody>
 
               {loading ? (
-
-                /* LOADING */
-
                 Array.from({
                   length: 5,
                 }).map((_, index) => (
-
                   <tr
                     key={index}
-                    className="
-                      border-b
-                      border-slate-100
-                    "
+                    className="border-b border-slate-100"
                   >
-
                     {Array.from({
                       length: 6,
                     }).map(
                       (_, cellIndex) => (
-
                         <td
                           key={cellIndex}
                           className="px-5 py-5"
@@ -1044,29 +884,16 @@ const CRMDueDates = () => {
                             "
                           />
                         </td>
-
                       )
                     )}
-
                   </tr>
-
                 ))
-
-              ) : filteredParties.length ===
-                0 ? (
-
-                /* EMPTY */
-
+              ) : filteredParties.length === 0 ? (
                 <tr>
-
                   <td
                     colSpan={6}
-                    className="
-                      px-6
-                      py-16
-                    "
+                    className="px-6 py-16"
                   >
-
                     <div
                       className="
                         flex
@@ -1076,7 +903,6 @@ const CRMDueDates = () => {
                         text-center
                       "
                     >
-
                       <div
                         className="
                           flex
@@ -1089,54 +915,29 @@ const CRMDueDates = () => {
                           text-slate-400
                         "
                       >
-                        <FiSearch
-                          size={20}
-                        />
+                        <FiSearch size={20} />
                       </div>
 
-                      <h3
-                        className="
-                          mt-4
-                          text-sm
-                          font-semibold
-                          text-slate-800
-                        "
-                      >
+                      <h3 className="mt-4 text-sm font-semibold text-slate-800">
                         No customers found
                       </h3>
 
-                      <p
-                        className="
-                          mt-1
-                          max-w-sm
-                          text-xs
-                          leading-5
-                          text-slate-400
-                        "
-                      >
+                      <p className="mt-1 max-w-sm text-xs leading-5 text-slate-400">
                         Try changing your search
                         or add customer payment
                         information through Accounts.
                       </p>
-
                     </div>
-
                   </td>
-
                 </tr>
-
               ) : (
-
                 filteredParties.map(
                   (party) => {
-
                     const dueDate =
-                      party.customerDetails
-                        ?.dueDate;
+                      party.dueDate;
 
                     const paymentTerms =
-                      party.customerDetails
-                        ?.paymentTerms;
+                      party.paymentTerms;
 
                     const status =
                       getDueStatus(
@@ -1151,8 +952,11 @@ const CRMDueDates = () => {
                     const StatusIcon =
                       statusConfig.icon;
 
-                    return (
+                    const isEditing =
+                      editingPartyId ===
+                      party._id;
 
+                    return (
                       <tr
                         key={party._id}
                         className="
@@ -1161,7 +965,6 @@ const CRMDueDates = () => {
                           border-slate-100
                           last:border-0
                           transition-colors
-                          duration-150
                           hover:bg-slate-50/70
                         "
                       >
@@ -1169,14 +972,7 @@ const CRMDueDates = () => {
                         {/* CUSTOMER */}
 
                         <td className="px-5 py-4">
-
-                          <div
-                            className="
-                              flex
-                              items-center
-                              gap-3
-                            "
-                          >
+                          <div className="flex items-center gap-3">
 
                             <div
                               className="
@@ -1199,111 +995,54 @@ const CRMDueDates = () => {
                                 "C"}
                             </div>
 
-
-                            <div
-                              className="
-                                min-w-0
-                              "
-                            >
-
-                              <p
-                                className="
-                                  truncate
-                                  text-sm
-                                  font-semibold
-                                  text-slate-800
-                                "
-                              >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-800">
                                 {party.companyName ||
                                   "Unnamed Customer"}
                               </p>
 
-                              <p
-                                className="
-                                  mt-0.5
-                                  truncate
-                                  text-[11px]
-                                  text-slate-400
-                                "
-                              >
-                                {party.customerDetails
-                                  ?.billingName ||
-                                  "Customer account"}
+                              <p className="mt-0.5 truncate text-[11px] text-slate-400">
+                                Customer account
                               </p>
-
                             </div>
 
                           </div>
-
                         </td>
-
 
                         {/* CONTACT */}
 
                         <td className="px-5 py-4">
-
-                          <p
-                            className="
-                              text-sm
-                              font-medium
-                              text-slate-700
-                            "
-                          >
+                          <p className="text-sm font-medium text-slate-700">
                             {party.contactPerson ||
                               "—"}
                           </p>
 
-                          <p
-                            className="
-                              mt-0.5
-                              text-[11px]
-                              text-slate-400
-                            "
-                          >
+                          <p className="mt-0.5 text-[11px] text-slate-400">
                             {party.phone ||
                               "No phone"}
                           </p>
-
                         </td>
-
 
                         {/* OUTSTANDING */}
 
                         <td className="px-5 py-4">
-
-                          <p
-                            className="
-                              text-sm
-                              font-bold
-                              text-slate-900
-                            "
-                          >
+                          <p className="text-sm font-bold text-slate-900">
                             ₹
                             {formatAmount(
                               party.currentBalance ||
-                                0
+                              0
                             )}
                           </p>
 
-                          <p
-                            className="
-                              mt-0.5
-                              text-[10px]
-                              text-slate-400
-                            "
-                          >
+                          <p className="mt-0.5 text-[10px] text-slate-400">
                             Outstanding balance
                           </p>
-
                         </td>
-
 
                         {/* PAYMENT TERMS */}
 
                         <td className="px-5 py-4">
-
                           {paymentTerms ? (
-
                             <span
                               className="
                                 inline-flex
@@ -1319,59 +1058,163 @@ const CRMDueDates = () => {
                                 text-slate-600
                               "
                             >
-                              {paymentTerms}
-                              {" "}
-                              days
+                              {paymentTerms} days
                             </span>
-
                           ) : (
-
-                            <span
-                              className="
-                                text-xs
-                                text-slate-400
-                              "
-                            >
+                            <span className="text-xs text-slate-400">
                               Not set
                             </span>
+                          )}
+                        </td>
+
+                        {/* =================================================
+                            INLINE DUE DATE
+                        ================================================= */}
+
+                        {/* =================================================
+    INLINE DUE DATE EDITOR
+================================================= */}
+
+                        <td className="px-5 py-4">
+
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+
+                              <input
+                                type="date"
+                                value={dueDateInput}
+                                onChange={(e) =>
+                                  setDueDateInput(e.target.value)
+                                }
+                                autoFocus
+                                className="
+          h-9
+          w-[150px]
+          rounded-lg
+          border
+          border-slate-300
+          bg-white
+          px-2.5
+          text-sm
+          font-medium
+          text-slate-700
+          outline-none
+          focus:border-[#172B6B]
+          focus:ring-2
+          focus:ring-blue-100
+        "
+                              />
+
+                              <button
+                                type="button"
+                                disabled={savingDueDate}
+                                onClick={() =>
+                                  saveDueDate(party._id)
+                                }
+                                className="
+          h-9
+          rounded-lg
+          bg-[#172B6B]
+          px-3
+          text-xs
+          font-semibold
+          text-white
+          transition
+          hover:bg-[#223a88]
+          disabled:cursor-not-allowed
+          disabled:opacity-50
+        "
+                              >
+                                {savingDueDate
+                                  ? "Saving..."
+                                  : "Save"}
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={savingDueDate}
+                                onClick={cancelDueDateEdit}
+                                className="
+          h-9
+          rounded-lg
+          border
+          border-slate-200
+          bg-white
+          px-3
+          text-xs
+          font-semibold
+          text-slate-600
+          transition
+          hover:bg-slate-50
+          disabled:opacity-50
+        "
+                              >
+                                Cancel
+                              </button>
+
+                            </div>
+                          ) : (
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                startDueDateEdit(party)
+                              }
+                              className="
+        group
+        flex
+        items-center
+        gap-2
+        rounded-lg
+        border
+        border-transparent
+        px-2
+        py-1.5
+        text-left
+        transition
+        hover:border-slate-200
+        hover:bg-slate-50
+      "
+                            >
+
+                              <FiCalendar
+                                size={14}
+                                className="
+          shrink-0
+          text-slate-400
+          group-hover:text-[#172B6B]
+        "
+                              />
+
+                              <span
+                                className="
+          text-sm
+          font-medium
+          text-slate-700
+        "
+                              >
+                                {formatDate(dueDate)}
+                              </span>
+
+                              <span
+                                className="
+          ml-1
+          text-[10px]
+          font-semibold
+          text-[#172B6B]
+          opacity-0
+          transition
+          group-hover:opacity-100
+        "
+                              >
+                                Edit
+                              </span>
+
+                            </button>
 
                           )}
 
                         </td>
-
-
-                        {/* DATE */}
-
-                        <td className="px-5 py-4">
-
-                          <div
-                            className="
-                              flex
-                              items-center
-                              gap-2
-                              text-sm
-                              font-medium
-                              text-slate-700
-                            "
-                          >
-
-                            <FiCalendar
-                              size={14}
-                              className="
-                                shrink-0
-                                text-slate-400
-                              "
-                            />
-
-                            {formatDate(
-                              dueDate
-                            )}
-
-                          </div>
-
-                        </td>
-
-
                         {/* STATUS */}
 
                         <td className="px-5 py-4">
@@ -1390,7 +1233,6 @@ const CRMDueDates = () => {
                               ${statusConfig.badge}
                             `}
                           >
-
                             <span
                               className={`
                                 h-1.5
@@ -1405,25 +1247,20 @@ const CRMDueDates = () => {
                             />
 
                             {statusConfig.label}
-
                           </span>
 
                         </td>
 
                       </tr>
-
                     );
                   }
                 )
-
               )}
 
             </tbody>
 
           </table>
-
         </div>
-
 
         {/* ===================================================
             FOOTER
@@ -1431,7 +1268,6 @@ const CRMDueDates = () => {
 
         {!loading &&
           filteredParties.length > 0 && (
-
             <div
               className="
                 flex
@@ -1447,24 +1283,12 @@ const CRMDueDates = () => {
                 sm:justify-between
               "
             >
-
-              <p
-                className="
-                  text-[11px]
-                  text-slate-400
-                "
-              >
-                Due dates entered through
-                Accounts appear here automatically.
+              <p className="text-[11px] text-slate-400">
+                Due dates are managed directly
+                from CRM and saved to Accounts.
               </p>
 
-              <p
-                className="
-                  text-[11px]
-                  font-medium
-                  text-slate-400
-                "
-              >
+              <p className="text-[11px] font-medium text-slate-400">
                 {filteredParties.length}
                 {" "}
                 customer
@@ -1472,9 +1296,7 @@ const CRMDueDates = () => {
                   ? "s"
                   : ""}
               </p>
-
             </div>
-
           )}
 
       </section>
@@ -1482,6 +1304,5 @@ const CRMDueDates = () => {
     </div>
   );
 };
-
 
 export default CRMDueDates;

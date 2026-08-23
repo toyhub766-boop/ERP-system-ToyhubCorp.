@@ -23,14 +23,16 @@ export const getCRMDueDates = async (): Promise<
   return parties
     .filter(
       (party: any) =>
-        party.partyType === "CUSTOMER"
+        party.partyType === "CUSTOMER" &&
+        party.status === "Active"
     )
     .map(
       (party: any): CRMDueDate => ({
         _id: party._id,
 
         companyName:
-          party.companyName || "Unnamed Customer",
+          party.companyName ||
+          "Unnamed Customer",
 
         contactPerson:
           party.contactPerson || "",
@@ -39,7 +41,9 @@ export const getCRMDueDates = async (): Promise<
           party.phone || "",
 
         currentBalance:
-          Number(party.currentBalance || 0),
+          Number(
+            party.currentBalance || 0
+          ),
 
         paymentTerms:
           Number(
@@ -48,11 +52,31 @@ export const getCRMDueDates = async (): Promise<
           ),
 
         dueDate:
-          party.customerDetails?.dueDate ||
-          null,
+          party.customerDetails
+            ?.dueDate || null,
 
         partyType:
-          party.partyType || "CUSTOMER",
+          party.partyType ||
+          "CUSTOMER",
       })
     );
+};
+
+
+/* =========================================================
+   UPDATE ACCOUNT DUE DATE
+   ========================================================= */
+
+export const updateCRMDueDate = async (
+  partyId: string,
+  dueDate: string | null
+) => {
+  const res = await api.patch(
+    `/accounts/party/${partyId}/due-date`,
+    {
+      dueDate,
+    }
+  );
+
+  return res.data;
 };

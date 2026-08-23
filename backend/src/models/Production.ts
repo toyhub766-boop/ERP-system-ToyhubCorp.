@@ -20,11 +20,8 @@ export interface IProductionItem {
   product: mongoose.Types.ObjectId;
   bom: mongoose.Types.ObjectId;
   quantity: number;
-
   materialSelections: IMaterialSelection[];
-
   checklist: IProductionChecklist;
-
   actualQuantity?: number;
   completed: boolean;
   readyForDispatch: boolean;
@@ -33,13 +30,12 @@ export interface IProductionItem {
 
 export interface IProduction extends Document {
   orderNumber: string;
-
   client: mongoose.Types.ObjectId;
-
+  clientModel:
+    | "ProductionClient"
+    | "AccountParty";
   items: IProductionItem[];
-
   team: string;
-
   status:
     | "Draft"
     | "Approved"
@@ -47,17 +43,11 @@ export interface IProduction extends Document {
     | "In Progress"
     | "Completed"
     | "Cancelled";
-
   targetDate: Date;
-
   transport?: string;
-
   notes?: string;
-
   createdBy: mongoose.Types.ObjectId;
-
   completedAt?: Date;
-
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,13 +60,11 @@ const MaterialSelectionSchema =
         ref: "Product",
         required: true,
       },
-
       selectedMaterial: {
         type: Schema.Types.ObjectId,
         ref: "Product",
         required: true,
       },
-
       reason: {
         type: String,
         default: "",
@@ -94,17 +82,14 @@ const ProductionChecklistSchema =
         type: [String],
         default: [],
       },
-
       leaving: {
         type: [String],
         default: [],
       },
-
       reason: {
         type: String,
         default: "",
       },
-
       updatedAt: {
         type: Date,
         default: null,
@@ -123,26 +108,22 @@ const ProductionItemSchema =
         ref: "Product",
         required: true,
       },
-
       bom: {
         type: Schema.Types.ObjectId,
         ref: "BOM",
         required: true,
       },
-
       quantity: {
         type: Number,
         required: true,
         min: 1,
       },
-
       materialSelections: {
         type: [
           MaterialSelectionSchema,
         ],
         default: [],
       },
-
       checklist: {
         type: ProductionChecklistSchema,
         default: () => ({
@@ -151,22 +132,18 @@ const ProductionItemSchema =
           reason: "",
         }),
       },
-
       actualQuantity: {
         type: Number,
         default: null,
       },
-
       completed: {
         type: Boolean,
         default: false,
       },
-
       readyForDispatch: {
         type: Boolean,
         default: false,
       },
-
       remarks: {
         type: String,
         default: "",
@@ -188,7 +165,17 @@ const ProductionSchema =
 
       client: {
         type: Schema.Types.ObjectId,
-        ref: "ProductionClient",
+        refPath: "clientModel",
+        required: true,
+      },
+
+      clientModel: {
+        type: String,
+        enum: [
+          "ProductionClient",
+          "AccountParty",
+        ],
+        default: "ProductionClient",
         required: true,
       },
 

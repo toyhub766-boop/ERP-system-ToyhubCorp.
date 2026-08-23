@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 interface Props {
   open: boolean;
   clients: any[];
+  accountCustomers: any[];
   boms: any[];
   rawProducts: any[];
   onClose: () => void;
@@ -34,6 +35,7 @@ const emptyItem = (): Item => ({
 export default function ProductionCreateModal({
   open,
   clients,
+  accountCustomers,
   boms,
   rawProducts,
   onClose,
@@ -41,6 +43,19 @@ export default function ProductionCreateModal({
   onCreateClient,
 }: Props) {
   const [client, setClient] = useState("");
+  const [clientModel, setClientModel] =
+    useState<
+      "ProductionClient" |
+      "AccountParty" |
+      ""
+    >("");
+
+  const [clientSearch, setClientSearch] =
+    useState("");
+
+  const [showClientOptions, setShowClientOptions] =
+    useState(false);
+
   const [items, setItems] = useState<Item[]>([
     emptyItem(),
   ]);
@@ -74,11 +89,16 @@ export default function ProductionCreateModal({
     if (!open) return;
 
     setClient("");
+    setClientModel("");
+    setClientSearch("");
+    setShowClientOptions(false);
+
     setItems([emptyItem()]);
     setTeam("");
     setTargetDate("");
     setTransport("");
     setNotes("");
+
     setShowNewClient(false);
     setNewClientName("");
     setNewClientPhone("");
@@ -152,7 +172,13 @@ export default function ProductionCreateModal({
         });
 
       setClient(created._id);
+      setClientModel("ProductionClient");
+      setClientSearch(
+        created.name || ""
+      );
+      setShowClientOptions(false);
       setShowNewClient(false);
+
       setNewClientName("");
       setNewClientPhone("");
       setNewClientContact("");
@@ -163,7 +189,7 @@ export default function ProductionCreateModal({
   };
 
   const submit = async () => {
-    if (!client) {
+    if (!client || !clientModel) {
       alert("Select a client.");
       return;
     }
@@ -192,6 +218,7 @@ export default function ProductionCreateModal({
 
       await onCreate({
         client,
+        clientModel,
         items,
         team:
           team.trim() || "Unassigned",
@@ -205,6 +232,37 @@ export default function ProductionCreateModal({
       setSaving(false);
     }
   };
+
+  const selectableClients = [
+    ...clients.map((entry: any) => ({
+      id: entry._id,
+      name: entry.name,
+      model:
+        "ProductionClient" as const,
+    })),
+
+    ...accountCustomers.map(
+      (entry: any) => ({
+        id: entry._id,
+        name:
+          entry.companyName ||
+          entry.firmName ||
+          "Customer",
+        model:
+          "AccountParty" as const,
+      })
+    ),
+  ];
+
+  const filteredClients =
+    selectableClients.filter(
+      (entry) =>
+        entry.name
+          .toLowerCase()
+          .includes(
+            clientSearch.toLowerCase()
+          )
+    );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
@@ -236,8 +294,6 @@ export default function ProductionCreateModal({
         </div>
 
         <div className="overflow-y-auto px-6 py-5">
-
-          {/* CLIENT */}
 
           <section>
             <div className="mb-2 flex items-center justify-between">
@@ -309,29 +365,70 @@ export default function ProductionCreateModal({
               </div>
             ) : null}
 
-            <select
-              value={client}
-              onChange={(e) =>
-                setClient(e.target.value)
-              }
-              className="w-full rounded-lg border px-3 py-2.5"
-            >
-              <option value="">
-                Select client
-              </option>
+            <div className="relative">
+              <input
+                value={clientSearch}
+                onChange={(e) => {
+                  setClientSearch(
+                    e.target.value
+                  );
+                  setShowClientOptions(true);
+                  setClient("");
+                  setClientModel("");
+                }}
+                onFocus={() =>
+                  setShowClientOptions(true)
+                }
+                placeholder="Search or select client..."
+                className="w-full rounded-lg border px-3 py-2.5"
+              />
 
-              {clients.map((entry: any) => (
-                <option
-                  key={entry._id}
-                  value={entry._id}
-                >
-                  {entry.name}
-                </option>
-              ))}
-            </select>
+              {showClientOptions && (
+                <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">
+                  {filteredClients.length > 0 ? (
+                    filteredClients.map(
+                      (entry) => (
+                        <button
+                          type="button"
+                          key={`${entry.model}-${entry.id}`}
+                          onClick={() => {
+                            setClient(
+                              entry.id
+                            );
+                            setClientModel(
+                              entry.model
+                            );
+                            setClientSearch(
+                              entry.name
+                            );
+                            setShowClientOptions(
+                              false
+                            );
+                          }}
+                          className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-slate-50"
+                        >
+                          <span className="font-medium">
+                            {entry.name}
+                          </span>
+
+                          <span className="text-xs text-slate-400">
+                            {entry.model ===
+                            "AccountParty"
+                              ? "Accounts"
+                              : "Production"}
+                          </span>
+                        </button>
+                      )
+                    )
+                  ) : (
+                    <div className="p-3 text-sm text-slate-500">
+                      No clients found.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </section>
-
-          {/* PRODUCTS */}
 
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
@@ -474,8 +571,6 @@ export default function ProductionCreateModal({
                         />
                       </div>
                     </div>
-
-                    {/* OPTIONAL MATERIALS */}
 
                     {materials.length > 0 && (
                       <div className="mt-4 rounded-xl bg-slate-50 p-4">
@@ -620,8 +715,6 @@ export default function ProductionCreateModal({
               })}
             </div>
           </section>
-
-          {/* SCHEDULE */}
 
           <section className="mt-6">
             <h3 className="font-semibold">

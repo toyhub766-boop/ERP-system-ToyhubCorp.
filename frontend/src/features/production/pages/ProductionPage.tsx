@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminLayout from "../../../app/layouts/AdminLayout";
 
+import api from "../../../services/api/axios";
+
 import { getBOMs } from "../../bom/services/bom.service";
 
 import {
@@ -32,6 +34,17 @@ const ProductionPage = () => {
     useState<any[]>([]);
 
   const [clients, setClients] =
+    useState<any[]>([]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | ACCOUNT CUSTOMERS
+  |--------------------------------------------------------------------------
+  | Existing customers from Accounts are available alongside
+  | the existing ProductionClient records.
+  */
+
+  const [accountCustomers, setAccountCustomers] =
     useState<any[]>([]);
 
   const [boms, setBoms] =
@@ -89,15 +102,33 @@ const ProductionPage = () => {
         productionData,
         bomData,
         clientData,
+        accountCustomerResponse,
       ] = await Promise.all([
         getProductions(),
         getBOMs(),
         getProductionClients(),
+
+        /*
+         * Existing Accounts API.
+         *
+         * We only use CUSTOMER + Active records below.
+         */
+        api.get("/accounts/party"),
       ]);
 
       setProductions(productionData);
       setBoms(bomData);
       setClients(clientData);
+
+      setAccountCustomers(
+        (
+          accountCustomerResponse.data || []
+        ).filter(
+          (party: any) =>
+            party.partyType === "CUSTOMER" &&
+            party.status === "Active"
+        )
+      );
 
       if (productionData.length > 0) {
         setSelectedProduction(
@@ -120,6 +151,7 @@ const ProductionPage = () => {
       }
     } catch (error) {
       console.error(error);
+
       alert(
         "Failed to load production data."
       );
@@ -150,6 +182,7 @@ const ProductionPage = () => {
       setMaterialConsumption(data);
     } catch (error) {
       console.error(error);
+
       setMaterialConsumption([]);
     }
   };
@@ -157,6 +190,7 @@ const ProductionPage = () => {
   useEffect(() => {
     if (!selectedProduction?._id) {
       setMaterialConsumption([]);
+
       return;
     }
 
@@ -175,7 +209,7 @@ const ProductionPage = () => {
 
   const selectedItem =
     selectedProduction?.items?.[
-    selectedItemIndex
+      selectedItemIndex
     ] || null;
 
   /*
@@ -184,8 +218,10 @@ const ProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const [selectedAvailability, setSelectedAvailability] =
-    useState<any>(null);
+  const [
+    selectedAvailability,
+    setSelectedAvailability,
+  ] = useState<any>(null);
 
   useEffect(() => {
     const calculate = async () => {
@@ -194,6 +230,7 @@ const ProductionPage = () => {
         !selectedItem?.quantity
       ) {
         setSelectedAvailability(null);
+
         return;
       }
 
@@ -219,6 +256,7 @@ const ProductionPage = () => {
         );
       } catch (error) {
         console.error(error);
+
         setSelectedAvailability(null);
       }
     };
@@ -242,6 +280,7 @@ const ProductionPage = () => {
     data: any
   ) => {
     await createProduction(data);
+
     await loadData();
   };
 
@@ -249,6 +288,9 @@ const ProductionPage = () => {
   |--------------------------------------------------------------------------
   | CREATE CLIENT
   |--------------------------------------------------------------------------
+  |
+  | Existing ProductionClient creation remains untouched.
+  | AccountParty customers are selected from Accounts instead.
   */
 
   const handleCreateClient = async (
@@ -340,6 +382,7 @@ const ProductionPage = () => {
   const handleCalculate = async () => {
     if (!calculatorBOM) {
       alert("Select a BOM.");
+
       return;
     }
 
@@ -358,6 +401,7 @@ const ProductionPage = () => {
       const result =
         await calculateProduction({
           bom: calculatorBOM,
+
           quantity:
             Number(
               calculatorQuantity
@@ -384,7 +428,10 @@ const ProductionPage = () => {
 
   const handleExportExcel = () => {
     if (!calculatorResult) {
-      alert("Calculate capacity first.");
+      alert(
+        "Calculate capacity first."
+      );
+
       return;
     }
 
@@ -395,16 +442,25 @@ const ProductionPage = () => {
 
     exportCapacityExcel(
       calculatorResult,
-      selectedBOM?.finishedProduct?.name ||
-      "Production",
-      Number(calculatorQuantity),
+
+      selectedBOM
+        ?.finishedProduct?.name ||
+        "Production",
+
+      Number(
+        calculatorQuantity
+      ),
+
       "Production_Capacity"
     );
   };
 
   const handleExportPdf = () => {
     if (!calculatorResult) {
-      alert("Calculate capacity first.");
+      alert(
+        "Calculate capacity first."
+      );
+
       return;
     }
 
@@ -415,16 +471,25 @@ const ProductionPage = () => {
 
     exportCapacityPdf(
       calculatorResult,
-      selectedBOM?.finishedProduct?.name ||
-      "Production",
-      Number(calculatorQuantity),
+
+      selectedBOM
+        ?.finishedProduct?.name ||
+        "Production",
+
+      Number(
+        calculatorQuantity
+      ),
+
       "Production Capacity Report"
     );
   };
 
   const handleExportReceipt = () => {
     if (!selectedProduction) {
-      alert("Select a production order first.");
+      alert(
+        "Select a production order first."
+      );
+
       return;
     }
 
@@ -432,6 +497,7 @@ const ProductionPage = () => {
       selectedProduction
     );
   };
+
   /*
   |--------------------------------------------------------------------------
   | STATS
@@ -447,9 +513,9 @@ const ProductionPage = () => {
         productions.filter(
           (production) =>
             production.status ===
-            "Started" ||
+              "Started" ||
             production.status ===
-            "In Progress"
+              "In Progress"
         ).length,
 
       completed:
@@ -538,10 +604,11 @@ const ProductionPage = () => {
             onClick={() =>
               setActiveTab("orders")
             }
-            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${activeTab === "orders"
-              ? "bg-[#17357A] text-white"
-              : "text-slate-600 hover:bg-slate-50"
-              }`}
+            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
+              activeTab === "orders"
+                ? "bg-[#17357A] text-white"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
           >
             Production Orders
           </button>
@@ -552,11 +619,12 @@ const ProductionPage = () => {
                 "calculator"
               )
             }
-            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${activeTab ===
+            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
+              activeTab ===
               "calculator"
-              ? "bg-[#17357A] text-white"
-              : "text-slate-600 hover:bg-slate-50"
-              }`}
+                ? "bg-[#17357A] text-white"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
           >
             Capacity Calculator
           </button>
@@ -665,10 +733,11 @@ const ProductionPage = () => {
                               0
                             );
                           }}
-                          className={`w-full border-b p-4 text-left transition ${isSelected
-                            ? "bg-blue-50"
-                            : "hover:bg-slate-50"
-                            }`}
+                          className={`w-full border-b p-4 text-left transition ${
+                            isSelected
+                              ? "bg-blue-50"
+                              : "hover:bg-slate-50"
+                          }`}
                         >
                           <div className="flex items-start justify-between gap-2">
 
@@ -681,6 +750,8 @@ const ProductionPage = () => {
 
                               <p className="mt-1 text-sm text-slate-600">
                                 {client?.name ||
+                                  client?.companyName ||
+                                  client?.firmName ||
                                   "No client"}
                               </p>
                             </div>
@@ -715,10 +786,10 @@ const ProductionPage = () => {
                             <span>
                               {production.targetDate
                                 ? new Date(
-                                  production.targetDate
-                                ).toLocaleDateString(
-                                  "en-IN"
-                                )
+                                    production.targetDate
+                                  ).toLocaleDateString(
+                                    "en-IN"
+                                  )
                                 : "-"}
                             </span>
                           </div>
@@ -759,10 +830,10 @@ const ProductionPage = () => {
                           Created{" "}
                           {selectedProduction.createdAt
                             ? new Date(
-                              selectedProduction.createdAt
-                            ).toLocaleDateString(
-                              "en-IN"
-                            )
+                                selectedProduction.createdAt
+                              ).toLocaleDateString(
+                                "en-IN"
+                              )
                             : "-"}
                         </p>
                       </div>
@@ -790,6 +861,10 @@ const ProductionPage = () => {
                         {
                           selectedProduction
                             .client?.name ||
+                          selectedProduction
+                            .client?.companyName ||
+                          selectedProduction
+                            .client?.firmName ||
                           "-"
                         }
                       </p>
@@ -797,24 +872,30 @@ const ProductionPage = () => {
                       {selectedProduction
                         .client
                         ?.contactPerson && (
-                          <p className="text-sm text-slate-500">
-                            {
-                              selectedProduction
-                                .client
-                                .contactPerson
-                            }
-                          </p>
-                        )}
+                        <p className="text-sm text-slate-500">
+                          {
+                            selectedProduction
+                              .client
+                              .contactPerson
+                          }
+                        </p>
+                      )}
 
-                      {selectedProduction
-                        .client?.phone && (
-                          <p className="text-sm text-slate-500">
-                            {
-                              selectedProduction
-                                .client.phone
-                            }
-                          </p>
-                        )}
+                      {(
+                        selectedProduction
+                          .client?.phone ||
+                        selectedProduction
+                          .client?.transportPhone
+                      ) && (
+                        <p className="text-sm text-slate-500">
+                          {
+                            selectedProduction
+                              .client?.phone ||
+                            selectedProduction
+                              .client?.transportPhone
+                          }
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -838,10 +919,10 @@ const ProductionPage = () => {
                       <p className="mt-1 font-semibold">
                         {selectedProduction.targetDate
                           ? new Date(
-                            selectedProduction.targetDate
-                          ).toLocaleDateString(
-                            "en-IN"
-                          )
+                              selectedProduction.targetDate
+                            ).toLocaleDateString(
+                              "en-IN"
+                            )
                           : "-"}
                       </p>
                     </div>
@@ -882,18 +963,19 @@ const ProductionPage = () => {
                                 index
                               )
                             }
-                            className={`flex w-full items-center justify-between rounded-xl border p-3 text-left ${selectedItemIndex ===
+                            className={`flex w-full items-center justify-between rounded-xl border p-3 text-left ${
+                              selectedItemIndex ===
                               index
-                              ? "border-blue-300 bg-blue-50"
-                              : "hover:bg-slate-50"
-                              }`}
+                                ? "border-blue-300 bg-blue-50"
+                                : "hover:bg-slate-50"
+                            }`}
                           >
                             <div>
                               <p className="font-semibold">
                                 {item.product
                                   ?.name ||
-                                  `Product ${index +
-                                  1
+                                  `Product ${
+                                    index + 1
                                   }`}
                               </p>
 
@@ -906,10 +988,11 @@ const ProductionPage = () => {
                             </div>
 
                             <span
-                              className={`rounded-full px-2 py-1 text-xs ${item.completed
-                                ? "bg-green-100 text-green-700"
-                                : "bg-slate-100 text-slate-600"
-                                }`}
+                              className={`rounded-full px-2 py-1 text-xs ${
+                                item.completed
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
                             >
                               {item.completed
                                 ? "Completed"
@@ -939,7 +1022,7 @@ const ProductionPage = () => {
                       "In Progress" &&
                       selectedProduction
                         .status !==
-                      "Completed" && (
+                        "Completed" && (
                         <button
                           onClick={() =>
                             setShowProgressModal(
@@ -955,17 +1038,17 @@ const ProductionPage = () => {
                     {selectedProduction
                       .status ===
                       "In Progress" && (
-                        <button
-                          onClick={() =>
-                            setShowCompletionModal(
-                              true
-                            )
-                          }
-                          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white"
-                        >
-                          Complete Production
-                        </button>
-                      )}
+                      <button
+                        onClick={() =>
+                          setShowCompletionModal(
+                            true
+                          )
+                        }
+                        className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        Complete Production
+                      </button>
+                    )}
 
                     <button
                       onClick={
@@ -977,7 +1060,9 @@ const ProductionPage = () => {
                     </button>
 
                     <button
-                      onClick={handleExportReceipt}
+                      onClick={
+                        handleExportReceipt
+                      }
                       className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
                     >
                       Export Receipt
@@ -1053,18 +1138,18 @@ const ProductionPage = () => {
 
                       {selectedAvailability
                         ?.bottleneck && (
-                          <div className="mt-3 rounded-lg bg-orange-50 p-3">
-                            <p className="text-xs text-orange-600">
-                              Bottleneck
-                            </p>
+                        <div className="mt-3 rounded-lg bg-orange-50 p-3">
+                          <p className="text-xs text-orange-600">
+                            Bottleneck
+                          </p>
 
-                            <p className="font-semibold text-orange-800">
-                              {
-                                selectedAvailability.bottleneck
-                              }
-                            </p>
-                          </div>
-                        )}
+                          <p className="font-semibold text-orange-800">
+                            {
+                              selectedAvailability.bottleneck
+                            }
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* MATERIALS */}
@@ -1096,10 +1181,11 @@ const ProductionPage = () => {
                                   </span>
 
                                   <span
-                                    className={`rounded-full px-2 py-1 text-[10px] font-semibold ${material.sufficient
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-red-100 text-red-700"
-                                      }`}
+                                    className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                                      material.sufficient
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                    }`}
                                   >
                                     {material.sufficient
                                       ? "Available"
@@ -1138,10 +1224,10 @@ const ProductionPage = () => {
                               </div>
                             )
                           ) || (
-                            <p className="text-sm text-slate-500">
-                              No calculation available.
-                            </p>
-                          )}
+                          <p className="text-sm text-slate-500">
+                            No calculation available.
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -1182,15 +1268,15 @@ const ProductionPage = () => {
                         {selectedItem
                           .checklist
                           ?.reason && (
-                            <p className="mt-2 text-xs text-orange-600">
-                              Reason:{" "}
-                              {
-                                selectedItem
-                                  .checklist
-                                  .reason
-                              }
-                            </p>
-                          )}
+                          <p className="mt-2 text-xs text-orange-600">
+                            Reason:{" "}
+                            {
+                              selectedItem
+                                .checklist
+                                .reason
+                            }
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -1235,208 +1321,209 @@ const ProductionPage = () => {
 
         {activeTab ===
           "calculator" && (
-            <div className="rounded-2xl border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border bg-white p-6 shadow-sm">
 
-              <h2 className="text-2xl font-bold">
-                Material Capacity Calculator
-              </h2>
+            <h2 className="text-2xl font-bold">
+              Material Capacity Calculator
+            </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
-                Calculate how much can actually be produced from current stock.
-              </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Calculate how much can actually be produced from current stock.
+            </p>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-[1fr_180px_auto]">
+            <div className="mt-6 grid gap-4 md:grid-cols-[1fr_180px_auto]">
 
-                <select
-                  value={
-                    calculatorBOM
-                  }
-                  onChange={(e) =>
-                    setCalculatorBOM(
+              <select
+                value={
+                  calculatorBOM
+                }
+                onChange={(e) =>
+                  setCalculatorBOM(
+                    e.target.value
+                  )
+                }
+                className="rounded-lg border px-3 py-2.5"
+              >
+                <option value="">
+                  Select BOM
+                </option>
+
+                {boms.map(
+                  (bom: any) => (
+                    <option
+                      key={bom._id}
+                      value={bom._id}
+                    >
+                      {bom.finishedProduct
+                        ?.name ||
+                        "BOM"}
+                    </option>
+                  )
+                )}
+              </select>
+
+              <input
+                type="number"
+                min="1"
+                value={
+                  calculatorQuantity
+                }
+                onChange={(e) =>
+                  setCalculatorQuantity(
+                    Number(
                       e.target.value
                     )
-                  }
-                  className="rounded-lg border px-3 py-2.5"
-                >
-                  <option value="">
-                    Select BOM
-                  </option>
+                  )
+                }
+                className="rounded-lg border px-3 py-2.5"
+              />
 
-                  {boms.map(
-                    (bom: any) => (
-                      <option
-                        key={bom._id}
-                        value={bom._id}
-                      >
-                        {bom.finishedProduct
-                          ?.name ||
-                          "BOM"}
-                      </option>
-                    )
-                  )}
-                </select>
+              <button
+                onClick={
+                  handleCalculate
+                }
+                className="rounded-lg bg-[#17357A] px-5 py-2.5 font-semibold text-white"
+              >
+                Calculate
+              </button>
+            </div>
 
-                <input
-                  type="number"
-                  min="1"
-                  value={
-                    calculatorQuantity
-                  }
-                  onChange={(e) =>
-                    setCalculatorQuantity(
-                      Number(
-                        e.target.value
-                      )
-                    )
-                  }
-                  className="rounded-lg border px-3 py-2.5"
-                />
+            {calculatorResult && (
+              <div className="mt-6">
 
-                <button
-                  onClick={
-                    handleCalculate
-                  }
-                  className="rounded-lg bg-[#17357A] px-5 py-2.5 font-semibold text-white"
-                >
-                  Calculate
-                </button>
-              </div>
+                <div className="grid gap-4 md:grid-cols-2">
 
-              {calculatorResult && (
-                <div className="mt-6">
+                  <div className="rounded-xl border bg-slate-50 p-5">
+                    <p className="text-sm text-slate-500">
+                      Maximum Producible
+                    </p>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-
-                    <div className="rounded-xl border bg-slate-50 p-5">
-                      <p className="text-sm text-slate-500">
-                        Maximum Producible
-                      </p>
-
-                      <p className="mt-1 text-3xl font-bold">
-                        {
-                          calculatorResult.maximumProducible
-                        }
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border bg-orange-50 p-5">
-                      <p className="text-sm text-orange-600">
-                        Bottleneck
-                      </p>
-
-                      <p className="mt-1 text-xl font-bold text-orange-800">
-                        {
-                          calculatorResult.bottleneck ||
-                          "None"
-                        }
-                      </p>
-                    </div>
+                    <p className="mt-1 text-3xl font-bold">
+                      {
+                        calculatorResult.maximumProducible
+                      }
+                    </p>
                   </div>
 
-                  <div className="mt-5 overflow-x-auto rounded-xl border">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left">
-                            Material
-                          </th>
+                  <div className="rounded-xl border bg-orange-50 p-5">
+                    <p className="text-sm text-orange-600">
+                      Bottleneck
+                    </p>
 
-                          <th className="px-4 py-3 text-right">
-                            Required
-                          </th>
-
-                          <th className="px-4 py-3 text-right">
-                            Available
-                          </th>
-
-                          <th className="px-4 py-3 text-right">
-                            Shortage
-                          </th>
-
-                          <th className="px-4 py-3 text-center">
-                            Status
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {calculatorResult.materials?.map(
-                          (
-                            material: any,
-                            index: number
-                          ) => (
-                            <tr
-                              key={
-                                index
-                              }
-                              className="border-t"
-                            >
-                              <td className="px-4 py-3">
-                                {
-                                  material.product
-                                }
-                              </td>
-
-                              <td className="px-4 py-3 text-right">
-                                {
-                                  material.required
-                                }
-                              </td>
-
-                              <td className="px-4 py-3 text-right">
-                                {
-                                  material.available
-                                }
-                              </td>
-
-                              <td className="px-4 py-3 text-right">
-                                {
-                                  material.shortage
-                                }
-                              </td>
-
-                              <td className="px-4 py-3 text-center">
-                                <span
-                                  className={`rounded-full px-2 py-1 text-xs ${material.sufficient
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"
-                                    }`}
-                                >
-                                  {material.sufficient
-                                    ? "Sufficient"
-                                    : "Shortage"}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <button
-                      onClick={
-                        handleExportExcel
+                    <p className="mt-1 text-xl font-bold text-orange-800">
+                      {
+                        calculatorResult.bottleneck ||
+                        "None"
                       }
-                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
-                    >
-                      Export Excel
-                    </button>
-
-                    <button
-                      onClick={
-                        handleExportPdf
-                      }
-                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
-                    >
-                      Export PDF
-                    </button>
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                <div className="mt-5 overflow-x-auto rounded-xl border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left">
+                          Material
+                        </th>
+
+                        <th className="px-4 py-3 text-right">
+                          Required
+                        </th>
+
+                        <th className="px-4 py-3 text-right">
+                          Available
+                        </th>
+
+                        <th className="px-4 py-3 text-right">
+                          Shortage
+                        </th>
+
+                        <th className="px-4 py-3 text-center">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {calculatorResult.materials?.map(
+                        (
+                          material: any,
+                          index: number
+                        ) => (
+                          <tr
+                            key={
+                              index
+                            }
+                            className="border-t"
+                          >
+                            <td className="px-4 py-3">
+                              {
+                                material.product
+                              }
+                            </td>
+
+                            <td className="px-4 py-3 text-right">
+                              {
+                                material.required
+                              }
+                            </td>
+
+                            <td className="px-4 py-3 text-right">
+                              {
+                                material.available
+                              }
+                            </td>
+
+                            <td className="px-4 py-3 text-right">
+                              {
+                                material.shortage
+                              }
+                            </td>
+
+                            <td className="px-4 py-3 text-center">
+                              <span
+                                className={`rounded-full px-2 py-1 text-xs ${
+                                  material.sufficient
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {material.sufficient
+                                  ? "Sufficient"
+                                  : "Shortage"}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    onClick={
+                      handleExportExcel
+                    }
+                    className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                  >
+                    Export Excel
+                  </button>
+
+                  <button
+                    onClick={
+                      handleExportPdf
+                    }
+                    className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                  >
+                    Export PDF
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* MODALS */}
 
@@ -1445,6 +1532,9 @@ const ProductionPage = () => {
             showCreateModal
           }
           clients={clients}
+          accountCustomers={
+            accountCustomers
+          }
           boms={boms}
           rawProducts={boms.flatMap(
             (bom: any) =>
@@ -1504,7 +1594,9 @@ const ProductionPage = () => {
 
         <ProductionEditModal
           open={showEditModal}
-          production={selectedProduction}
+          production={
+            selectedProduction
+          }
           clients={clients}
           boms={boms}
           rawProducts={boms.flatMap(

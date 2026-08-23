@@ -1,9 +1,16 @@
 import { Response } from "express";
+
 import { AuthRequest } from "../middlewares/auth.middleware";
 
 import Production from "../models/Production";
+
 import BOM from "../models/BOM";
+
 import MaterialConsumption from "../models/MaterialConsumption";
+
+import AccountParty from "../models/AccountParty";
+
+import ProductionClient from "../models/ProductionClient";
 
 import {
   calculateMaterialAvailability,
@@ -30,7 +37,7 @@ const populateProduction = (query: any) => {
 
 /*
 |--------------------------------------------------------------------------
-| CREATE
+| CREATE PRODUCTION
 |--------------------------------------------------------------------------
 */
 
@@ -41,6 +48,7 @@ export const createProduction = async (
   try {
     const {
       client,
+      clientModel,
       items,
       team,
       targetDate,
@@ -54,12 +62,57 @@ export const createProduction = async (
       });
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
+    const resolvedClientModel =
+      clientModel || "ProductionClient";
+
+    if (
+      ![
+        "ProductionClient",
+        "AccountParty",
+      ].includes(resolvedClientModel)
+    ) {
+      return res.status(400).json({
+        message: "Invalid client type",
+      });
+    }
+
+    /*
+     * Existing Production Clients can still be used.
+     *
+     * AccountParty is only allowed when it is
+     * an active CUSTOMER.
+     */
+
+    const clientExists =
+      resolvedClientModel === "AccountParty"
+        ? await AccountParty.findOne({
+            _id: client,
+            partyType: "CUSTOMER",
+          })
+        : await ProductionClient.findById(
+            client
+          );
+
+    if (!clientExists) {
+      return res.status(404).json({
+        message: "Client not found",
+      });
+    }
+
+    if (
+      !Array.isArray(items) ||
+      items.length === 0
+    ) {
       return res.status(400).json({
         message:
           "At least one production item is required",
       });
     }
+
+    /*
+     * Validate every production item
+     * and its BOM.
+     */
 
     for (const item of items) {
       if (!item.product || !item.bom) {
@@ -79,7 +132,8 @@ export const createProduction = async (
         });
       }
 
-      const bom = await BOM.findById(item.bom);
+      const bom =
+        await BOM.findById(item.bom);
 
       if (!bom) {
         return res.status(404).json({
@@ -87,6 +141,10 @@ export const createProduction = async (
         });
       }
     }
+
+    /*
+     * Generate production order number.
+     */
 
     const count =
       (await Production.countDocuments()) + 1;
@@ -102,47 +160,69 @@ export const createProduction = async (
 
         client,
 
-        items: items.map((item: any) => ({
-          product: item.product,
-          bom: item.bom,
-          quantity: Number(item.quantity),
+        clientModel:
+          resolvedClientModel,
 
-          materialSelections:
-            item.materialSelections || [],
+        items: items.map(
+          (item: any) => ({
+            product:
+              item.product,
 
-          checklist: {
-            preparing:
-              item.checklist?.preparing || [],
+            bom:
+              item.bom,
 
-            leaving:
-              item.checklist?.leaving || [],
+            quantity:
+              Number(item.quantity),
 
-            reason:
-              item.checklist?.reason || "",
-          },
+            materialSelections:
+              item.materialSelections ||
+              [],
 
-          actualQuantity:
-            item.actualQuantity ?? null,
+            checklist: {
+              preparing:
+                item.checklist?.preparing ||
+                [],
 
-          completed: false,
+              leaving:
+                item.checklist?.leaving ||
+                [],
 
-          readyForDispatch: false,
+              reason:
+                item.checklist?.reason ||
+                "",
+            },
 
-          remarks:
-            item.remarks || "",
-        })),
+            actualQuantity:
+              item.actualQuantity ??
+              null,
 
-        team: team || "Unassigned",
+            completed:
+              false,
 
-        status: "Draft",
+            readyForDispatch:
+              false,
+
+            remarks:
+              item.remarks || "",
+          })
+        ),
+
+        team:
+          team || "Unassigned",
+
+        status:
+          "Draft",
 
         targetDate,
 
-        transport: transport || "",
+        transport:
+          transport || "",
 
-        notes: notes || "",
+        notes:
+          notes || "",
 
-        createdBy: req.user?.userId,
+        createdBy:
+          req.user?.userId,
       });
 
     const populated =
@@ -152,9 +232,9 @@ export const createProduction = async (
         )
       );
 
-    return res.status(201).json(
-      populated
-    );
+    return res
+      .status(201)
+      .json(populated);
   } catch (error: any) {
     console.error(error);
 
@@ -166,10 +246,9 @@ export const createProduction = async (
   }
 };
 
-
 /*
 |--------------------------------------------------------------------------
-| GET ALL
+| GET ALL PRODUCTIONS
 |--------------------------------------------------------------------------
 */
 
@@ -185,7 +264,9 @@ export const getProductions = async (
         })
       );
 
-    return res.json(productions);
+    return res.json(
+      productions
+    );
   } catch (error) {
     console.error(error);
 
@@ -196,196 +277,378 @@ export const getProductions = async (
   }
 };
 
-
 /*
 |--------------------------------------------------------------------------
-| GET ONE
+| GET SINGLE PRODUCTION
 |--------------------------------------------------------------------------
 */
 
-export const getProductionById = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const production =
-      await populateProduction(
-        Production.findById(req.params.id)
-      );
+export const getProductionById =
+  async (
+    req: AuthRequest,
+    res: Response
+  ) => {
+    try {
+      const production =
+        await populateProduction(
+          Production.findById(
+            req.params.id
+          )
+        );
 
-    if (!production) {
-      return res.status(404).json({
+      if (!production) {
+        return res.status(404).json({
+          message:
+            "Production order not found",
+        });
+      }
+
+      return res.json(
+        production
+      );
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
         message:
-          "Production order not found",
+          "Failed to fetch production order",
       });
     }
-
-    return res.json(production);
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message:
-        "Failed to fetch production order",
-    });
-  }
-};
-
+  };
 
 /*
 |--------------------------------------------------------------------------
-| UPDATE WHOLE ORDER
+| UPDATE WHOLE PRODUCTION ORDER
 |--------------------------------------------------------------------------
 */
 
-export const updateProduction = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const production =
-      await Production.findById(
-        req.params.id
-      );
+export const updateProduction =
+  async (
+    req: AuthRequest,
+    res: Response
+  ) => {
+    try {
+      const production =
+        await Production.findById(
+          req.params.id
+        );
 
-    if (!production) {
-      return res.status(404).json({
-        message:
-          "Production order not found",
-      });
-    }
+      if (!production) {
+        return res.status(404).json({
+          message:
+            "Production order not found",
+        });
+      }
 
-    const {
-      client,
-      items,
-      team,
-      status,
-      targetDate,
-      transport,
-      notes,
-    } = req.body;
+      const {
+        client,
+        clientModel,
+        items,
+        team,
+        status,
+        targetDate,
+        transport,
+        notes,
+      } = req.body;
 
-    if (client !== undefined) {
-      production.client = client;
-    }
+      /*
+       * Client can be either:
+       *
+       * 1. Existing ProductionClient
+       * 2. AccountParty CUSTOMER
+       */
 
-    if (team !== undefined) {
-      production.team = team;
-    }
+      if (
+        client !== undefined
+      ) {
+        const resolvedClientModel =
+          clientModel ||
+          production.clientModel ||
+          "ProductionClient";
 
-    if (status !== undefined) {
-      production.status = status;
-    }
-
-    if (targetDate !== undefined) {
-      production.targetDate = targetDate;
-    }
-
-    if (transport !== undefined) {
-      production.transport = transport;
-    }
-
-    if (notes !== undefined) {
-      production.notes = notes;
-    }
-
-    if (Array.isArray(items)) {
-      for (const item of items) {
-        if (!item.product || !item.bom) {
+        if (
+          ![
+            "ProductionClient",
+            "AccountParty",
+          ].includes(
+            resolvedClientModel
+          )
+        ) {
           return res.status(400).json({
             message:
-              "Product and BOM are required for every item",
+              "Invalid client type",
           });
         }
 
-        const bom =
-          await BOM.findById(item.bom);
+        const clientExists =
+          resolvedClientModel ===
+          "AccountParty"
+            ? await AccountParty.findOne({
+                _id: client,
+                partyType:
+                  "CUSTOMER",
+              })
+            : await ProductionClient.findById(
+                client
+              );
 
-        if (!bom) {
+        if (!clientExists) {
           return res.status(404).json({
-            message: "BOM not found",
+            message:
+              "Client not found",
           });
+        }
+
+        production.client =
+          client;
+
+        production.clientModel =
+          resolvedClientModel;
+      }
+
+      if (
+        team !== undefined
+      ) {
+        production.team =
+          team;
+      }
+
+      if (
+        status !== undefined
+      ) {
+        production.status =
+          status;
+      }
+
+      if (
+        targetDate !== undefined
+      ) {
+        production.targetDate =
+          targetDate;
+      }
+
+      if (
+        transport !== undefined
+      ) {
+        production.transport =
+          transport;
+      }
+
+      if (
+        notes !== undefined
+      ) {
+        production.notes =
+          notes;
+      }
+
+      /*
+       * Replace production items
+       * only when items are supplied.
+       */
+
+      if (Array.isArray(items)) {
+        for (
+          const item of items
+        ) {
+          if (
+            !item.product ||
+            !item.bom
+          ) {
+            return res.status(400).json({
+              message:
+                "Product and BOM are required for every item",
+            });
+          }
+
+          const bom =
+            await BOM.findById(
+              item.bom
+            );
+
+          if (!bom) {
+            return res.status(404).json({
+              message:
+                "BOM not found",
+            });
+          }
+        }
+
+        production.set(
+          "items",
+          items.map(
+            (item: any) => ({
+              _id:
+                item._id,
+
+              product:
+                item.product,
+
+              bom:
+                item.bom,
+
+              quantity:
+                Number(
+                  item.quantity
+                ),
+
+              materialSelections:
+                item.materialSelections ||
+                [],
+
+              checklist: {
+                preparing:
+                  item.checklist
+                    ?.preparing ||
+                  [],
+
+                leaving:
+                  item.checklist
+                    ?.leaving ||
+                  [],
+
+                reason:
+                  item.checklist
+                    ?.reason ||
+                  "",
+
+                updatedAt:
+                  item.checklist
+                    ?.updatedAt ||
+                  null,
+              },
+
+              actualQuantity:
+                item.actualQuantity ??
+                null,
+
+              completed:
+                item.completed ??
+                false,
+
+              readyForDispatch:
+                item.readyForDispatch ??
+                false,
+
+              remarks:
+                item.remarks ||
+                "",
+            })
+          )
+        );
+      }
+
+      /*
+       * Record completion time.
+       */
+
+      if (
+        production.status ===
+          "Completed" &&
+        !production.completedAt
+      ) {
+        production.completedAt =
+          new Date();
+      }
+
+      /*
+       * If whole order is completed,
+       * create material consumption records.
+       *
+       * IMPORTANT:
+       * This does NOT change inventory.
+       */
+
+      if (
+        status ===
+          "Completed" &&
+        Array.isArray(
+          production.items
+        )
+      ) {
+        await MaterialConsumption.deleteMany(
+          {
+            production:
+              production._id,
+          }
+        );
+
+        const consumptionRecords: any[] =
+          [];
+
+        for (
+          const productionItem of
+            production.items as any[]
+        ) {
+          const bom =
+            await BOM.findById(
+              productionItem.bom
+            );
+
+          if (!bom) {
+            continue;
+          }
+
+          for (
+            const material of
+              bom.materials as any[]
+          ) {
+            consumptionRecords.push({
+              production:
+                production._id,
+
+              productionItem:
+                productionItem._id,
+
+              material:
+                material.product,
+
+              requiredQuantity:
+                Number(
+                  material.quantity
+                ) *
+                Number(
+                  productionItem.quantity
+                ),
+            });
+          }
+        }
+
+        if (
+          consumptionRecords.length >
+          0
+        ) {
+          await MaterialConsumption.insertMany(
+            consumptionRecords
+          );
         }
       }
 
-      production.set(
-        "items",
-        items.map((item: any) => ({
-          _id: item._id,
+      await production.save();
 
-          product: item.product,
+      const populated =
+        await populateProduction(
+          Production.findById(
+            production._id
+          )
+        );
 
-          bom: item.bom,
-
-          quantity:
-            Number(item.quantity),
-
-          materialSelections:
-            item.materialSelections || [],
-
-          checklist: {
-            preparing:
-              item.checklist?.preparing || [],
-
-            leaving:
-              item.checklist?.leaving || [],
-
-            reason:
-              item.checklist?.reason || "",
-
-            updatedAt:
-              item.checklist?.updatedAt ||
-              null,
-          },
-
-          actualQuantity:
-            item.actualQuantity ?? null,
-
-          completed:
-            item.completed ?? false,
-
-          readyForDispatch:
-            item.readyForDispatch ?? false,
-
-          remarks:
-            item.remarks || "",
-        }))
+      return res.json(
+        populated
       );
+    } catch (error: any) {
+      console.error(error);
+
+      return res.status(500).json({
+        message:
+          error.message ||
+          "Failed to update production order",
+      });
     }
-
-    if (
-      production.status === "Completed" &&
-      !production.completedAt
-    ) {
-      production.completedAt =
-        new Date();
-    }
-
-    await production.save();
-
-    const populated =
-      await populateProduction(
-        Production.findById(
-          production._id
-        )
-      );
-
-    return res.json(populated);
-  } catch (error: any) {
-    console.error(error);
-
-    return res.status(500).json({
-      message:
-        error.message ||
-        "Failed to update production order",
-    });
-  }
-};
-
+  };
 
 /*
 |--------------------------------------------------------------------------
-| UPDATE SINGLE ITEM
+| UPDATE SINGLE PRODUCTION ITEM
 |--------------------------------------------------------------------------
 */
 
@@ -408,10 +671,14 @@ export const updateProductionItem =
       }
 
       const item: any =
-        (production.items as any[]).find(
+        (
+          production.items as any[]
+        ).find(
           (entry: any) =>
             entry._id?.toString() ===
-            String(req.params.itemId)
+            String(
+              req.params.itemId
+            )
         );
 
       if (!item) {
@@ -438,18 +705,24 @@ export const updateProductionItem =
           materialSelections;
       }
 
-      if (checklist !== undefined) {
+      if (
+        checklist !== undefined
+      ) {
         item.checklist = {
           preparing:
-            checklist.preparing || [],
+            checklist.preparing ||
+            [],
 
           leaving:
-            checklist.leaving || [],
+            checklist.leaving ||
+            [],
 
           reason:
-            checklist.reason || "",
+            checklist.reason ||
+            "",
 
-          updatedAt: new Date(),
+          updatedAt:
+            new Date(),
         };
       }
 
@@ -458,14 +731,19 @@ export const updateProductionItem =
         undefined
       ) {
         item.actualQuantity =
-          Number(actualQuantity);
+          Number(
+            actualQuantity
+          );
       }
 
       if (
-        completed !== undefined
+        completed !==
+        undefined
       ) {
         item.completed =
-          Boolean(completed);
+          Boolean(
+            completed
+          );
       }
 
       if (
@@ -478,8 +756,12 @@ export const updateProductionItem =
           );
       }
 
-      if (remarks !== undefined) {
-        item.remarks = remarks;
+      if (
+        remarks !==
+        undefined
+      ) {
+        item.remarks =
+          remarks;
       }
 
       /*
@@ -488,19 +770,27 @@ export const updateProductionItem =
        */
 
       const allCompleted =
-        (production.items as any[]).length >
-        0 &&
-        (production.items as any[]).every(
+        (
+          production.items as any[]
+        ).length > 0 &&
+        (
+          production.items as any[]
+        ).every(
           (entry: any) =>
-            entry.completed === true
+            entry.completed ===
+            true
         );
 
       const anyStarted =
-        (production.items as any[]).some(
+        (
+          production.items as any[]
+        ).some(
           (entry: any) =>
-            entry.checklist?.preparing
+            entry.checklist
+              ?.preparing
               ?.length > 0 ||
-            entry.checklist?.leaving
+            entry.checklist
+              ?.leaving
               ?.length > 0
         );
 
@@ -510,7 +800,9 @@ export const updateProductionItem =
 
         production.completedAt =
           new Date();
-      } else if (anyStarted) {
+      } else if (
+        anyStarted
+      ) {
         production.status =
           "In Progress";
       }
@@ -520,8 +812,11 @@ export const updateProductionItem =
       /*
        * IMPORTANT:
        *
-       * This creates production records only.
-       * It does NOT reduce Product.currentStock.
+       * This creates production
+       * records only.
+       *
+       * It does NOT reduce
+       * Product.currentStock.
        */
 
       if (
@@ -536,7 +831,8 @@ export const updateProductionItem =
         const alreadyRecorded =
           existing.some(
             (record: any) =>
-              record.productionItem?.toString() ===
+              record.productionItem
+                ?.toString() ===
               item._id?.toString()
           );
 
@@ -548,7 +844,9 @@ export const updateProductionItem =
 
           if (bom) {
             const records =
-              bom.materials.map(
+              (
+                bom.materials as any[]
+              ).map(
                 (material: any) => ({
                   production:
                     production._id,
@@ -569,7 +867,10 @@ export const updateProductionItem =
                 })
               );
 
-            if (records.length > 0) {
+            if (
+              records.length >
+              0
+            ) {
               await MaterialConsumption.insertMany(
                 records
               );
@@ -599,7 +900,6 @@ export const updateProductionItem =
     }
   };
 
-
 /*
 |--------------------------------------------------------------------------
 | MATERIAL CONSUMPTION
@@ -625,7 +925,9 @@ export const getMaterialConsumption =
             createdAt: 1,
           });
 
-      return res.json(records);
+      return res.json(
+        records
+      );
     } catch (error) {
       console.error(error);
 
@@ -636,10 +938,9 @@ export const getMaterialConsumption =
     }
   };
 
-
 /*
 |--------------------------------------------------------------------------
-| DELETE
+| DELETE PRODUCTION
 |--------------------------------------------------------------------------
 */
 
@@ -662,14 +963,18 @@ export const deleteProduction =
       }
 
       /*
-       * Delete production records only.
-       * Inventory remains untouched.
+       * Delete production-side
+       * consumption records too.
+       *
+       * This does NOT touch inventory.
        */
 
-      await MaterialConsumption.deleteMany({
-        production:
-          production._id,
-      });
+      await MaterialConsumption.deleteMany(
+        {
+          production:
+            production._id,
+        }
+      );
 
       await Production.findByIdAndDelete(
         production._id
@@ -689,7 +994,6 @@ export const deleteProduction =
     }
   };
 
-
 /*
 |--------------------------------------------------------------------------
 | CAPACITY CALCULATOR
@@ -708,7 +1012,10 @@ export const calculateProduction =
         materialSelections,
       } = req.body;
 
-      if (!bom || !quantity) {
+      if (
+        !bom ||
+        !quantity
+      ) {
         return res.status(400).json({
           message:
             "BOM and quantity are required.",
@@ -718,11 +1025,16 @@ export const calculateProduction =
       const result =
         await calculateMaterialAvailability(
           bom,
-          Number(quantity),
-          materialSelections || []
+          Number(
+            quantity
+          ),
+          materialSelections ||
+            []
         );
 
-      return res.json(result);
+      return res.json(
+        result
+      );
     } catch (error: any) {
       console.error(error);
 

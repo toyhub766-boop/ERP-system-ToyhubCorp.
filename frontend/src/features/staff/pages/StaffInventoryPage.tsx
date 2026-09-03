@@ -13,7 +13,10 @@ import {
   Search,
 } from "lucide-react";
 
-import { getProducts } from "../services/inventory.service";
+import {
+  getProducts,
+  getTransactions,
+} from "../services/inventory.service";
 import type { Product } from "../types/inventory.types";
 
 import BottomNavigation from "../components/BottomNavigation";
@@ -30,6 +33,8 @@ const StaffInventoryPage = () => {
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [transactions, setTransactions] =
+  useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -67,9 +72,14 @@ const StaffInventoryPage = () => {
     try {
       setLoading(true);
 
-      const data = await getProducts();
+      const [productsData, transactionsData] =
+  await Promise.all([
+    getProducts(),
+    getTransactions(),
+  ]);
 
-      setProducts(data);
+setProducts(productsData);
+setTransactions(transactionsData);
     } catch (error) {
       console.error("Failed to fetch products:", error);
     } finally {
@@ -217,6 +227,32 @@ const StaffInventoryPage = () => {
     selectedWarehouse !== "All" ||
     selectedStatus !== "All" ||
     selectedType !== "All";
+
+
+  const latestTransactionBySku = new Map<
+  string,
+  any
+>();
+
+transactions.forEach((transaction) => {
+  const sku = transaction.product?.sku;
+
+  if (!sku) return;
+
+  const existing =
+    latestTransactionBySku.get(sku);
+
+  if (
+    !existing ||
+    new Date(transaction.createdAt) >
+      new Date(existing.createdAt)
+  ) {
+    latestTransactionBySku.set(
+      sku,
+      transaction
+    );
+  }
+});
 
   return (
     <div
@@ -941,6 +977,58 @@ const StaffInventoryPage = () => {
                       p-0
                     "
                   >
+                    {latestTransactionBySku.get(
+  product.sku
+)?.createdAt && (
+  <div
+    className="
+      mt-4
+      border-t
+      border-slate-100
+      px-4
+      pt-4
+      sm:mt-5
+      sm:px-5
+      sm:pt-5
+    "
+  >
+    <div className="flex items-center justify-between gap-3">
+      <p
+        className="
+          text-[9px]
+          font-semibold
+          uppercase
+          tracking-[0.08em]
+          text-slate-400
+          sm:text-[10px]
+        "
+      >
+        Last Updated
+      </p>
+
+      <p
+        className="
+          text-xs
+          font-medium
+          text-slate-500
+          sm:text-sm
+        "
+      >
+        {new Date(
+          latestTransactionBySku.get(
+            product.sku
+          ).createdAt
+        ).toLocaleDateString()}
+        {" • "}
+        {new Date(
+          latestTransactionBySku.get(
+            product.sku
+          ).createdAt
+        ).toLocaleTimeString()}
+      </p>
+    </div>
+  </div>
+)}
                     {/* =================================================
                         PRODUCT TOP
                     ================================================= */}

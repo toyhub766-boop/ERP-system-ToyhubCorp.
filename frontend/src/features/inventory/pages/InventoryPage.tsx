@@ -8,6 +8,7 @@ import InventoryFilters from "../components/InventoryFilters";
 import InventoryCard from "../components/InventoryCard";
 
 import { getProducts } from "../services/product.service";
+import { getTransactions } from "../../staff/services/inventory.service";
 import { getCategories } from "../../categories/services/category.service";
 
 import type { Product } from "../../staff/types/inventory.types";
@@ -30,6 +31,9 @@ const InventoryPage = () => {
 
   const [products, setProducts] =
     useState<Product[]>([]);
+
+  const [transactions, setTransactions] =
+  useState<any[]>([]);
 
   const [, setLoading] =
     useState(true);
@@ -74,18 +78,21 @@ const InventoryPage = () => {
   const fetchData = async () => {
     try {
       const [
-        productsData,
-        categoriesData,
-        warehousesData,
-      ] = await Promise.all([
-        getProducts(),
-        getCategories(),
-        getWarehouses(),
-      ]);
+  productsData,
+  categoriesData,
+  warehousesData,
+  transactionsData,
+] = await Promise.all([
+  getProducts(),
+  getCategories(),
+  getWarehouses(),
+  getTransactions(),
+]);
 
-      setProducts(productsData);
-      setCategories(categoriesData);
-      setWarehouses(warehousesData);
+setProducts(productsData);
+setCategories(categoriesData);
+setWarehouses(warehousesData);
+setTransactions(transactionsData);
     } finally {
       setLoading(false);
     }
@@ -141,6 +148,32 @@ const InventoryPage = () => {
       );
     }
   );
+
+
+  const latestTransactionBySku = new Map<
+  string,
+  any
+>();
+
+transactions.forEach((transaction) => {
+  const sku = transaction.product?.sku;
+
+  if (!sku) return;
+
+  const existing =
+    latestTransactionBySku.get(sku);
+
+  if (
+    !existing ||
+    new Date(transaction.createdAt) >
+      new Date(existing.createdAt)
+  ) {
+    latestTransactionBySku.set(
+      sku,
+      transaction
+    );
+  }
+});
 
   /* ============================================================
      RENDER
@@ -363,8 +396,13 @@ const InventoryPage = () => {
               filteredProducts.map(
                 (product) => (
                   <InventoryCard
-                    key={product._id}
-                    product={product}
+  key={product._id}
+  product={product}
+  lastUpdated={
+    latestTransactionBySku.get(
+      product.sku
+    )?.createdAt
+  }
                     onView={(id) =>
                       navigate(
                         `/inventory/${id}`

@@ -11,6 +11,7 @@ import type { Product } from "../../staff/types/inventory.types";
 
 interface InventoryCardProps {
   product: Product;
+  lastUpdated?: string;
   onView: (id: string) => void;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
@@ -18,6 +19,7 @@ interface InventoryCardProps {
 
 const InventoryCard = ({
   product,
+  lastUpdated,
   onView,
   onEdit,
   onDelete,
@@ -246,6 +248,36 @@ const InventoryCard = ({
             {product.status}
           </span>
         </div>
+
+        {lastUpdated && (
+  <div className="mt-4 flex items-center justify-between gap-4 sm:mt-5">
+    <p
+      className="
+        text-[10px]
+        font-semibold
+        uppercase
+        tracking-wide
+        text-slate-400
+        sm:text-xs
+      "
+    >
+      Last Updated
+    </p>
+
+    <p
+      className="
+        text-xs
+        font-medium
+        text-slate-500
+        sm:text-sm
+      "
+    >
+      {new Date(lastUpdated).toLocaleDateString()}
+      {" • "}
+      {new Date(lastUpdated).toLocaleTimeString()}
+    </p>
+  </div>
+)}
 
         {/* =====================================================
             DIVIDER

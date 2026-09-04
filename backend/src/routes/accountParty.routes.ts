@@ -7,7 +7,11 @@ import {
   updateParty,
   updatePartyDueDate,
   updatePartySalespeople,
+  updatePartyPipeline,
   deleteParty,
+  addPartyNote,
+  updatePartyNote,
+  deletePartyNote,
 } from "../controllers/accountParty.controller";
 
 const router = express.Router();
@@ -30,6 +34,26 @@ router.patch(
   updatePartySalespeople
 );
 
+// Update CRM pipeline
+router.patch(
+  "/:id/pipeline",
+  updatePartyPipeline
+);
+
+router.post(
+  "/:id/notes",
+  addPartyNote
+);
+
+router.put(
+  "/:id/notes/:noteId",
+  updatePartyNote
+);
+
+router.delete(
+  "/:id/notes/:noteId",
+  deletePartyNote
+);
 
 // Get single party
 router.get("/:id", getPartyById);

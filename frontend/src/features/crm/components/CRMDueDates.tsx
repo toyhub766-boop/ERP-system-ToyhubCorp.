@@ -7,7 +7,9 @@ import {
 import {
   FiAlertCircle,
   FiCalendar,
+  FiChevronDown,
   FiClock,
+  FiFilter,
   FiSearch,
   FiUsers,
   FiX,
@@ -24,12 +26,65 @@ type DueStatus =
   | "UPCOMING"
   | "NO_DUE_DATE";
 
+type StatusFilter = "ALL" | DueStatus;
+
+type BalanceFilter =
+  | "ALL"
+  | "OUTSTANDING"
+  | "NO_OUTSTANDING";
+
+type PaymentTermsFilter =
+  | "ALL"
+  | "ZERO"
+  | "1_15"
+  | "16_30"
+  | "31_60"
+  | "60_PLUS";
+
+interface Salesperson {
+  _id: string;
+  name: string;
+  role?: string;
+  status?: string;
+}
+
+interface CRMParty {
+  _id: string;
+  companyName?: string;
+  contactPerson?: string;
+  phone?: string;
+  currentBalance?: number;
+  paymentTerms?: number;
+  dueDate?: string | null;
+  partyType?: string;
+  assignedSalespeople?: Salesperson[];
+}
+
 const CRMDueDates = () => {
   const [parties, setParties] =
-    useState<any[]>([]);
+    useState<CRMParty[]>([]);
 
   const [search, setSearch] =
     useState("");
+
+  /* =========================================================
+     FILTERS
+  ========================================================= */
+
+  const [statusFilter, setStatusFilter] =
+    useState<StatusFilter>("ALL");
+
+  const [salespersonFilter, setSalespersonFilter] =
+    useState("ALL");
+
+  const [balanceFilter, setBalanceFilter] =
+    useState<BalanceFilter>("ALL");
+
+  const [paymentTermsFilter, setPaymentTermsFilter] =
+    useState<PaymentTermsFilter>("ALL");
+
+  const [showFilters, setShowFilters] =
+    useState(false);
 
   const [loading, setLoading] =
     useState(true);
@@ -101,8 +156,8 @@ const CRMDueDates = () => {
 
     return new Date(
       date.getTime() -
-      date.getTimezoneOffset() *
-      60000
+        date.getTimezoneOffset() *
+          60000
     )
       .toISOString()
       .split("T")[0];
@@ -190,11 +245,114 @@ const CRMDueDates = () => {
   };
 
   /* =========================================================
+     AVAILABLE SALESPERSONS
+  ========================================================= */
+
+  const salespeople =
+    useMemo(() => {
+      const map =
+        new Map<
+          string,
+          Salesperson
+        >();
+
+      parties.forEach(
+        (party) => {
+          if (
+            !Array.isArray(
+              party.assignedSalespeople
+            )
+          ) {
+            return;
+          }
+
+          party.assignedSalespeople.forEach(
+            (person) => {
+              if (
+                !person?._id ||
+                !person?.name
+              ) {
+                return;
+              }
+
+              map.set(
+                person._id,
+                person
+              );
+            }
+          );
+        }
+      );
+
+      return Array.from(
+        map.values()
+      ).sort(
+        (a, b) =>
+          a.name.localeCompare(
+            b.name
+          )
+      );
+    }, [parties]);
+
+  /* =========================================================
+     ACTIVE FILTER COUNT
+  ========================================================= */
+
+  const activeFilterCount =
+    useMemo(() => {
+      let count = 0;
+
+      if (
+        statusFilter !== "ALL"
+      ) {
+        count++;
+      }
+
+      if (
+        salespersonFilter !==
+        "ALL"
+      ) {
+        count++;
+      }
+
+      if (
+        balanceFilter !== "ALL"
+      ) {
+        count++;
+      }
+
+      if (
+        paymentTermsFilter !==
+        "ALL"
+      ) {
+        count++;
+      }
+
+      return count;
+    }, [
+      statusFilter,
+      salespersonFilter,
+      balanceFilter,
+      paymentTermsFilter,
+    ]);
+
+  /* =========================================================
+     CLEAR FILTERS
+  ========================================================= */
+
+  const clearFilters = () => {
+    setStatusFilter("ALL");
+    setSalespersonFilter("ALL");
+    setBalanceFilter("ALL");
+    setPaymentTermsFilter("ALL");
+  };
+
+  /* =========================================================
      INLINE EDIT START
   ========================================================= */
 
   const startDueDateEdit = (
-    party: any
+    party: CRMParty
   ) => {
     setEditingPartyId(
       party._id
@@ -242,12 +400,13 @@ const CRMDueDates = () => {
         (current) =>
           current.map(
             (party) =>
-              party._id === partyId
+              party._id ===
+              partyId
                 ? {
-                  ...party,
-                  dueDate:
-                    updatedDueDate,
-                }
+                    ...party,
+                    dueDate:
+                      updatedDueDate,
+                  }
                 : party
           )
       );
@@ -279,25 +438,155 @@ const CRMDueDates = () => {
           .trim()
           .toLowerCase();
 
-      if (!query) {
-        return parties;
-      }
-
       return parties.filter(
-        (party) =>
-          party.companyName
-            ?.toLowerCase()
-            .includes(query) ||
-          party.contactPerson
-            ?.toLowerCase()
-            .includes(query) ||
-          party.phone
-            ?.toLowerCase()
-            .includes(query)
+        (party) => {
+          /* SEARCH */
+
+          const matchesSearch =
+            !query ||
+            party.companyName
+              ?.toLowerCase()
+              .includes(query) ||
+            party.contactPerson
+              ?.toLowerCase()
+              .includes(query) ||
+            party.phone
+              ?.toLowerCase()
+              .includes(query);
+
+          if (!matchesSearch) {
+            return false;
+          }
+
+          /* STATUS */
+
+          const status =
+            getDueStatus(
+              party.dueDate
+            );
+
+          if (
+            statusFilter !==
+              "ALL" &&
+            status !==
+              statusFilter
+          ) {
+            return false;
+          }
+
+          /* SALESPERSON */
+
+          if (
+            salespersonFilter !==
+            "ALL"
+          ) {
+            const assigned =
+              Array.isArray(
+                party.assignedSalespeople
+              )
+                ? party.assignedSalespeople
+                : [];
+
+            const matchesSalesperson =
+              assigned.some(
+                (person) =>
+                  person._id ===
+                  salespersonFilter
+              );
+
+            if (
+              !matchesSalesperson
+            ) {
+              return false;
+            }
+          }
+
+          /* BALANCE */
+
+          const balance =
+            Number(
+              party.currentBalance ||
+                0
+            );
+
+          if (
+            balanceFilter ===
+              "OUTSTANDING" &&
+            balance <= 0
+          ) {
+            return false;
+          }
+
+          if (
+            balanceFilter ===
+              "NO_OUTSTANDING" &&
+            balance > 0
+          ) {
+            return false;
+          }
+
+          /* PAYMENT TERMS */
+
+          const terms =
+            Number(
+              party.paymentTerms ||
+                0
+            );
+
+          if (
+            paymentTermsFilter ===
+              "ZERO" &&
+            terms !== 0
+          ) {
+            return false;
+          }
+
+          if (
+            paymentTermsFilter ===
+              "1_15" &&
+            (terms < 1 ||
+              terms > 15)
+          ) {
+            return false;
+          }
+
+          if (
+            paymentTermsFilter ===
+              "16_30" &&
+            (terms < 16 ||
+              terms > 30)
+          ) {
+            return false;
+          }
+
+          if (
+            paymentTermsFilter ===
+              "31_60" &&
+            (terms < 31 ||
+              terms > 60)
+          ) {
+            return false;
+          }
+
+          if (
+            paymentTermsFilter ===
+              "60_PLUS" &&
+            terms <= 60
+          ) {
+            return false;
+          }
+
+          return true;
+        }
       );
     }, [
       parties,
       search,
+      statusFilter,
+      salespersonFilter,
+      balanceFilter,
+      paymentTermsFilter,
+      today,
     ]);
 
   /* =========================================================
@@ -506,7 +795,7 @@ const CRMDueDates = () => {
       </section>
 
       {/* =====================================================
-          SEARCH
+          SEARCH + FILTERS
       ===================================================== */}
 
       <section
@@ -520,79 +809,602 @@ const CRMDueDates = () => {
           sm:p-4
         "
       >
-        <div className="relative max-w-xl">
 
-          <FiSearch
-            size={18}
-            className="
-              pointer-events-none
-              absolute
-              left-4
-              top-1/2
-              -translate-y-1/2
-              text-slate-400
-            "
-          />
+        <div
+          className="
+            flex
+            flex-col
+            gap-3
+            lg:flex-row
+            lg:items-center
+          "
+        >
 
-          <input
-            value={search}
-            onChange={(e) =>
-              setSearch(
-                e.target.value
+          {/* SEARCH */}
+
+          <div className="relative max-w-xl flex-1">
+
+            <FiSearch
+              size={18}
+              className="
+                pointer-events-none
+                absolute
+                left-4
+                top-1/2
+                -translate-y-1/2
+                text-slate-400
+              "
+            />
+
+            <input
+              value={search}
+              onChange={(e) =>
+                setSearch(
+                  e.target.value
+                )
+              }
+              placeholder="Search customer, contact or phone..."
+              className="
+                h-11
+                w-full
+                rounded-xl
+                border
+                border-slate-200
+                bg-slate-50
+                pl-11
+                pr-10
+                text-sm
+                text-slate-800
+                outline-none
+                transition-all
+                placeholder:text-slate-400
+                focus:border-[#172B6B]
+                focus:bg-white
+                focus:ring-4
+                focus:ring-blue-50
+              "
+            />
+
+            {search && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSearch("")
+                }
+                className="
+                  absolute
+                  right-3
+                  top-1/2
+                  flex
+                  h-7
+                  w-7
+                  -translate-y-1/2
+                  items-center
+                  justify-center
+                  rounded-lg
+                  text-slate-400
+                  transition
+                  hover:bg-slate-100
+                  hover:text-slate-700
+                "
+              >
+                <FiX size={15} />
+              </button>
+            )}
+
+          </div>
+
+          {/* FILTER BUTTON */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowFilters(
+                (current) =>
+                  !current
               )
             }
-            placeholder="
-              Search customer, contact or phone...
-            "
-            className="
+            className={`
+              inline-flex
               h-11
-              w-full
+              items-center
+              justify-center
+              gap-2
               rounded-xl
               border
-              border-slate-200
-              bg-slate-50
-              pl-11
-              pr-10
+              px-4
               text-sm
-              text-slate-800
-              outline-none
-              transition-all
-              placeholder:text-slate-400
-              focus:border-[#172B6B]
-              focus:bg-white
-              focus:ring-4
-              focus:ring-blue-50
-            "
-          />
-
-          {search && (
-            <button
-              type="button"
-              onClick={() =>
-                setSearch("")
+              font-semibold
+              transition
+              ${
+                showFilters ||
+                activeFilterCount > 0
+                  ? `
+                    border-[#172B6B]
+                    bg-blue-50
+                    text-[#172B6B]
+                  `
+                  : `
+                    border-slate-200
+                    bg-white
+                    text-slate-600
+                    hover:bg-slate-50
+                  `
               }
-              className="
-                absolute
-                right-3
-                top-1/2
-                flex
-                h-7
-                w-7
-                -translate-y-1/2
-                items-center
-                justify-center
-                rounded-lg
-                text-slate-400
-                transition
-                hover:bg-slate-100
-                hover:text-slate-700
-              "
-            >
-              <FiX size={15} />
-            </button>
+            `}
+          >
+            <FiFilter size={16} />
+
+            Filters
+
+            {activeFilterCount >
+              0 && (
+              <span
+                className="
+                  flex
+                  h-5
+                  min-w-5
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-[#172B6B]
+                  px-1.5
+                  text-[10px]
+                  font-bold
+                  text-white
+                "
+              >
+                {activeFilterCount}
+              </span>
+            )}
+
+            <FiChevronDown
+              size={15}
+              className={`
+                transition-transform
+                ${
+                  showFilters
+                    ? "rotate-180"
+                    : ""
+                }
+              `}
+            />
+          </button>
+
+        </div>
+
+        {/* ===================================================
+            QUICK STATUS FILTERS
+        =================================================== */}
+
+        <div
+          className="
+            mt-4
+            flex
+            gap-2
+            overflow-x-auto
+            pb-1
+          "
+        >
+
+          {[
+            {
+              value: "ALL",
+              label: "All",
+            },
+            {
+              value: "OVERDUE",
+              label: "Overdue",
+            },
+            {
+              value: "DUE_TODAY",
+              label: "Due Today",
+            },
+            {
+              value: "UPCOMING",
+              label: "Upcoming",
+            },
+            {
+              value: "NO_DUE_DATE",
+              label: "No Due Date",
+            },
+          ].map(
+            (option) => {
+              const active =
+                statusFilter ===
+                option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() =>
+                    setStatusFilter(
+                      option.value as StatusFilter
+                    )
+                  }
+                  className={`
+                    inline-flex
+                    shrink-0
+                    items-center
+                    gap-2
+                    rounded-lg
+                    border
+                    px-3
+                    py-2
+                    text-xs
+                    font-semibold
+                    transition
+                    ${
+                      active
+                        ? `
+                          border-[#172B6B]
+                          bg-[#172B6B]
+                          text-white
+                        `
+                        : `
+                          border-slate-200
+                          bg-white
+                          text-slate-500
+                          hover:bg-slate-50
+                        `
+                    }
+                  `}
+                >
+                  {option.label}
+
+                  {option.value !==
+                    "ALL" && (
+                    <span
+                      className={`
+                        rounded-md
+                        px-1.5
+                        py-0.5
+                        text-[10px]
+                        ${
+                          active
+                            ? "bg-white/15 text-white"
+                            : "bg-slate-100 text-slate-500"
+                        }
+                      `}
+                    >
+                      {
+                        option.value ===
+                        "OVERDUE"
+                          ? overdue.length
+                          : option.value ===
+                              "DUE_TODAY"
+                            ? dueToday.length
+                            : option.value ===
+                                "UPCOMING"
+                              ? upcoming.length
+                              : noDueDate.length
+                      }
+                    </span>
+                  )}
+                </button>
+              );
+            }
           )}
 
         </div>
+
+        {/* ===================================================
+            ADVANCED FILTERS
+        =================================================== */}
+
+        {showFilters && (
+          <div
+            className="
+              mt-4
+              border-t
+              border-slate-100
+              pt-4
+            "
+          >
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                gap-4
+                md:grid-cols-3
+              "
+            >
+
+              {/* SALESPERSON */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wide
+                    text-slate-400
+                  "
+                >
+                  Salesperson
+                </label>
+
+                <div className="relative">
+                  <select
+                    value={
+                      salespersonFilter
+                    }
+                    onChange={(e) =>
+                      setSalespersonFilter(
+                        e.target.value
+                      )
+                    }
+                    className="
+                      h-10
+                      w-full
+                      appearance-none
+                      rounded-xl
+                      border
+                      border-slate-200
+                      bg-white
+                      px-3
+                      pr-9
+                      text-sm
+                      text-slate-700
+                      outline-none
+                      focus:border-[#172B6B]
+                      focus:ring-2
+                      focus:ring-blue-50
+                    "
+                  >
+                    <option value="ALL">
+                      All Salespeople
+                    </option>
+
+                    {salespeople.map(
+                      (person) => (
+                        <option
+                          key={
+                            person._id
+                          }
+                          value={
+                            person._id
+                          }
+                        >
+                          {person.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+
+                  <FiChevronDown
+                    size={15}
+                    className="
+                      pointer-events-none
+                      absolute
+                      right-3
+                      top-1/2
+                      -translate-y-1/2
+                      text-slate-400
+                    "
+                  />
+                </div>
+              </div>
+
+              {/* BALANCE */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wide
+                    text-slate-400
+                  "
+                >
+                  Balance
+                </label>
+
+                <div className="relative">
+                  <select
+                    value={
+                      balanceFilter
+                    }
+                    onChange={(e) =>
+                      setBalanceFilter(
+                        e.target.value as BalanceFilter
+                      )
+                    }
+                    className="
+                      h-10
+                      w-full
+                      appearance-none
+                      rounded-xl
+                      border
+                      border-slate-200
+                      bg-white
+                      px-3
+                      pr-9
+                      text-sm
+                      text-slate-700
+                      outline-none
+                      focus:border-[#172B6B]
+                      focus:ring-2
+                      focus:ring-blue-50
+                    "
+                  >
+                    <option value="ALL">
+                      Any Balance
+                    </option>
+
+                    <option value="OUTSTANDING">
+                      Outstanding
+                    </option>
+
+                    <option value="NO_OUTSTANDING">
+                      No Outstanding
+                    </option>
+                  </select>
+
+                  <FiChevronDown
+                    size={15}
+                    className="
+                      pointer-events-none
+                      absolute
+                      right-3
+                      top-1/2
+                      -translate-y-1/2
+                      text-slate-400
+                    "
+                  />
+                </div>
+              </div>
+
+              {/* PAYMENT TERMS */}
+
+              <div>
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wide
+                    text-slate-400
+                  "
+                >
+                  Payment Terms
+                </label>
+
+                <div className="relative">
+                  <select
+                    value={
+                      paymentTermsFilter
+                    }
+                    onChange={(e) =>
+                      setPaymentTermsFilter(
+                        e.target.value as PaymentTermsFilter
+                      )
+                    }
+                    className="
+                      h-10
+                      w-full
+                      appearance-none
+                      rounded-xl
+                      border
+                      border-slate-200
+                      bg-white
+                      px-3
+                      pr-9
+                      text-sm
+                      text-slate-700
+                      outline-none
+                      focus:border-[#172B6B]
+                      focus:ring-2
+                      focus:ring-blue-50
+                    "
+                  >
+                    <option value="ALL">
+                      Any Payment Terms
+                    </option>
+
+                    <option value="ZERO">
+                      0 days
+                    </option>
+
+                    <option value="1_15">
+                      1–15 days
+                    </option>
+
+                    <option value="16_30">
+                      16–30 days
+                    </option>
+
+                    <option value="31_60">
+                      31–60 days
+                    </option>
+
+                    <option value="60_PLUS">
+                      60+ days
+                    </option>
+                  </select>
+
+                  <FiChevronDown
+                    size={15}
+                    className="
+                      pointer-events-none
+                      absolute
+                      right-3
+                      top-1/2
+                      -translate-y-1/2
+                      text-slate-400
+                    "
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            {/* FILTER FOOTER */}
+
+            <div
+              className="
+                mt-4
+                flex
+                flex-col
+                gap-3
+                border-t
+                border-slate-100
+                pt-4
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+              "
+            >
+
+              <p className="text-xs text-slate-400">
+                Showing{" "}
+                <span className="font-semibold text-slate-600">
+                  {filteredParties.length}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-slate-600">
+                  {parties.length}
+                </span>{" "}
+                customers
+              </p>
+
+              {activeFilterCount >
+                0 && (
+                <button
+                  type="button"
+                  onClick={
+                    clearFilters
+                  }
+                  className="
+                    inline-flex
+                    items-center
+                    gap-2
+                    text-xs
+                    font-semibold
+                    text-[#172B6B]
+                    hover:underline
+                  "
+                >
+                  <FiX size={13} />
+                  Clear Filters
+                </button>
+              )}
+
+            </div>
+
+          </div>
+        )}
+
       </section>
 
       {/* =====================================================
@@ -888,7 +1700,8 @@ const CRMDueDates = () => {
                     )}
                   </tr>
                 ))
-              ) : filteredParties.length === 0 ? (
+              ) : filteredParties.length ===
+                0 ? (
                 <tr>
                   <td
                     colSpan={6}
@@ -924,9 +1737,38 @@ const CRMDueDates = () => {
 
                       <p className="mt-1 max-w-sm text-xs leading-5 text-slate-400">
                         Try changing your search
-                        or add customer payment
-                        information through Accounts.
+                        or filters, or add customer
+                        payment information through
+                        Accounts.
                       </p>
+
+                      {(search ||
+                        activeFilterCount >
+                          0) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearch("");
+                            clearFilters();
+                          }}
+                          className="
+                            mt-4
+                            inline-flex
+                            items-center
+                            gap-2
+                            rounded-lg
+                            bg-[#172B6B]
+                            px-3
+                            py-2
+                            text-xs
+                            font-semibold
+                            text-white
+                          "
+                        >
+                          <FiX size={13} />
+                          Clear Search & Filters
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1030,7 +1872,7 @@ const CRMDueDates = () => {
                             ₹
                             {formatAmount(
                               party.currentBalance ||
-                              0
+                                0
                             )}
                           </p>
 
@@ -1067,13 +1909,7 @@ const CRMDueDates = () => {
                           )}
                         </td>
 
-                        {/* =================================================
-                            INLINE DUE DATE
-                        ================================================= */}
-
-                        {/* =================================================
-    INLINE DUE DATE EDITOR
-================================================= */}
+                        {/* DUE DATE */}
 
                         <td className="px-5 py-4">
 
@@ -1082,48 +1918,56 @@ const CRMDueDates = () => {
 
                               <input
                                 type="date"
-                                value={dueDateInput}
+                                value={
+                                  dueDateInput
+                                }
                                 onChange={(e) =>
-                                  setDueDateInput(e.target.value)
+                                  setDueDateInput(
+                                    e.target.value
+                                  )
                                 }
                                 autoFocus
                                 className="
-          h-9
-          w-[150px]
-          rounded-lg
-          border
-          border-slate-300
-          bg-white
-          px-2.5
-          text-sm
-          font-medium
-          text-slate-700
-          outline-none
-          focus:border-[#172B6B]
-          focus:ring-2
-          focus:ring-blue-100
-        "
+                                  h-9
+                                  w-[150px]
+                                  rounded-lg
+                                  border
+                                  border-slate-300
+                                  bg-white
+                                  px-2.5
+                                  text-sm
+                                  font-medium
+                                  text-slate-700
+                                  outline-none
+                                  focus:border-[#172B6B]
+                                  focus:ring-2
+                                  focus:ring-blue-100
+                                "
                               />
 
                               <button
                                 type="button"
-                                disabled={savingDueDate}
+                                disabled={
+                                  savingDueDate
+                                }
                                 onClick={() =>
-                                  saveDueDate(party._id)
+                                  saveDueDate(
+                                    party._id
+                                  )
                                 }
                                 className="
-          h-9
-          rounded-lg
-          bg-[#172B6B]
-          px-3
-          text-xs
-          font-semibold
-          text-white
-          transition
-          hover:bg-[#223a88]
-          disabled:cursor-not-allowed
-          disabled:opacity-50
-        "
+                                  h-9
+                                  rounded-lg
+                                  bg-[#172B6B]
+                                  px-3
+                                  text-xs
+                                  font-semibold
+                                  text-white
+                                  transition
+                                  hover:bg-[#223a88]
+                                  disabled:cursor-not-allowed
+                                  disabled:opacity-50
+                                "
                               >
                                 {savingDueDate
                                   ? "Saving..."
@@ -1132,22 +1976,26 @@ const CRMDueDates = () => {
 
                               <button
                                 type="button"
-                                disabled={savingDueDate}
-                                onClick={cancelDueDateEdit}
+                                disabled={
+                                  savingDueDate
+                                }
+                                onClick={
+                                  cancelDueDateEdit
+                                }
                                 className="
-          h-9
-          rounded-lg
-          border
-          border-slate-200
-          bg-white
-          px-3
-          text-xs
-          font-semibold
-          text-slate-600
-          transition
-          hover:bg-slate-50
-          disabled:opacity-50
-        "
+                                  h-9
+                                  rounded-lg
+                                  border
+                                  border-slate-200
+                                  bg-white
+                                  px-3
+                                  text-xs
+                                  font-semibold
+                                  text-slate-600
+                                  transition
+                                  hover:bg-slate-50
+                                  disabled:opacity-50
+                                "
                               >
                                 Cancel
                               </button>
@@ -1158,54 +2006,58 @@ const CRMDueDates = () => {
                             <button
                               type="button"
                               onClick={() =>
-                                startDueDateEdit(party)
+                                startDueDateEdit(
+                                  party
+                                )
                               }
                               className="
-        group
-        flex
-        items-center
-        gap-2
-        rounded-lg
-        border
-        border-transparent
-        px-2
-        py-1.5
-        text-left
-        transition
-        hover:border-slate-200
-        hover:bg-slate-50
-      "
+                                group
+                                flex
+                                items-center
+                                gap-2
+                                rounded-lg
+                                border
+                                border-transparent
+                                px-2
+                                py-1.5
+                                text-left
+                                transition
+                                hover:border-slate-200
+                                hover:bg-slate-50
+                              "
                             >
 
                               <FiCalendar
                                 size={14}
                                 className="
-          shrink-0
-          text-slate-400
-          group-hover:text-[#172B6B]
-        "
+                                  shrink-0
+                                  text-slate-400
+                                  group-hover:text-[#172B6B]
+                                "
                               />
 
                               <span
                                 className="
-          text-sm
-          font-medium
-          text-slate-700
-        "
+                                  text-sm
+                                  font-medium
+                                  text-slate-700
+                                "
                               >
-                                {formatDate(dueDate)}
+                                {formatDate(
+                                  dueDate
+                                )}
                               </span>
 
                               <span
                                 className="
-          ml-1
-          text-[10px]
-          font-semibold
-          text-[#172B6B]
-          opacity-0
-          transition
-          group-hover:opacity-100
-        "
+                                  ml-1
+                                  text-[10px]
+                                  font-semibold
+                                  text-[#172B6B]
+                                  opacity-0
+                                  transition
+                                  group-hover:opacity-100
+                                "
                               >
                                 Edit
                               </span>
@@ -1215,6 +2067,7 @@ const CRMDueDates = () => {
                           )}
 
                         </td>
+
                         {/* STATUS */}
 
                         <td className="px-5 py-4">
@@ -1260,6 +2113,7 @@ const CRMDueDates = () => {
             </tbody>
 
           </table>
+
         </div>
 
         {/* ===================================================
@@ -1267,7 +2121,8 @@ const CRMDueDates = () => {
         =================================================== */}
 
         {!loading &&
-          filteredParties.length > 0 && (
+          filteredParties.length >
+            0 && (
             <div
               className="
                 flex
@@ -1292,7 +2147,8 @@ const CRMDueDates = () => {
                 {filteredParties.length}
                 {" "}
                 customer
-                {filteredParties.length !== 1
+                {filteredParties.length !==
+                1
                   ? "s"
                   : ""}
               </p>

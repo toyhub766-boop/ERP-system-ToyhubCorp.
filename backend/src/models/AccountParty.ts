@@ -1,5 +1,34 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export interface IAccountPartyNote {
+  _id?: mongoose.Types.ObjectId;
+
+  title?: string;
+
+  note: string;
+
+  type:
+    | "GENERAL"
+    | "PAYMENT"
+    | "MEETING"
+    | "FOLLOW_UP"
+    | "COMPLAINT"
+    | "PRODUCT";
+
+  priority:
+    | "LOW"
+    | "MEDIUM"
+    | "HIGH";
+
+  reminderDate?: Date;
+
+  completed: boolean;
+
+  addedBy?: mongoose.Types.ObjectId;
+
+  createdAt: Date;
+}
+
 export interface IAccountParty extends Document {
   partyCode: string;
 
@@ -8,6 +37,10 @@ export interface IAccountParty extends Document {
   firmName?: string;
 
   assignedSalespeople?: mongoose.Types.ObjectId[];
+
+  crmPipeline?: string;
+  crmStage?: string;
+  crmAssociation?: string;
 
   companyName: string;
   contactPerson: string;
@@ -23,6 +56,8 @@ export interface IAccountParty extends Document {
   currentBalance: number;
 
   remarks: string;
+
+  specialNotes: IAccountPartyNote[];
 
   status: "Active" | "Inactive";
 
@@ -88,6 +123,24 @@ const accountPartySchema = new Schema<IAccountParty>(
         ref: "User",
       },
     ],
+
+    crmPipeline: {
+      type: String,
+      default: "Sales Pipeline",
+      trim: true,
+    },
+
+    crmStage: {
+      type: String,
+      default: "LEAD",
+      trim: true,
+    },
+
+    crmAssociation: {
+      type: String,
+      default: "PARTY",
+      trim: true,
+    },
 
     companyName: {
       type: String,
@@ -160,6 +213,62 @@ const accountPartySchema = new Schema<IAccountParty>(
       default: "",
       trim: true,
     },
+
+    specialNotes: [
+  {
+    title: {
+      type: String,
+      default: "",
+    },
+
+    note: {
+      type: String,
+      required: true,
+    },
+
+    type: {
+      type: String,
+      enum: [
+        "GENERAL",
+        "PAYMENT",
+        "MEETING",
+        "FOLLOW_UP",
+        "COMPLAINT",
+        "PRODUCT",
+      ],
+      default: "GENERAL",
+    },
+
+    priority: {
+      type: String,
+      enum: [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+      ],
+      default: "MEDIUM",
+    },
+
+    reminderDate: {
+      type: Date,
+    },
+
+    completed: {
+      type: Boolean,
+      default: false,
+    },
+
+    addedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
 
     status: {
       type: String,

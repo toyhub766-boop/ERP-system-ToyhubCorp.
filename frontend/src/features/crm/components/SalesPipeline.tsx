@@ -4,19 +4,25 @@ import {
   useState,
 } from "react";
 
+import type {
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+} from "react";
+
 import {
-  FiArrowRight,
+  FiArrowLeft,
   FiCalendar,
   FiCheck,
-  FiCheckCircle,
   FiChevronDown,
   FiClock,
   FiEdit3,
   FiFilter,
-  FiMail,
-  FiPhone,
+  FiMessageSquare,
+  FiPlus,
   FiSearch,
   FiTarget,
+  FiTrash2,
   FiUser,
   FiUsers,
   FiX,
@@ -29,26 +35,47 @@ import {
   updateCustomerPipeline,
 } from "../services/pipeline.service";
 
-const STAGES = [
-  { id: "LEAD", label: "Lead" },
-  { id: "RINGING", label: "Ringing" },
-  { id: "NEGOTIATION", label: "Negotiation" },
-  { id: "CATALOG_SHARED", label: "Catalog Shared" },
-  { id: "VERIFICATION", label: "Verification" },
-  { id: "ACTIVE_DEALER", label: "Active Dealer" },
-  { id: "SUPPLIER", label: "Supplier" },
-  { id: "DELAYED_PAYMENT", label: "Delayed Payment" },
-  { id: "CLOSED", label: "Closed" },
-  { id: "NO_DEALER", label: "No Dealer" },
-] as const;
+import {
+  addCustomerNote,
+  updateCustomerNote,
+  deleteCustomerNote,
+} from "../services/customerNote.service";
+
+import {
+  addPartyNote,
+  updatePartyNote,
+  deletePartyNote,
+  updatePartySalespeople,
+  updatePartyPipeline,
+} from "../../accounts/services/accountParty.service";
+
+/* =========================================================
+   TYPES
+========================================================= */
+
+type Stage = {
+  id: string;
+  label: string;
+};
 
 type CRMUser = {
   _id: string;
   name: string;
-  employeeId: string;
   role: string;
   status?: string;
 };
+
+type PipelineRecord = any;
+
+type DateFilter =
+  | "ALL"
+  | "TODAY"
+  | "TOMORROW"
+  | "YESTERDAY"
+  | "THIS_WEEK"
+  | "OVERDUE"
+  | "OLDER"
+  | "NO_DATE";
 
 type PipelineForm = {
   stage: string;
@@ -58,7 +85,95 @@ type PipelineForm = {
   nextAction: string;
   negotiationNotes: string;
   stageNote: string;
+  crmAssociation: string;
 };
+
+type ConversationForm = {
+  note: string;
+  type:
+    | "GENERAL"
+    | "PAYMENT"
+    | "MEETING"
+    | "FOLLOW_UP"
+    | "COMPLAINT"
+    | "PRODUCT";
+  priority:
+    | "LOW"
+    | "MEDIUM"
+    | "HIGH";
+  nextFollowUpDate: string;
+  nextAction: string;
+};
+
+type ConversationNote = {
+  _id?: string;
+  title?: string;
+  note: string;
+  type?:
+    | "GENERAL"
+    | "PAYMENT"
+    | "MEETING"
+    | "FOLLOW_UP"
+    | "COMPLAINT"
+    | "PRODUCT";
+  priority?:
+    | "LOW"
+    | "MEDIUM"
+    | "HIGH";
+  reminderDate?: string;
+  completed?: boolean;
+  addedBy?: {
+    _id?: string;
+    name?: string;
+    employeeId?: string;
+    role?: string;
+  } | string;
+  createdAt?: string;
+};
+
+/* =========================================================
+   CRM STAGES
+   SUPPLIERS ARE INTENTIONALLY NOT INCLUDED
+========================================================= */
+
+const STAGES: Stage[] = [
+  {
+    id: "LEAD",
+    label: "Lead",
+  },
+  {
+    id: "RINGING",
+    label: "Ringing",
+  },
+  {
+    id: "NEGOTIATION",
+    label: "Negotiation",
+  },
+  {
+    id: "CATALOG_SHARED",
+    label: "Catalog Shared",
+  },
+  {
+    id: "VERIFICATION",
+    label: "Verification",
+  },
+  {
+    id: "ACTIVE_DEALER",
+    label: "Active Dealer",
+  },
+  {
+    id: "DELAYED_PAYMENT",
+    label: "Delayed Payment",
+  },
+  {
+    id: "CLOSED",
+    label: "Closed",
+  },
+  {
+    id: "NO_DEAL",
+    label: "No Deal",
+  },
+];
 
 const EMPTY_FORM: PipelineForm = {
   stage: "LEAD",
@@ -68,155 +183,587 @@ const EMPTY_FORM: PipelineForm = {
   nextAction: "",
   negotiationNotes: "",
   stageNote: "",
+  crmAssociation: "LEAD",
 };
 
-const formatDate = (date?: string | null) => {
-  if (!date) return "Not set";
+const EMPTY_CONVERSATION: ConversationForm = {
+  note: "",
+  type: "GENERAL",
+  priority: "MEDIUM",
+  nextFollowUpDate: "",
+  nextAction: "",
+};
 
-  const parsed = new Date(date);
+/* =========================================================
+   HELPERS
+========================================================= */
 
-  if (Number.isNaN(parsed.getTime())) {
+const getType = (
+  record: PipelineRecord
+): "LEAD" | "CUSTOMER" | "PARTY" | "SUPPLIER" => {
+  if (
+    record.source === "ACCOUNTS" ||
+    record.crmType === "PARTY"
+  ) {
+    if (
+      record.partyType ===
+      "SUPPLIER"
+    ) {
+      return "SUPPLIER";
+    }
+
+    return "PARTY";
+  }
+
+  if (
+    record.stage === "LEAD" &&
+    !record.crmAssociation
+  ) {
+    return "LEAD";
+  }
+
+  return "CUSTOMER";
+};
+
+const getStage = (
+  record: PipelineRecord
+): string => {
+  const type = getType(record);
+
+  if (type === "SUPPLIER") {
+    return "SUPPLIER";
+  }
+
+  if (type === "PARTY") {
+    return (
+      record.crmStage ||
+      "ACTIVE_DEALER"
+    );
+  }
+
+  return record.stage || "LEAD";
+};
+
+const getSalespersonIds = (
+  record: PipelineRecord
+): string[] => {
+  if (
+    Array.isArray(
+      record.assignedSalespeople
+    )
+  ) {
+    return record.assignedSalespeople
+      .map((person: any) =>
+        typeof person === "string"
+          ? person
+          : person?._id
+      )
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const getSalespersonNames = (
+  record: PipelineRecord
+): string[] => {
+  if (
+    Array.isArray(
+      record.assignedSalespeople
+    )
+  ) {
+    return record.assignedSalespeople
+      .map((person: any) =>
+        typeof person === "string"
+          ? person
+          : person?.name
+      )
+      .filter(Boolean);
+  }
+
+  return record.assignedSalesperson
+    ? [record.assignedSalesperson]
+    : [];
+};
+
+const getConversationNotes = (
+  record: PipelineRecord
+): ConversationNote[] => {
+  if (
+    !Array.isArray(
+      record.specialNotes
+    )
+  ) {
+    return [];
+  }
+
+  return record.specialNotes;
+};
+
+const formatDate = (
+  value?: string | null
+) => {
+  if (!value) {
     return "Not set";
   }
 
-  return parsed.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const date = new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "Not set";
+  }
+
+  return date.toLocaleDateString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  );
 };
 
-const formatDateInput = (date?: string | null) => {
-  if (!date) return "";
+const formatDateTime = (
+  value?: string | null
+) => {
+  if (!value) {
+    return "Unknown time";
+  }
 
-  const parsed = new Date(date);
+  const date = new Date(value);
 
-  if (Number.isNaN(parsed.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "Unknown time";
+  }
+
+  return date.toLocaleString(
+    "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  );
+};
+
+const formatDateInput = (
+  value?: string | null
+) => {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
     return "";
   }
 
   return [
-    parsed.getFullYear(),
-    String(parsed.getMonth() + 1).padStart(2, "0"),
-    String(parsed.getDate()).padStart(2, "0"),
+    date.getFullYear(),
+    String(
+      date.getMonth() + 1
+    ).padStart(2, "0"),
+    String(
+      date.getDate()
+    ).padStart(2, "0"),
   ].join("-");
 };
 
-const getStageLabel = (stage?: string) => {
+const startOfDay = (
+  value: Date
+) => {
+  const date = new Date(value);
+
+  date.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  return date;
+};
+
+const isToday = (
+  value?: string | null
+) => {
+  if (!value) {
+    return false;
+  }
+
   return (
-    STAGES.find((item) => item.id === stage)?.label ||
-    stage ||
-    "Lead"
+    startOfDay(
+      new Date(value)
+    ).getTime() ===
+    startOfDay(
+      new Date()
+    ).getTime()
   );
 };
 
-const isOverdue = (date?: string | null) => {
-  if (!date) return false;
+const isTomorrow = (
+  value?: string | null
+) => {
+  if (!value) {
+    return false;
+  }
 
-  const followUp = new Date(date);
-  const today = new Date();
+  const tomorrow = new Date();
 
-  followUp.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
+  tomorrow.setDate(
+    tomorrow.getDate() + 1
+  );
 
-  return followUp < today;
+  return (
+    startOfDay(
+      new Date(value)
+    ).getTime() ===
+    startOfDay(
+      tomorrow
+    ).getTime()
+  );
 };
 
-const SalesPipeline = () => {
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [salespeople, setSalespeople] = useState<CRMUser[]>([]);
+const isYesterday = (
+  value?: string | null
+) => {
+  if (!value) {
+    return false;
+  }
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const yesterday = new Date();
 
-  const [search, setSearch] = useState("");
+  yesterday.setDate(
+    yesterday.getDate() - 1
+  );
 
-  const [selectedStage, setSelectedStage] =
-    useState("ALL");
+  return (
+    startOfDay(
+      new Date(value)
+    ).getTime() ===
+    startOfDay(
+      yesterday
+    ).getTime()
+  );
+};
 
-  const [selectedCustomer, setSelectedCustomer] =
-    useState<any>(null);
+const isOverdue = (
+  value?: string | null
+) => {
+  if (!value) {
+    return false;
+  }
 
-  const [showEdit, setShowEdit] =
-    useState(false);
+  return (
+    startOfDay(
+      new Date(value)
+    ).getTime() <
+    startOfDay(
+      new Date()
+    ).getTime()
+  );
+};
 
-  const [showSalespersonDropdown, setShowSalespersonDropdown] =
-    useState(false);
+const isThisWeek = (
+  value?: string | null
+) => {
+  if (!value) {
+    return false;
+  }
 
-  const [form, setForm] =
-    useState<PipelineForm>(EMPTY_FORM);
+  const date = startOfDay(
+    new Date(value)
+  );
 
-const loadPipeline = async () => {
-  try {
-    setLoading(true);
+  const today = startOfDay(
+    new Date()
+  );
 
-    console.log(
-      "CRM PIPELINE: requesting /customers/pipeline"
-    );
+  const day =
+    today.getDay() || 7;
 
-    const data = await getSalesPipeline();
+  const monday =
+    new Date(today);
 
-    console.log(
-      "CRM PIPELINE: response",
-      data
-    );
+  monday.setDate(
+    today.getDate() -
+      day +
+      1
+  );
 
-    if (!Array.isArray(data)) {
-      console.error(
-        "CRM PIPELINE: expected array but received:",
-        data
+  const sunday =
+    new Date(monday);
+
+  sunday.setDate(
+    monday.getDate() + 6
+  );
+
+  sunday.setHours(
+    23,
+    59,
+    59,
+    999
+  );
+
+  return (
+    date >= monday &&
+    date <= sunday
+  );
+};
+
+const matchesDateFilter = (
+  value:
+    | string
+    | null
+    | undefined,
+  filter: DateFilter,
+  mode: "NEXT" | "LAST"
+) => {
+  switch (filter) {
+    case "ALL":
+      return true;
+
+    case "NO_DATE":
+      return !value;
+
+    case "TODAY":
+      return isToday(value);
+
+    case "TOMORROW":
+      return isTomorrow(value);
+
+    case "YESTERDAY":
+      return isYesterday(value);
+
+    case "THIS_WEEK":
+      return isThisWeek(value);
+
+    case "OVERDUE":
+      return (
+        mode === "NEXT" &&
+        isOverdue(value)
       );
 
-      setCustomers([]);
-      return;
-    }
+    case "OLDER":
+      return (
+        mode === "LAST" &&
+        !!value &&
+        !isThisWeek(value) &&
+        !isToday(value)
+      );
 
-    setCustomers(data);
-
-  } catch (error: any) {
-    console.error(
-      "CRM PIPELINE API ERROR:",
-      error
-    );
-
-    console.error(
-      "CRM PIPELINE STATUS:",
-      error?.response?.status
-    );
-
-    console.error(
-      "CRM PIPELINE RESPONSE:",
-      error?.response?.data
-    );
-
-    setCustomers([]);
-  } finally {
-    setLoading(false);
+    default:
+      return true;
   }
 };
 
-  const loadSalespeople = async () => {
+const getStageLabel = (
+  stage: string
+) =>
+  STAGES.find(
+    item =>
+      item.id === stage
+  )?.label || stage;
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
+
+const SalesPipeline = () => {
+  const [
+    records,
+    setRecords,
+  ] = useState<PipelineRecord[]>(
+    []
+  );
+
+  const [
+    salespeople,
+    setSalespeople,
+  ] = useState<CRMUser[]>([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
+
+  const [
+    recordView,
+    setRecordView,
+  ] = useState<
+    "ALL" |
+    "LEADS" |
+    "CUSTOMERS" |
+    "PARTIES"
+  >("ALL");
+
+  const [
+    activeSalesperson,
+    setActiveSalesperson,
+  ] = useState("ALL");
+
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    showFilters,
+    setShowFilters,
+  ] = useState(false);
+
+  const [
+    stageFilter,
+    setStageFilter,
+  ] = useState("ALL");
+
+  const [
+    salespersonFilter,
+    setSalespersonFilter,
+  ] = useState("ALL");
+
+  const [
+    nextFollowUpFilter,
+    setNextFollowUpFilter,
+  ] = useState<DateFilter>("ALL");
+
+  const [
+    lastContactFilter,
+    setLastContactFilter,
+  ] = useState<DateFilter>("ALL");
+
+  const [
+    selectedRecord,
+    setSelectedRecord,
+  ] = useState<PipelineRecord | null>(
+    null
+  );
+
+  const [
+    editingRecord,
+    setEditingRecord,
+  ] = useState<PipelineRecord | null>(
+    null
+  );
+
+  const [
+    form,
+    setForm,
+  ] = useState<PipelineForm>(
+    EMPTY_FORM
+  );
+
+  const [
+    showEdit,
+    setShowEdit,
+  ] = useState(false);
+
+  const [
+    showSalespersonDropdown,
+    setShowSalespersonDropdown,
+  ] = useState(false);
+
+  const [
+    draggingRecord,
+    setDraggingRecord,
+  ] = useState<PipelineRecord | null>(
+    null
+  );
+
+  const [
+    dragOverStage,
+    setDragOverStage,
+  ] = useState<string | null>(
+    null
+  );
+
+  /* =======================================================
+     LOAD
+  ======================================================= */
+
+  const loadPipeline = async (
+    showLoader = true
+  ) => {
     try {
-      const response = await api.get("/users");
+      if (showLoader) {
+        setLoading(true);
+      }
 
-      const users = Array.isArray(response.data)
-        ? response.data
-        : [];
+      const data =
+        await getSalesPipeline();
 
-      const crmUsers = users.filter(
-        (user: CRMUser) =>
-          user.role === "CRM" &&
-          user.status !== "INACTIVE"
+      setRecords(
+        Array.isArray(data)
+          ? data
+          : []
       );
 
-      setSalespeople(crmUsers);
+      return Array.isArray(data)
+        ? data
+        : [];
     } catch (error) {
       console.error(
-        "Failed to load CRM salespeople:",
+        "Failed to load pipeline:",
         error
       );
 
-      setSalespeople([]);
+      if (showLoader) {
+        setRecords([]);
+      }
+
+      return [];
+    } finally {
+      if (showLoader) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const loadSalespeople = async () => {
+    try {
+      const response =
+        await api.get("/users");
+
+      const users =
+        Array.isArray(
+          response.data
+        )
+          ? response.data
+          : [];
+
+      setSalespeople(
+        users.filter(
+          (user: CRMUser) =>
+            user.role === "CRM" &&
+            user.status !==
+              "INACTIVE"
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load salespeople:",
+        error
+      );
     }
   };
 
@@ -225,2090 +772,3338 @@ const loadPipeline = async () => {
     loadSalespeople();
   }, []);
 
-  const filteredCustomers = useMemo(() => {
-    const query = search
-      .toLowerCase()
-      .trim();
+  /* =======================================================
+     RECORD UPDATE HELPER
+  ======================================================= */
 
-    return customers.filter((customer) => {
-      const companyName =
-        customer.companyName?.toLowerCase() || "";
-
-      const contactPerson =
-        customer.contactPerson?.toLowerCase() || "";
-
-      const phone =
-        customer.phone?.toLowerCase() || "";
-
-      const oldSalesperson =
-        customer.assignedSalesperson?.toLowerCase() ||
-        "";
-
-      const assignedSalespeople =
-        Array.isArray(
-          customer.assignedSalespeople
-        )
-          ? customer.assignedSalespeople
-              .map((person: any) =>
-                typeof person === "string"
-                  ? person
-                  : person?.name || ""
-              )
-              .join(" ")
-              .toLowerCase()
-          : "";
-
-      const matchesSearch =
-        !query ||
-        companyName.includes(query) ||
-        contactPerson.includes(query) ||
-        phone.includes(query) ||
-        oldSalesperson.includes(query) ||
-        assignedSalespeople.includes(query);
-
-      const matchesStage =
-        selectedStage === "ALL" ||
-        (customer.stage || "LEAD") ===
-          selectedStage;
-
-      return (
-        matchesSearch &&
-        matchesStage
-      );
-    });
-  }, [
-    customers,
-    search,
-    selectedStage,
-  ]);
-
-  const stageCounts = useMemo(() => {
-    return STAGES.map((stage) => ({
-      ...stage,
-      count: customers.filter(
-        (customer) =>
-          (customer.stage || "LEAD") ===
-          stage.id
-      ).length,
-    }));
-  }, [customers]);
-
-  const pipelineStats = useMemo(() => {
-    const total = customers.length;
-
-    const assigned = customers.filter(
-      (customer) =>
-        (Array.isArray(
-          customer.assignedSalespeople
-        ) &&
-          customer.assignedSalespeople.length > 0) ||
-        Boolean(
-          customer.assignedSalesperson?.trim()
-        )
-    ).length;
-
-    const followUps = customers.filter(
-      (customer) =>
-        Boolean(customer.nextFollowUpDate)
-    ).length;
-
-    const overdue = customers.filter(
-      (customer) =>
-        isOverdue(
-          customer.nextFollowUpDate
-        )
-    ).length;
-
-    const activeDeals = customers.filter(
-      (customer) =>
-        [
-          "NEGOTIATION",
-          "CATALOG_SHARED",
-          "VERIFICATION",
-          "ACTIVE_DEALER",
-        ].includes(customer.stage)
-    ).length;
-
-    return {
-      total,
-      assigned,
-      followUps,
-      overdue,
-      activeDeals,
-    };
-  }, [customers]);
-
-  const openEdit = (customer: any) => {
-    setSelectedCustomer(customer);
-
-    const assignedIds =
-      Array.isArray(
-        customer.assignedSalespeople
-      )
-        ? customer.assignedSalespeople
-            .map((person: any) =>
-              typeof person === "string"
-                ? person
-                : person?._id
-            )
-            .filter(Boolean)
-        : [];
-
-    setForm({
-      stage:
-        customer.stage || "LEAD",
-
-      assignedSalespeople:
-        assignedIds,
-
-      lastContactDate:
-        formatDateInput(
-          customer.lastContactDate
-        ),
-
-      nextFollowUpDate:
-        formatDateInput(
-          customer.nextFollowUpDate
-        ),
-
-      nextAction:
-        customer.nextAction || "",
-
-      negotiationNotes:
-        customer.negotiationNotes || "",
-
-      stageNote: "",
-    });
-
-    setShowSalespersonDropdown(false);
-    setShowEdit(true);
-  };
-
-  const closeEdit = () => {
-    if (saving) return;
-
-    setShowEdit(false);
-    setSelectedCustomer(null);
-    setForm(EMPTY_FORM);
-    setShowSalespersonDropdown(false);
-  };
-
-  const updateForm = (
-    field: keyof PipelineForm,
-    value: string | string[]
+  const replaceRecord = (
+    updatedRecord: PipelineRecord
   ) => {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  };
+    if (
+      !updatedRecord?._id
+    ) {
+      return;
+    }
 
-  const toggleSalesperson = (
-    salespersonId: string
-  ) => {
-    setForm((previous) => {
-      const alreadySelected =
-        previous.assignedSalespeople.includes(
-          salespersonId
-        );
+    setRecords(
+  (previous: PipelineRecord[]) =>
+      previous.map(record => {
+        if (
+          record._id !==
+            updatedRecord._id ||
+          record.source !==
+            updatedRecord.source
+        ) {
+          return record;
+        }
+
+        return {
+          ...record,
+          ...updatedRecord,
+        };
+      })
+    );
+
+    setSelectedRecord(
+  (previous: PipelineRecord | null) => {
+      if (
+        !previous ||
+        previous._id !==
+          updatedRecord._id ||
+        previous.source !==
+          updatedRecord.source
+      ) {
+        return previous;
+      }
 
       return {
         ...previous,
-
-        assignedSalespeople:
-          alreadySelected
-            ? previous.assignedSalespeople.filter(
-                (id) =>
-                  id !== salespersonId
-              )
-            : [
-                ...previous.assignedSalespeople,
-                salespersonId,
-              ],
+        ...updatedRecord,
       };
     });
   };
 
-  const savePipeline = async () => {
-    if (!selectedCustomer?._id) {
+  /* =======================================================
+     COUNTS
+  ======================================================= */
+
+  const counts = useMemo(() => {
+    const valid =
+      records.filter(
+        record =>
+          getType(record) !==
+          "SUPPLIER"
+      );
+
+    return {
+      all: valid.length,
+
+      leads: valid.filter(
+        record =>
+          getType(record) ===
+          "LEAD"
+      ).length,
+
+      customers: valid.filter(
+        record =>
+          getType(record) ===
+          "CUSTOMER"
+      ).length,
+
+      parties: valid.filter(
+        record =>
+          getType(record) ===
+          "PARTY"
+      ).length,
+    };
+  }, [records]);
+
+  /* =======================================================
+     FILTERS
+  ======================================================= */
+
+  const filteredRecords =
+    useMemo(() => {
+      const query =
+        search
+          .trim()
+          .toLowerCase();
+
+      return records.filter(
+        record => {
+          if (
+            getType(record) ===
+            "SUPPLIER"
+          ) {
+            return false;
+          }
+
+          const type =
+            getType(record);
+
+          if (
+            recordView ===
+              "LEADS" &&
+            type !== "LEAD"
+          ) {
+            return false;
+          }
+
+          if (
+            recordView ===
+              "CUSTOMERS" &&
+            type !== "CUSTOMER"
+          ) {
+            return false;
+          }
+
+          if (
+            recordView ===
+              "PARTIES" &&
+            type !== "PARTY"
+          ) {
+            return false;
+          }
+
+          const searchable = [
+            record.companyName,
+            record.firmName,
+            record.contactPerson,
+            record.phone,
+            record.email,
+            record.partyCode,
+            record.customerCode,
+            ...getSalespersonNames(
+              record
+            ),
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          if (
+            query &&
+            !searchable.includes(
+              query
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            stageFilter !==
+              "ALL" &&
+            getStage(record) !==
+              stageFilter
+          ) {
+            return false;
+          }
+
+          const salespersonIds =
+            getSalespersonIds(
+              record
+            );
+
+          if (
+            salespersonFilter !==
+              "ALL" &&
+            !salespersonIds.includes(
+              salespersonFilter
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            activeSalesperson !==
+              "ALL" &&
+            !salespersonIds.includes(
+              activeSalesperson
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            !matchesDateFilter(
+              record.nextFollowUpDate,
+              nextFollowUpFilter,
+              "NEXT"
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            !matchesDateFilter(
+              record.lastContactDate,
+              lastContactFilter,
+              "LAST"
+            )
+          ) {
+            return false;
+          }
+
+          return true;
+        }
+      );
+    }, [
+      records,
+      recordView,
+      search,
+      stageFilter,
+      salespersonFilter,
+      activeSalesperson,
+      nextFollowUpFilter,
+      lastContactFilter,
+    ]);
+
+  /* =======================================================
+     DRAG / DROP
+  ======================================================= */
+
+  const handleDragStart = (
+    record: PipelineRecord
+  ) => {
+    setDraggingRecord(record);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingRecord(null);
+    setDragOverStage(null);
+  };
+
+  const handleDrop = async (
+    stageId: string
+  ) => {
+    if (
+      !draggingRecord?._id
+    ) {
       return;
     }
+
+    const record =
+      draggingRecord;
+
+    const previousStage =
+      getStage(record);
+
+    setDraggingRecord(null);
+    setDragOverStage(null);
+
+    if (
+      previousStage === stageId
+    ) {
+      return;
+    }
+
+    setRecords(previous =>
+      previous.map(item => {
+        if (
+          item._id !==
+          record._id ||
+          item.source !==
+            record.source
+        ) {
+          return item;
+        }
+
+        if (
+          getType(item) ===
+          "PARTY"
+        ) {
+          return {
+            ...item,
+            crmStage:
+              stageId,
+          };
+        }
+
+        return {
+          ...item,
+          stage: stageId,
+        };
+      })
+    );
 
     try {
       setSaving(true);
 
-      await updateCustomerPipeline(
-        selectedCustomer._id,
-        {
-          stage: form.stage,
+      if (
+        getType(record) ===
+        "PARTY"
+      ) {
+        const updated =
+          await updatePartyPipeline(
+            record._id,
+            {
+              crmPipeline:
+                record.crmPipeline ||
+                "Sales Pipeline",
+              crmStage:
+                stageId,
+              crmAssociation:
+                record.crmAssociation ||
+                "PARTY",
+            }
+          );
 
-          assignedSalespeople:
-            form.assignedSalespeople,
+        replaceRecord({
+          ...updated,
+          source:
+            "ACCOUNTS",
+          crmType:
+            "PARTY",
+        });
+      } else {
+        const updated =
+          await updateCustomerPipeline(
+            record._id,
+            {
+              stage:
+                stageId,
+            }
+          );
 
-          lastContactDate:
-            form.lastContactDate ||
-            undefined,
-
-          nextFollowUpDate:
-            form.nextFollowUpDate ||
-            undefined,
-
-          nextAction:
-            form.nextAction.trim(),
-
-          negotiationNotes:
-            form.negotiationNotes.trim(),
-
-          stageNote:
-            form.stageNote.trim(),
-        }
-      );
-
-      await loadPipeline();
-
-      setShowEdit(false);
-      setSelectedCustomer(null);
-      setForm(EMPTY_FORM);
-      setShowSalespersonDropdown(false);
+        replaceRecord({
+          ...updated,
+          source: "CRM",
+          crmType:
+            getType(record),
+        });
+      }
     } catch (error) {
       console.error(
-        "Failed to update sales pipeline:",
+        "Failed to move card:",
         error
+      );
+
+      setRecords(previous =>
+        previous.map(item => {
+          if (
+            item._id !==
+              record._id ||
+            item.source !==
+              record.source
+          ) {
+            return item;
+          }
+
+          if (
+            getType(item) ===
+            "PARTY"
+          ) {
+            return {
+              ...item,
+              crmStage:
+                previousStage,
+            };
+          }
+
+          return {
+            ...item,
+            stage:
+              previousStage,
+          };
+        })
       );
     } finally {
       setSaving(false);
     }
   };
 
+  /* =======================================================
+     PROFILE
+  ======================================================= */
+
+  const openProfile = (
+    record: PipelineRecord
+  ) => {
+    setSelectedRecord(record);
+  };
+
+  /* =======================================================
+     EDIT
+  ======================================================= */
+
+  const openEdit = (
+    record: PipelineRecord
+  ) => {
+    setEditingRecord(record);
+
+    setForm({
+      stage:
+        getStage(record),
+
+      assignedSalespeople:
+        getSalespersonIds(
+          record
+        ),
+
+      lastContactDate:
+        formatDateInput(
+          record.lastContactDate
+        ),
+
+      nextFollowUpDate:
+        formatDateInput(
+          record.nextFollowUpDate
+        ),
+
+      nextAction:
+        record.nextAction ||
+        "",
+
+      negotiationNotes:
+        record.negotiationNotes ||
+        "",
+
+      stageNote: "",
+
+      crmAssociation:
+        record.crmAssociation ||
+        getType(record),
+    });
+
+    setShowEdit(true);
+  };
+
+  const saveEdit =
+    async () => {
+      if (
+        !editingRecord?._id
+      ) {
+        return;
+      }
+
+      try {
+        setSaving(true);
+
+        const type =
+          getType(
+            editingRecord
+          );
+
+        if (
+          type === "PARTY"
+        ) {
+          const salespersonResult =
+            await updatePartySalespeople(
+              editingRecord._id,
+              form.assignedSalespeople
+            );
+
+          const pipelineResult =
+            await updatePartyPipeline(
+              editingRecord._id,
+              {
+                crmPipeline:
+                  "Sales Pipeline",
+                crmStage:
+                  form.stage,
+                crmAssociation:
+                  form.crmAssociation,
+              }
+            );
+
+          replaceRecord({
+            ...pipelineResult,
+            ...salespersonResult,
+            source:
+              "ACCOUNTS",
+            crmType:
+              "PARTY",
+          });
+        } else {
+          const updated =
+            await updateCustomerPipeline(
+              editingRecord._id,
+              {
+                stage:
+                  form.stage,
+
+                assignedSalespeople:
+                  form.assignedSalespeople,
+
+                lastContactDate:
+                  form.lastContactDate ||
+                  undefined,
+
+                nextFollowUpDate:
+                  form.nextFollowUpDate ||
+                  undefined,
+
+                nextAction:
+                  form.nextAction.trim(),
+
+                negotiationNotes:
+                  form.negotiationNotes.trim(),
+
+                stageNote:
+                  form.stageNote.trim(),
+              }
+            );
+
+          replaceRecord({
+            ...updated,
+            source:
+              "CRM",
+            crmType:
+              type,
+          });
+        }
+
+        await loadPipeline(false);
+
+        setShowEdit(false);
+        setEditingRecord(null);
+        setForm(EMPTY_FORM);
+      } catch (error) {
+        console.error(
+          "Failed to save:",
+          error
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
+
+  /* =======================================================
+     CONVERSATION — ADD
+  ======================================================= */
+
+  const handleAddConversation =
+    async (
+      record: PipelineRecord,
+      conversation: ConversationForm
+    ) => {
+      if (
+        !record?._id ||
+        !conversation.note.trim()
+      ) {
+        return false;
+      }
+
+      try {
+        const type =
+          getType(record);
+
+        let updatedRecord;
+
+        if (
+          type === "PARTY"
+        ) {
+          updatedRecord =
+            await addPartyNote(
+              record._id,
+              {
+                title: "",
+                note:
+                  conversation.note.trim(),
+                type:
+                  conversation.type,
+                priority:
+                  conversation.priority,
+                reminderDate:
+                  conversation.nextFollowUpDate ||
+                  undefined,
+                completed:
+                  false,
+              }
+            );
+        } else {
+          updatedRecord =
+            await addCustomerNote(
+              record._id,
+              {
+                title: "",
+                note:
+                  conversation.note.trim(),
+                type:
+                  conversation.type,
+                priority:
+                  conversation.priority,
+                reminderDate:
+                  conversation.nextFollowUpDate ||
+                  undefined,
+                completed:
+                  false,
+              }
+            );
+
+          /*
+           * A conversation means the customer
+           * was contacted now.
+           *
+           * Update Last Contact and optionally
+           * Next Follow-up / Next Action.
+           */
+          updatedRecord =
+            await updateCustomerPipeline(
+              record._id,
+              {
+                lastContactDate:
+                  new Date().toISOString(),
+
+                nextFollowUpDate:
+                  conversation.nextFollowUpDate ||
+                  undefined,
+
+                nextAction:
+                  conversation.nextAction.trim() ||
+                  undefined,
+              }
+            );
+
+          /*
+           * The pipeline endpoint returns the
+           * customer. Reload once silently so
+           * specialNotes and pipeline fields
+           * remain synchronized.
+           */
+          const freshRecords =
+            await loadPipeline(
+              false
+            );
+
+          const freshRecord =
+            freshRecords.find(
+              (item: PipelineRecord) =>
+                item._id ===
+                  record._id &&
+                item.source ===
+                  "CRM"
+            );
+
+          if (freshRecord) {
+            updatedRecord =
+              freshRecord;
+          }
+        }
+
+        replaceRecord({
+          ...updatedRecord,
+          source:
+            type === "PARTY"
+              ? "ACCOUNTS"
+              : "CRM",
+          crmType:
+            type === "PARTY"
+              ? "PARTY"
+              : type,
+        });
+
+        return true;
+      } catch (error) {
+        console.error(
+          "Failed to add conversation:",
+          error
+        );
+
+        return false;
+      }
+    };
+
+  /* =======================================================
+     CONVERSATION — EDIT
+  ======================================================= */
+
+const handleUpdateConversation =
+  async (
+    record: PipelineRecord,
+    noteId: string,
+    data: Partial<ConversationNote>
+  ) => {
+    try {
+      const type = getType(record);
+
+      let updated;
+
+      if (type === "PARTY") {
+        updated = await updatePartyNote(
+          record._id,
+          noteId,
+          data as any
+        );
+      } else {
+        updated = await updateCustomerNote(
+          record._id,
+          noteId,
+          data as any
+        );
+      }
+
+      replaceRecord({
+        ...updated,
+        source:
+          type === "PARTY"
+            ? "ACCOUNTS"
+            : "CRM",
+        crmType:
+          type === "PARTY"
+            ? "PARTY"
+            : type,
+      });
+
+      return true;
+    } catch (error) {
+      console.error(
+        "Failed to update conversation:",
+        error
+      );
+
+      return false;
+    }
+  };
+
+  /* =======================================================
+     CONVERSATION — DELETE
+  ======================================================= */
+
+  const handleDeleteConversation =
+    async (
+      record: PipelineRecord,
+      noteId: string
+    ) => {
+      try {
+        const type =
+          getType(record);
+
+        if (
+          type === "PARTY"
+        ) {
+          await deletePartyNote(
+            record._id,
+            noteId
+          );
+        } else {
+          await deleteCustomerNote(
+            record._id,
+            noteId
+          );
+        }
+
+        setRecords(previous =>
+          previous.map(item => {
+            if (
+              item._id !==
+                record._id ||
+              item.source !==
+                record.source
+            ) {
+              return item;
+            }
+
+            return {
+              ...item,
+              specialNotes:
+                getConversationNotes(
+                  item
+                ).filter(
+                  note =>
+                    note._id !==
+                    noteId
+                ),
+            };
+          })
+        );
+
+        setSelectedRecord(
+  (previous: PipelineRecord | null) => {
+            if (
+              !previous ||
+              previous._id !==
+                record._id ||
+              previous.source !==
+                record.source
+            ) {
+              return previous;
+            }
+
+            return {
+              ...previous,
+              specialNotes:
+                getConversationNotes(
+                  previous
+                ).filter(
+                  note =>
+                    note._id !==
+                    noteId
+                ),
+            };
+          }
+        );
+
+        return true;
+      } catch (error) {
+        console.error(
+          "Failed to delete conversation:",
+          error
+        );
+
+        return false;
+      }
+    };
+
+  /* =======================================================
+     FILTER RESET
+  ======================================================= */
+
+  const clearFilters = () => {
+    setStageFilter("ALL");
+    setSalespersonFilter("ALL");
+    setNextFollowUpFilter(
+      "ALL"
+    );
+    setLastContactFilter(
+      "ALL"
+    );
+  };
+
+  const hasFilters =
+    stageFilter !== "ALL" ||
+    salespersonFilter !==
+      "ALL" ||
+    nextFollowUpFilter !==
+      "ALL" ||
+    lastContactFilter !==
+      "ALL";
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
   if (loading) {
     return (
-      <div className="min-h-[500px] flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div
-            className="
-              flex
-              h-12
-              w-12
-              items-center
-              justify-center
-              rounded-2xl
-              bg-[#172B6B]/10
-              text-[#172B6B]
-            "
-          >
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#172B6B]/10 text-[#172B6B]">
             <FiTarget
-              size={21}
+              size={20}
               className="animate-pulse"
             />
           </div>
 
-          <p className="mt-4 text-sm font-semibold text-slate-700">
-            Loading sales pipeline
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Preparing your CRM workspace...
+          <p className="mt-4 text-sm font-bold text-slate-700">
+            Loading sales pipeline...
           </p>
         </div>
       </div>
     );
   }
 
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
   return (
-    <>
-      <div className="space-y-6">
+    <div className="w-full space-y-5">
 
-        {/* HEADER */}
+      {/* HEADER */}
 
-        <section
-          className="
-            rounded-[28px]
-            border
-            border-slate-200
-            bg-white
-            p-5
-            shadow-sm
-            sm:p-6
-          "
-        >
-          <div
-            className="
-              flex
-              flex-col
-              gap-6
-              xl:flex-row
-              xl:items-center
-              xl:justify-between
-            "
-          >
-            <div className="flex items-start gap-4">
+      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
 
-              <div
-                className="
-                  flex
-                  h-12
-                  w-12
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-2xl
-                  bg-[#172B6B]
-                  text-white
-                  shadow-lg
-                  shadow-[#172B6B]/20
-                "
-              >
-                <FiTarget size={21} />
-              </div>
+        <div className="flex flex-col gap-5">
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="
-                      text-[11px]
-                      font-bold
-                      uppercase
-                      tracking-[0.16em]
-                      text-[#172B6B]
-                    "
-                  >
-                    CRM
-                  </span>
+          <div className="flex items-start gap-3">
 
-                  <span className="h-1 w-1 rounded-full bg-slate-300" />
-
-                  <span className="text-xs text-slate-400">
-                    Sales Operations
-                  </span>
-                </div>
-
-                <h1
-                  className="
-                    mt-1
-                    text-2xl
-                    font-bold
-                    tracking-tight
-                    text-slate-900
-                    sm:text-3xl
-                  "
-                >
-                  Sales Pipeline
-                </h1>
-
-                <p
-                  className="
-                    mt-1.5
-                    max-w-2xl
-                    text-sm
-                    leading-6
-                    text-slate-500
-                  "
-                >
-                  Manage customer stages, salesperson
-                  assignments, negotiations and upcoming
-                  follow-ups from one workspace.
-                </p>
-              </div>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#172B6B] text-white">
+              <FiTarget size={19} />
             </div>
 
-            <div className="flex w-full flex-col gap-2 sm:flex-row xl:w-auto">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#172B6B]">
+                Sales Operations
+              </p>
 
-              <div className="relative sm:w-80">
-
-                <FiSearch
-                  size={17}
-                  className="
-                    pointer-events-none
-                    absolute
-                    left-4
-                    top-1/2
-                    -translate-y-1/2
-                    text-slate-400
-                  "
-                />
-
-                <input
-                  value={search}
-                  onChange={(event) =>
-                    setSearch(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Search customers..."
-                  className="
-                    h-11
-                    w-full
-                    rounded-xl
-                    border
-                    border-slate-200
-                    bg-slate-50
-                    pl-11
-                    pr-10
-                    text-sm
-                    text-slate-800
-                    outline-none
-                    transition
-                    placeholder:text-slate-400
-                    focus:border-[#172B6B]
-                    focus:bg-white
-                    focus:ring-4
-                    focus:ring-[#172B6B]/10
-                  "
-                />
-
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSearch("")
-                    }
-                    className="
-                      absolute
-                      right-3
-                      top-1/2
-                      -translate-y-1/2
-                      rounded-lg
-                      p-1
-                      text-slate-400
-                      hover:bg-slate-100
-                      hover:text-slate-700
-                    "
-                  >
-                    <FiX size={15} />
-                  </button>
-                )}
-
-              </div>
-
-              <div className="relative sm:w-48">
-
-                <FiFilter
-                  size={15}
-                  className="
-                    pointer-events-none
-                    absolute
-                    left-3.5
-                    top-1/2
-                    -translate-y-1/2
-                    text-slate-400
-                  "
-                />
-
-                <select
-                  value={selectedStage}
-                  onChange={(event) =>
-                    setSelectedStage(
-                      event.target.value
-                    )
-                  }
-                  className="
-                    h-11
-                    w-full
-                    appearance-none
-                    rounded-xl
-                    border
-                    border-slate-200
-                    bg-slate-50
-                    pl-9
-                    pr-8
-                    text-sm
-                    font-medium
-                    text-slate-700
-                    outline-none
-                    focus:border-[#172B6B]
-                    focus:bg-white
-                  "
-                >
-                  <option value="ALL">
-                    All Stages
-                  </option>
-
-                  {STAGES.map((stage) => (
-                    <option
-                      key={stage.id}
-                      value={stage.id}
-                    >
-                      {stage.label}
-                    </option>
-                  ))}
-                </select>
-
-                <FiChevronDown
-                  size={14}
-                  className="
-                    pointer-events-none
-                    absolute
-                    right-3
-                    top-1/2
-                    -translate-y-1/2
-                    text-slate-400
-                  "
-                />
-
-              </div>
-
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                Sales Pipeline
+              </h1>
             </div>
+
           </div>
-        </section>
 
-        {/* KPI */}
+          {/* RECORD TABS */}
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50 p-1">
 
-          <KpiCard
-            label="Pipeline"
-            value={pipelineStats.total}
-            description="Total customers"
-            icon={<FiUsers size={17} />}
-          />
+            <RecordTab
+              label="All"
+              count={counts.all}
+              active={
+                recordView ===
+                "ALL"
+              }
+              onClick={() =>
+                setRecordView(
+                  "ALL"
+                )
+              }
+            />
 
-          <KpiCard
-            label="Active Deals"
-            value={pipelineStats.activeDeals}
-            description="In active sales stages"
-            icon={<FiTarget size={17} />}
-            highlighted
-          />
+            <RecordTab
+              label="Leads"
+              count={counts.leads}
+              active={
+                recordView ===
+                "LEADS"
+              }
+              onClick={() =>
+                setRecordView(
+                  "LEADS"
+                )
+              }
+            />
 
-          <KpiCard
-            label="Assigned"
-            value={pipelineStats.assigned}
-            description="With salesperson"
-            icon={<FiUser size={17} />}
-          />
+            <RecordTab
+              label="Customers"
+              count={
+                counts.customers
+              }
+              active={
+                recordView ===
+                "CUSTOMERS"
+              }
+              onClick={() =>
+                setRecordView(
+                  "CUSTOMERS"
+                )
+              }
+            />
 
-          <KpiCard
-            label="Follow-ups"
-            value={pipelineStats.followUps}
-            description="Scheduled contacts"
-            icon={<FiCalendar size={17} />}
-            warning
-          />
+            <RecordTab
+              label="Account Parties"
+              count={
+                counts.parties
+              }
+              active={
+                recordView ===
+                "PARTIES"
+              }
+              onClick={() =>
+                setRecordView(
+                  "PARTIES"
+                )
+              }
+            />
 
-          <KpiCard
-            label="Overdue"
-            value={pipelineStats.overdue}
-            description="Requires attention"
-            icon={<FiClock size={17} />}
-            danger
-          />
+          </div>
 
-        </section>
+          {/* SALESPERSON TABS */}
 
-        {/* STAGES */}
+          <div>
 
-        <section
-          className="
-            overflow-hidden
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            shadow-sm
-          "
-        >
-          <div className="border-b border-slate-100 px-5 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Pipeline Stages
-                </h3>
+            <div className="mb-2 flex items-center gap-2">
+              <FiUsers
+                size={13}
+                className="text-slate-400"
+              />
 
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Current customer distribution
-                </p>
-              </div>
-
-              <span className="text-xs font-medium text-slate-400">
-                {customers.length} total
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Salespeople
               </span>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 xl:divide-y-0">
+            <div className="flex gap-1 overflow-x-auto">
 
-            {stageCounts.map((stage) => {
-              const active =
-                selectedStage === stage.id;
+              <SalespersonTab
+                label="All"
+                active={
+                  activeSalesperson ===
+                  "ALL"
+                }
+                onClick={() =>
+                  setActiveSalesperson(
+                    "ALL"
+                  )
+                }
+              />
 
-              return (
-                <button
-                  key={stage.id}
-                  type="button"
-                  onClick={() =>
-                    setSelectedStage(
-                      active
-                        ? "ALL"
-                        : stage.id
-                    )
-                  }
-                  className={`
-                    group
-                    px-4
-                    py-4
-                    text-left
-                    transition
-                    hover:bg-slate-50
-                    ${
-                      active
-                        ? "bg-[#172B6B]/5"
-                        : ""
+              {salespeople.map(
+                person => (
+                  <SalespersonTab
+                    key={
+                      person._id
                     }
-                  `}
-                >
-                  <div className="flex items-center justify-between gap-2">
+                    label={
+                      person.name
+                    }
+                    active={
+                      activeSalesperson ===
+                      person._id
+                    }
+                    onClick={() =>
+                      setActiveSalesperson(
+                        person._id
+                      )
+                    }
+                  />
+                )
+              )}
 
-                    <span
-                      className={`
-                        h-2
-                        w-2
-                        shrink-0
-                        rounded-full
-                        ${
-                          active
-                            ? "bg-[#172B6B]"
-                            : "bg-slate-300 group-hover:bg-[#172B6B]"
-                        }
-                      `}
-                    />
-
-                    <span className="text-xl font-bold text-slate-900">
-                      {stage.count}
-                    </span>
-
-                  </div>
-
-                  <p
-                    className={`
-                      mt-2
-                      truncate
-                      text-[11px]
-                      font-semibold
-                      ${
-                        active
-                          ? "text-[#172B6B]"
-                          : "text-slate-500"
-                      }
-                    `}
-                  >
-                    {stage.label}
-                  </p>
-                </button>
-              );
-            })}
-
-          </div>
-        </section>
-
-        {/* TABLE */}
-
-        <section
-          className="
-            overflow-hidden
-            rounded-[28px]
-            border
-            border-slate-200
-            bg-white
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              flex
-              flex-col
-              gap-3
-              border-b
-              border-slate-100
-              px-5
-              py-5
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-              sm:px-6
-            "
-          >
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Customer Pipeline
-              </h3>
-
-              <p className="mt-1 text-xs text-slate-400">
-                Showing {filteredCustomers.length} of{" "}
-                {customers.length} customers
-              </p>
             </div>
 
-            {(search ||
-              selectedStage !== "ALL") && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  setSelectedStage("ALL");
-                }}
-                className="
-                  inline-flex
-                  items-center
-                  gap-1.5
-                  self-start
-                  rounded-lg
-                  px-3
-                  py-2
-                  text-xs
-                  font-semibold
-                  text-slate-500
-                  hover:bg-slate-100
-                  hover:text-slate-800
-                "
-              >
-                <FiX size={14} />
-                Clear filters
-              </button>
-            )}
           </div>
 
-          <div className="overflow-x-auto">
+          {/* SEARCH */}
 
-            <table className="w-full min-w-[1200px]">
+          <div className="flex flex-col gap-2 lg:flex-row">
 
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80">
+            <div className="relative flex-1">
 
-                  <th className="px-6 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                    Customer
-                  </th>
+              <FiSearch
+                size={16}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-                  <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                    Salesperson
-                  </th>
+              <input
+                value={search}
+                onChange={e =>
+                  setSearch(
+                    e.target.value
+                  )
+                }
+                placeholder="Search company, contact, phone, party code or salesperson..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:border-[#172B6B] focus:bg-white"
+              />
 
-                  <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                    Stage
-                  </th>
+            </div>
 
-                  <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                    Last Contact
-                  </th>
+            <button
+              type="button"
+              onClick={() =>
+                setShowFilters(
+                  value => !value
+                )
+              }
+              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold ${
+                hasFilters
+                  ? "border-[#172B6B] bg-[#172B6B]/5 text-[#172B6B]"
+                  : "border-slate-200 bg-white text-slate-600"
+              }`}
+            >
+              <FiFilter size={15} />
 
-                  <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                    Follow-up
-                  </th>
+              Advanced Search
 
-                  <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                    Next Action
-                  </th>
+              {hasFilters && (
+                <span className="rounded-full bg-[#172B6B] px-1.5 py-0.5 text-[9px] text-white">
+                  !
+                </span>
+              )}
 
-                  <th className="px-6 py-3.5 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                    Manage
-                  </th>
+            </button>
 
-                </tr>
-              </thead>
+          </div>
 
-              <tbody className="divide-y divide-slate-100">
+          {/* FILTERS */}
 
-                {filteredCustomers.map(
-                  (customer) => {
-                    const overdue =
-                      isOverdue(
-                        customer.nextFollowUpDate
-                      );
+          {showFilters && (
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
 
-                    return (
-                      <tr
-                        key={customer._id}
-                        className="
-                          group
-                          transition
-                          hover:bg-slate-50/70
-                        "
-                      >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
-                        <td className="px-6 py-4">
-
-                          <div className="flex items-center gap-3">
-
-                            <div
-                              className="
-                                flex
-                                h-10
-                                w-10
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-xl
-                                bg-[#172B6B]/10
-                                text-sm
-                                font-bold
-                                text-[#172B6B]
-                              "
-                            >
-                              {customer.companyName
-                                ?.charAt(0)
-                                ?.toUpperCase() ||
-                                "C"}
-                            </div>
-
-                            <div className="min-w-0">
-
-                              <p className="truncate text-sm font-bold text-slate-900">
-                                {customer.companyName ||
-                                  "Unnamed Customer"}
-                              </p>
-
-                              <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-
-                                <span>
-                                  {customer.contactPerson ||
-                                    "No contact"}
-                                </span>
-
-                                {customer.phone && (
-                                  <>
-                                    <span className="h-1 w-1 rounded-full bg-slate-300" />
-
-                                    <span>
-                                      {customer.phone}
-                                    </span>
-                                  </>
-                                )}
-
-                              </div>
-
-                            </div>
-
-                          </div>
-
-                        </td>
-
-                        <td className="px-5 py-4">
-
-                          {Array.isArray(
-                            customer.assignedSalespeople
-                          ) &&
-                          customer.assignedSalespeople.length > 0 ? (
-                            <div className="flex max-w-[240px] flex-wrap gap-1.5">
-
-                              {customer.assignedSalespeople.map(
-                                (person: any) => {
-                                  const name =
-                                    typeof person === "string"
-                                      ? person
-                                      : person?.name;
-
-                                  const key =
-                                    typeof person === "string"
-                                      ? person
-                                      : person?._id;
-
-                                  return (
-                                    <span
-                                      key={key}
-                                      className="
-                                        inline-flex
-                                        items-center
-                                        gap-1.5
-                                        rounded-lg
-                                        bg-slate-100
-                                        px-2.5
-                                        py-1.5
-                                        text-xs
-                                        font-medium
-                                        text-slate-700
-                                      "
-                                    >
-                                      <FiUser size={12} />
-                                      {name || "Salesperson"}
-                                    </span>
-                                  );
-                                }
-                              )}
-
-                            </div>
-                          ) : customer.assignedSalesperson ? (
-                            <div className="flex items-center gap-2.5">
-
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                                <FiUser size={14} />
-                              </div>
-
-                              <span className="text-sm font-medium text-slate-700">
-                                {customer.assignedSalesperson}
-                              </span>
-
-                            </div>
-                          ) : (
-                            <span
-                              className="
-                                inline-flex
-                                rounded-lg
-                                bg-slate-100
-                                px-2.5
-                                py-1.5
-                                text-xs
-                                font-medium
-                                text-slate-400
-                              "
-                            >
-                              Unassigned
-                            </span>
-                          )}
-
-                        </td>
-
-                        <td className="px-5 py-4">
-
-                          <span
-                            className="
-                              inline-flex
-                              items-center
-                              gap-2
-                              rounded-full
-                              bg-[#172B6B]/10
-                              px-3
-                              py-1.5
-                              text-xs
-                              font-semibold
-                              text-[#172B6B]
-                            "
-                          >
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#172B6B]" />
-
-                            {getStageLabel(
-                              customer.stage
-                            )}
-                          </span>
-
-                        </td>
-
-                        <td className="px-5 py-4">
-
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
-
-                            <FiPhone
-                              size={14}
-                              className="text-slate-400"
-                            />
-
-                            {formatDate(
-                              customer.lastContactDate
-                            )}
-
-                          </div>
-
-                        </td>
-
-                        <td className="px-5 py-4">
-
-                          <div
-                            className={`
-                              flex
-                              items-center
-                              gap-2
-                              text-sm
-                              ${
-                                overdue
-                                  ? "font-semibold text-red-600"
-                                  : "text-slate-600"
-                              }
-                            `}
-                          >
-                            <FiCalendar
-                              size={14}
-                            />
-
-                            {formatDate(
-                              customer.nextFollowUpDate
-                            )}
-                          </div>
-
-                          {overdue && (
-                            <span className="mt-1 inline-flex rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600">
-                              OVERDUE
-                            </span>
-                          )}
-
-                        </td>
-
-                        <td className="max-w-[250px] px-5 py-4">
-
-                          <p
-                            className="
-                              truncate
-                              text-sm
-                              text-slate-600
-                            "
-                            title={
-                              customer.nextAction ||
-                              undefined
-                            }
-                          >
-                            {customer.nextAction ||
-                              "No next action"}
-                          </p>
-
-                        </td>
-
-                        <td className="px-6 py-4 text-right">
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEdit(
-                                customer
-                              )
-                            }
-                            className="
-                              inline-flex
-                              items-center
-                              gap-2
-                              rounded-xl
-                              border
-                              border-slate-200
-                              bg-white
-                              px-3.5
-                              py-2
-                              text-xs
-                              font-semibold
-                              text-[#172B6B]
-                              shadow-sm
-                              transition
-                              hover:border-[#172B6B]/30
-                              hover:bg-[#172B6B]/5
-                            "
-                          >
-                            <FiEdit3
-                              size={14}
-                            />
-                            Manage
-                            <FiArrowRight
-                              size={13}
-                            />
-                          </button>
-
-                        </td>
-
-                      </tr>
-                    );
+                <FilterSelect
+                  label="Stage"
+                  value={
+                    stageFilter
                   }
-                )}
+                  onChange={
+                    setStageFilter
+                  }
+                  options={[
+                    {
+                      value: "ALL",
+                      label:
+                        "All Stages",
+                    },
+                    ...STAGES.map(
+                      stage => ({
+                        value:
+                          stage.id,
+                        label:
+                          stage.label,
+                      })
+                    ),
+                  ]}
+                />
 
-              </tbody>
+                <FilterSelect
+                  label="Salesperson"
+                  value={
+                    salespersonFilter
+                  }
+                  onChange={
+                    setSalespersonFilter
+                  }
+                  options={[
+                    {
+                      value: "ALL",
+                      label:
+                        "All Salespeople",
+                    },
+                    ...salespeople.map(
+                      person => ({
+                        value:
+                          person._id,
+                        label:
+                          person.name,
+                      })
+                    ),
+                  ]}
+                />
 
-            </table>
+                <FilterSelect
+                  label="Next Follow-up"
+                  value={
+                    nextFollowUpFilter
+                  }
+                  onChange={value =>
+                    setNextFollowUpFilter(
+                      value as DateFilter
+                    )
+                  }
+                  options={[
+                    {
+                      value: "ALL",
+                      label:
+                        "All",
+                    },
+                    {
+                      value:
+                        "TODAY",
+                      label:
+                        "Today",
+                    },
+                    {
+                      value:
+                        "TOMORROW",
+                      label:
+                        "Tomorrow",
+                    },
+                    {
+                      value:
+                        "THIS_WEEK",
+                      label:
+                        "This Week",
+                    },
+                    {
+                      value:
+                        "OVERDUE",
+                      label:
+                        "Overdue",
+                    },
+                    {
+                      value:
+                        "NO_DATE",
+                      label:
+                        "Not Set",
+                    },
+                  ]}
+                />
 
-          </div>
+                <FilterSelect
+                  label="Last Contact"
+                  value={
+                    lastContactFilter
+                  }
+                  onChange={value =>
+                    setLastContactFilter(
+                      value as DateFilter
+                    )
+                  }
+                  options={[
+                    {
+                      value: "ALL",
+                      label:
+                        "All",
+                    },
+                    {
+                      value:
+                        "TODAY",
+                      label:
+                        "Today",
+                    },
+                    {
+                      value:
+                        "YESTERDAY",
+                      label:
+                        "Yesterday",
+                    },
+                    {
+                      value:
+                        "THIS_WEEK",
+                      label:
+                        "This Week",
+                    },
+                    {
+                      value:
+                        "OLDER",
+                      label:
+                        "Older",
+                    },
+                    {
+                      value:
+                        "NO_DATE",
+                      label:
+                        "Not Set",
+                    },
+                  ]}
+                />
 
-          {!filteredCustomers.length && (
-            <div className="px-6 py-20 text-center">
-
-              <div
-                className="
-                  mx-auto
-                  flex
-                  h-14
-                  w-14
-                  items-center
-                  justify-center
-                  rounded-2xl
-                  bg-slate-100
-                  text-slate-400
-                "
-              >
-                <FiSearch size={22} />
               </div>
 
-              <h3 className="mt-4 text-base font-bold text-slate-800">
-                No pipeline records found
-              </h3>
-
-              <p className="mx-auto mt-1.5 max-w-sm text-sm text-slate-500">
-                Try changing your search or stage
-                filter to find the customer you're
-                looking for.
-              </p>
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={
+                    clearFilters
+                  }
+                  className="mt-3 text-xs font-bold text-[#172B6B]"
+                >
+                  Clear all filters
+                </button>
+              )}
 
             </div>
           )}
 
-        </section>
+        </div>
+
+      </section>
+
+      {/* KANBAN */}
+
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">
+              {recordView ===
+              "ALL"
+                ? "All Records"
+                : recordView ===
+                  "LEADS"
+                ? "Leads"
+                : recordView ===
+                  "CUSTOMERS"
+                ? "Customers"
+                : "Account Parties"}
+            </h2>
+
+            <p className="mt-0.5 text-xs text-slate-400">
+              {
+                filteredRecords.length
+              }{" "}
+              matching records
+            </p>
+          </div>
+
+          {saving && (
+            <span className="text-[10px] font-semibold text-slate-400">
+              Saving...
+            </span>
+          )}
+
+        </div>
+
+        <div className="overflow-x-auto bg-slate-50 p-4">
+
+          <div className="flex min-w-max items-start gap-4">
+
+            {STAGES.map(
+              stage => {
+                const columnRecords =
+                  filteredRecords.filter(
+                    record =>
+                      getStage(
+                        record
+                      ) ===
+                      stage.id
+                  );
+
+                return (
+                  <KanbanColumn
+                    key={
+                      stage.id
+                    }
+                    stage={
+                      stage
+                    }
+                    records={
+                      columnRecords
+                    }
+                    draggingId={
+                      draggingRecord?._id
+                    }
+                    dragOver={
+                      dragOverStage ===
+                      stage.id
+                    }
+                    onDragOver={() =>
+                      setDragOverStage(
+                        stage.id
+                      )
+                    }
+                    onDrop={() =>
+                      handleDrop(
+                        stage.id
+                      )
+                    }
+                    onDragStart={
+                      handleDragStart
+                    }
+                    onDragEnd={
+                      handleDragEnd
+                    }
+                    onOpen={
+                      openProfile
+                    }
+                    onEdit={
+                      openEdit
+                    }
+                  />
+                );
+              }
+            )}
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* PROFILE */}
+
+      {selectedRecord && (
+        <ProfileDrawer
+          record={
+            selectedRecord
+          }
+          onClose={() =>
+            setSelectedRecord(
+              null
+            )
+          }
+          onEdit={() => {
+            const record =
+              selectedRecord;
+
+            setSelectedRecord(
+              null
+            );
+
+            openEdit(record);
+          }}
+          onAddConversation={
+            handleAddConversation
+          }
+          onUpdateConversation={
+            handleUpdateConversation
+          }
+          onDeleteConversation={
+            handleDeleteConversation
+          }
+        />
+      )}
+
+      {/* EDIT MODAL */}
+
+      {showEdit &&
+        editingRecord && (
+          <EditModal
+            record={
+              editingRecord
+            }
+            form={form}
+            setForm={
+              setForm
+            }
+            salespeople={
+              salespeople
+            }
+            dropdownOpen={
+              showSalespersonDropdown
+            }
+            setDropdownOpen={
+              setShowSalespersonDropdown
+            }
+            saving={
+              saving
+            }
+            onClose={() => {
+              if (saving) {
+                return;
+              }
+
+              setShowEdit(
+                false
+              );
+
+              setEditingRecord(
+                null
+              );
+
+              setForm(
+                EMPTY_FORM
+              );
+            }}
+            onSave={
+              saveEdit
+            }
+          />
+        )}
+
+    </div>
+  );
+};
+
+/* =========================================================
+   RECORD TAB
+========================================================= */
+
+const RecordTab = ({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`shrink-0 rounded-lg px-4 py-2.5 text-xs font-bold ${
+      active
+        ? "bg-white text-[#172B6B] shadow-sm"
+        : "text-slate-500"
+    }`}
+  >
+    {label}
+
+    <span className="ml-1.5 text-[10px] opacity-60">
+      {count}
+    </span>
+  </button>
+);
+
+/* =========================================================
+   SALESPERSON TAB
+========================================================= */
+
+const SalespersonTab = ({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`shrink-0 rounded-lg px-3.5 py-2 text-xs font-semibold ${
+      active
+        ? "bg-[#172B6B] text-white"
+        : "bg-white text-slate-500"
+    }`}
+  >
+    {label}
+  </button>
+);
+
+/* =========================================================
+   KANBAN COLUMN
+========================================================= */
+
+const KanbanColumn = ({
+  stage,
+  records,
+  draggingId,
+  dragOver,
+  onDragOver,
+  onDrop,
+  onDragStart,
+  onDragEnd,
+  onOpen,
+  onEdit,
+}: {
+  stage: Stage;
+  records: PipelineRecord[];
+  draggingId?: string;
+  dragOver: boolean;
+  onDragOver: () => void;
+  onDrop: () => void;
+  onDragStart: (
+    record: PipelineRecord
+  ) => void;
+  onDragEnd: () => void;
+  onOpen: (
+    record: PipelineRecord
+  ) => void;
+  onEdit: (
+    record: PipelineRecord
+  ) => void;
+}) => (
+  <div
+    className={`flex w-[285px] min-w-[285px] shrink-0 flex-col overflow-hidden rounded-2xl border ${
+      dragOver
+        ? "border-[#172B6B] ring-2 ring-[#172B6B]/10"
+        : "border-slate-200"
+    }`}
+    onDragOver={e => {
+      e.preventDefault();
+      onDragOver();
+    }}
+    onDrop={e => {
+      e.preventDefault();
+      onDrop();
+    }}
+  >
+
+    <div className="flex min-h-[58px] items-center justify-between border-b border-slate-200 bg-white px-3.5 py-3">
+
+      <div className="flex items-center gap-2">
+
+        <span className="h-2 w-2 rounded-full bg-[#172B6B]" />
+
+        <span className="text-xs font-bold text-slate-700">
+          {stage.label}
+        </span>
 
       </div>
 
-      {/* EDIT PIPELINE MODAL */}
+      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+        {records.length}
+      </span>
 
-      {showEdit && selectedCustomer && (
-        <div
-          className="
-            fixed
-            inset-0
-            z-[100]
-            flex
-            items-center
-            justify-center
-            bg-slate-950/60
-            p-4
-            backdrop-blur-sm
-          "
-          onMouseDown={(event) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              closeEdit();
+    </div>
+
+    <div
+      className={`min-h-[220px] space-y-3 bg-slate-100 p-2.5 ${
+        dragOver
+          ? "bg-[#172B6B]/5"
+          : ""
+      }`}
+    >
+
+      {records.map(
+        record => (
+          <PipelineCard
+            key={`${record.source || "CRM"}-${record._id}`}
+            record={
+              record
             }
-          }}
-        >
+            dragging={
+              draggingId ===
+              record._id
+            }
+            onOpen={() =>
+              onOpen(
+                record
+              )
+            }
+            onEdit={() =>
+              onEdit(
+                record
+              )
+            }
+            onDragStart={() =>
+              onDragStart(
+                record
+              )
+            }
+            onDragEnd={
+              onDragEnd
+            }
+          />
+        )
+      )}
 
-          <div
-            className="
-              flex
-              max-h-[92vh]
-              w-full
-              max-w-3xl
-              flex-col
-              overflow-hidden
-              rounded-[28px]
-              bg-white
-              shadow-2xl
-            "
+      {!records.length && (
+        <div className="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/70">
+          <span className="text-xs text-slate-400">
+            {dragOver
+              ? "Drop here"
+              : "No records"}
+          </span>
+        </div>
+      )}
+
+    </div>
+
+  </div>
+);
+
+/* =========================================================
+   PIPELINE CARD
+========================================================= */
+
+const PipelineCard = ({
+  record,
+  dragging,
+  onOpen,
+  onEdit,
+  onDragStart,
+  onDragEnd,
+}: {
+  record: PipelineRecord;
+  dragging: boolean;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}) => {
+  const type =
+    getType(record);
+
+  const names =
+    getSalespersonNames(
+      record
+    );
+
+  const overdue =
+    isOverdue(
+      record.nextFollowUpDate
+    );
+
+  const today =
+    isToday(
+      record.nextFollowUpDate
+    );
+
+  const conversationCount =
+    getConversationNotes(
+      record
+    ).length;
+
+  return (
+    <article
+      draggable
+      onDragStart={e => {
+        e.dataTransfer.effectAllowed =
+          "move";
+
+        onDragStart();
+      }}
+      onDragEnd={
+        onDragEnd
+      }
+      className={`rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm ${
+        dragging
+          ? "cursor-grabbing opacity-40"
+          : "cursor-grab"
+      }`}
+    >
+
+      <button
+        type="button"
+        onClick={
+          onOpen
+        }
+        className="block w-full text-left"
+      >
+
+        <div className="flex items-start justify-between gap-2">
+
+          <div className="min-w-0 flex-1">
+
+            <h3 className="break-words text-sm font-bold leading-5 text-slate-900">
+              {record.companyName ||
+                record.firmName ||
+                "Unnamed Company"}
+            </h3>
+
+            <p className="mt-1 text-xs text-slate-400">
+              {record.contactPerson ||
+                "No contact"}
+            </p>
+
+          </div>
+
+          <span
+            className={`shrink-0 rounded-md px-2 py-1 text-[9px] font-bold uppercase ${
+              type ===
+              "LEAD"
+                ? "bg-blue-50 text-blue-700"
+                : type ===
+                  "PARTY"
+                ? "bg-amber-50 text-amber-700"
+                : "bg-slate-100 text-slate-600"
+            }`}
           >
+            {type}
+          </span>
 
-            <div
-              className="
-                flex
-                shrink-0
-                items-start
-                justify-between
-                border-b
-                border-slate-100
-                bg-white
-                px-5
-                py-5
-                sm:px-6
-              "
-            >
+        </div>
 
-              <div className="min-w-0 pr-4">
+        <div className="mt-3">
 
-                <div className="flex items-center gap-2">
+          {names.length ? (
+            <div className="flex flex-wrap gap-1.5">
 
+              {names.map(
+                name => (
                   <span
-                    className="
-                      rounded-lg
-                      bg-[#172B6B]/10
-                      px-2.5
-                      py-1
-                      text-[10px]
-                      font-bold
-                      uppercase
-                      tracking-[0.12em]
-                      text-[#172B6B]
-                    "
+                    key={
+                      name
+                    }
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1.5 text-[10px] font-semibold text-slate-600"
                   >
-                    Pipeline
-                  </span>
-
-                  <span className="text-xs text-slate-300">
-                    /
-                  </span>
-
-                  <span className="text-xs text-slate-400">
-                    Manage Customer
-                  </span>
-
-                </div>
-
-                <h3
-                  className="
-                    mt-2
-                    truncate
-                    text-xl
-                    font-bold
-                    tracking-tight
-                    text-slate-900
-                    sm:text-2xl
-                  "
-                >
-                  {selectedCustomer.companyName}
-                </h3>
-
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-
-                  {selectedCustomer.contactPerson && (
-                    <span className="flex items-center gap-1.5">
-                      <FiUser size={12} />
-                      {selectedCustomer.contactPerson}
-                    </span>
-                  )}
-
-                  {selectedCustomer.phone && (
-                    <span className="flex items-center gap-1.5">
-                      <FiPhone size={12} />
-                      {selectedCustomer.phone}
-                    </span>
-                  )}
-
-                  {selectedCustomer.email && (
-                    <span className="flex items-center gap-1.5">
-                      <FiMail size={12} />
-                      {selectedCustomer.email}
-                    </span>
-                  )}
-
-                </div>
-
-              </div>
-
-              <button
-                type="button"
-                onClick={closeEdit}
-                disabled={saving}
-                aria-label="Close"
-                className="
-                  flex
-                  h-9
-                  w-9
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-xl
-                  text-slate-400
-                  transition
-                  hover:bg-slate-100
-                  hover:text-slate-700
-                  disabled:cursor-not-allowed
-                "
-              >
-                <FiX size={19} />
-              </button>
-
-            </div>
-
-            <div className="overflow-y-auto">
-
-              <div className="space-y-6 p-5 sm:p-6">
-
-                <section
-                  className="
-                    rounded-2xl
-                    border
-                    border-[#172B6B]/10
-                    bg-[#172B6B]/5
-                    p-4
-                  "
-                >
-
-                  <div className="flex items-center justify-between gap-4">
-
-                    <div>
-
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#172B6B]/60">
-                        Current Stage
-                      </p>
-
-                      <p className="mt-1 text-base font-bold text-[#172B6B]">
-                        {getStageLabel(
-                          selectedCustomer.stage
-                        )}
-                      </p>
-
-                    </div>
-
-                    <FiTarget
-                      size={22}
-                      className="text-[#172B6B]/50"
+                    <FiUser
+                      size={10}
                     />
 
-                  </div>
-
-                </section>
-
-                {/* ASSIGNMENT + STAGE */}
-
-                <div className="grid gap-5 md:grid-cols-2">
-
-                  {/* SALESPERSON */}
-
-                  <div>
-
-                    <label className="mb-2 block text-sm font-semibold text-slate-800">
-                      Assigned Salesperson
-                    </label>
-
-                    <div className="relative">
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowSalespersonDropdown(
-                            (previous) =>
-                              !previous
-                          )
-                        }
-                        className="
-                          flex
-                          min-h-11
-                          w-full
-                          items-center
-                          justify-between
-                          gap-3
-                          rounded-xl
-                          border
-                          border-slate-200
-                          bg-white
-                          px-3.5
-                          py-2
-                          text-left
-                          text-sm
-                          outline-none
-                          transition
-                          hover:border-slate-300
-                          focus:border-[#172B6B]
-                          focus:ring-4
-                          focus:ring-[#172B6B]/10
-                        "
-                      >
-
-                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-
-                          {form.assignedSalespeople.length === 0 ? (
-                            <span className="text-slate-400">
-                              Select salesperson(s)
-                            </span>
-                          ) : (
-                            form.assignedSalespeople.map(
-                              (id) => {
-                                const person =
-                                  salespeople.find(
-                                    (user) =>
-                                      user._id === id
-                                  );
-
-                                if (!person) {
-                                  return null;
-                                }
-
-                                return (
-                                  <span
-                                    key={id}
-                                    className="
-                                      inline-flex
-                                      items-center
-                                      gap-1.5
-                                      rounded-lg
-                                      bg-[#172B6B]/10
-                                      px-2.5
-                                      py-1
-                                      text-xs
-                                      font-semibold
-                                      text-[#172B6B]
-                                    "
-                                  >
-
-                                    {person.name}
-
-                                    <span
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-
-                                        toggleSalesperson(
-                                          person._id
-                                        );
-                                      }}
-                                      onKeyDown={(event) => {
-                                        if (
-                                          event.key ===
-                                          "Enter"
-                                        ) {
-                                          event.stopPropagation();
-
-                                          toggleSalesperson(
-                                            person._id
-                                          );
-                                        }
-                                      }}
-                                      className="
-                                        cursor-pointer
-                                        rounded
-                                        p-0.5
-                                        hover:bg-[#172B6B]/10
-                                      "
-                                    >
-                                      <FiX size={12} />
-                                    </span>
-
-                                  </span>
-                                );
-                              }
-                            )
-                          )}
-
-                        </div>
-
-                        <FiChevronDown
-                          size={16}
-                          className={`
-                            shrink-0
-                            text-slate-400
-                            transition-transform
-                            ${
-                              showSalespersonDropdown
-                                ? "rotate-180"
-                                : ""
-                            }
-                          `}
-                        />
-
-                      </button>
-
-                      {showSalespersonDropdown && (
-                        <div
-                          className="
-                            absolute
-                            left-0
-                            right-0
-                            top-full
-                            z-50
-                            mt-2
-                            max-h-56
-                            overflow-y-auto
-                            rounded-xl
-                            border
-                            border-slate-200
-                            bg-white
-                            p-1.5
-                            shadow-xl
-                          "
-                        >
-
-                          {salespeople.length === 0 ? (
-                            <div className="px-3 py-4 text-center text-xs text-slate-400">
-                              No CRM salespeople found
-                            </div>
-                          ) : (
-                            salespeople.map(
-                              (person) => {
-                                const selected =
-                                  form.assignedSalespeople.includes(
-                                    person._id
-                                  );
-
-                                return (
-                                  <button
-                                    key={person._id}
-                                    type="button"
-                                    onClick={() =>
-                                      toggleSalesperson(
-                                        person._id
-                                      )
-                                    }
-                                    className="
-                                      flex
-                                      w-full
-                                      items-center
-                                      justify-between
-                                      gap-3
-                                      rounded-lg
-                                      px-3
-                                      py-2.5
-                                      text-left
-                                      transition
-                                      hover:bg-slate-50
-                                    "
-                                  >
-
-                                    <div className="flex min-w-0 items-center gap-3">
-
-                                      <div
-                                        className="
-                                          flex
-                                          h-8
-                                          w-8
-                                          shrink-0
-                                          items-center
-                                          justify-center
-                                          rounded-lg
-                                          bg-slate-100
-                                          text-xs
-                                          font-bold
-                                          text-slate-600
-                                        "
-                                      >
-                                        {person.name
-                                          ?.charAt(0)
-                                          ?.toUpperCase() ||
-                                          "U"}
-                                      </div>
-
-                                      <div className="min-w-0">
-
-                                        <p className="truncate text-sm font-semibold text-slate-800">
-                                          {person.name}
-                                        </p>
-
-                                        <p className="text-[10px] text-slate-400">
-                                          {person.employeeId}
-                                        </p>
-
-                                      </div>
-
-                                    </div>
-
-                                    <div
-                                      className={`
-                                        flex
-                                        h-5
-                                        w-5
-                                        shrink-0
-                                        items-center
-                                        justify-center
-                                        rounded-md
-                                        border
-                                        ${
-                                          selected
-                                            ? "border-[#172B6B] bg-[#172B6B] text-white"
-                                            : "border-slate-300 bg-white text-transparent"
-                                        }
-                                      `}
-                                    >
-                                      <FiCheck size={13} />
-                                    </div>
-
-                                  </button>
-                                );
-                              }
-                            )
-                          )}
-
-                        </div>
-                      )}
-
-                    </div>
-
-                    <p className="mt-1.5 text-[11px] text-slate-400">
-                      Select one or more CRM salespeople responsible for this customer.
-                    </p>
-
-                  </div>
-
-                  {/* STAGE */}
-
-                  <div>
-
-                    <label className="mb-2 block text-sm font-semibold text-slate-800">
-                      Pipeline Stage
-                    </label>
-
-                    <div className="relative">
-
-                      <select
-                        value={form.stage}
-                        onChange={(event) =>
-                          updateForm(
-                            "stage",
-                            event.target.value
-                          )
-                        }
-                        className="
-                          h-11
-                          w-full
-                          appearance-none
-                          rounded-xl
-                          border
-                          border-slate-200
-                          bg-white
-                          px-4
-                          pr-10
-                          text-sm
-                          outline-none
-                          transition
-                          focus:border-[#172B6B]
-                          focus:ring-4
-                          focus:ring-[#172B6B]/10
-                        "
-                      >
-
-                        {STAGES.map(
-                          (stage) => (
-                            <option
-                              key={stage.id}
-                              value={stage.id}
-                            >
-                              {stage.label}
-                            </option>
-                          )
-                        )}
-
-                      </select>
-
-                      <FiChevronDown
-                        size={15}
-                        className="
-                          pointer-events-none
-                          absolute
-                          right-3.5
-                          top-1/2
-                          -translate-y-1/2
-                          text-slate-400
-                        "
-                      />
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                {/* DATES */}
-
-                <div className="grid gap-5 md:grid-cols-2">
-
-                  <DateField
-                    label="Last Contact Date"
-                    value={form.lastContactDate}
-                    onChange={(value) =>
-                      updateForm(
-                        "lastContactDate",
-                        value
-                      )
-                    }
-                  />
-
-                  <DateField
-                    label="Next Follow-up"
-                    value={form.nextFollowUpDate}
-                    onChange={(value) =>
-                      updateForm(
-                        "nextFollowUpDate",
-                        value
-                      )
-                    }
-                  />
-
-                </div>
-
-                {/* NEXT ACTION */}
-
-                <section>
-
-                  <label className="mb-2 block text-sm font-semibold text-slate-800">
-                    Next Action
-                  </label>
-
-                  <input
-                    value={form.nextAction}
-                    onChange={(event) =>
-                      updateForm(
-                        "nextAction",
-                        event.target.value
-                      )
-                    }
-                    placeholder="Call customer, send quotation, share catalogue..."
-                    className="
-                      h-11
-                      w-full
-                      rounded-xl
-                      border
-                      border-slate-200
-                      px-4
-                      text-sm
-                      outline-none
-                      transition
-                      focus:border-[#172B6B]
-                      focus:ring-4
-                      focus:ring-[#172B6B]/10
-                    "
-                  />
-
-                </section>
-
-                {/* NOTES */}
-
-                <section>
-
-                  <label className="mb-2 block text-sm font-semibold text-slate-800">
-                    Negotiation & Conversation Notes
-                  </label>
-
-                  <textarea
-                    value={
-                      form.negotiationNotes
-                    }
-                    onChange={(event) =>
-                      updateForm(
-                        "negotiationNotes",
-                        event.target.value
-                      )
-                    }
-                    rows={4}
-                    placeholder="Customer requirements, objections, pricing discussion, payment terms, commitments..."
-                    className="
-                      w-full
-                      resize-none
-                      rounded-xl
-                      border
-                      border-slate-200
-                      px-4
-                      py-3
-                      text-sm
-                      leading-6
-                      outline-none
-                      transition
-                      focus:border-[#172B6B]
-                      focus:ring-4
-                      focus:ring-[#172B6B]/10
-                    "
-                  />
-
-                </section>
-
-                {/* STAGE NOTE */}
-
-                <section>
-
-                  <label className="mb-2 block text-sm font-semibold text-slate-800">
-                    Stage Change Note
-                  </label>
-
-                  <textarea
-                    value={
-                      form.stageNote
-                    }
-                    onChange={(event) =>
-                      updateForm(
-                        "stageNote",
-                        event.target.value
-                      )
-                    }
-                    rows={3}
-                    placeholder="Why is this customer moving to the selected stage?"
-                    className="
-                      w-full
-                      resize-none
-                      rounded-xl
-                      border
-                      border-slate-200
-                      px-4
-                      py-3
-                      text-sm
-                      leading-6
-                      outline-none
-                      transition
-                      focus:border-[#172B6B]
-                      focus:ring-4
-                      focus:ring-[#172B6B]/10
-                    "
-                  />
-
-                </section>
-
-                {/* HISTORY */}
-
-                {selectedCustomer.stageHistory?.length > 0 && (
-                  <section>
-
-                    <div className="mb-4 flex items-center gap-2.5">
-
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                        <FiClock size={15} />
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900">
-                          Stage History
-                        </h4>
-
-                        <p className="text-xs text-slate-400">
-                          Recent pipeline activity
-                        </p>
-                      </div>
-
-                    </div>
-
-                    <div className="relative ml-4 space-y-4 border-l border-slate-200 pl-6">
-
-                      {[
-                        ...selectedCustomer.stageHistory,
-                      ]
-                        .reverse()
-                        .map(
-                          (
-                            history: any,
-                            index: number
-                          ) => (
-                            <div
-                              key={
-                                history._id ||
-                                index
-                              }
-                              className="relative"
-                            >
-
-                              <span
-                                className="
-                                  absolute
-                                  -left-[31px]
-                                  top-1.5
-                                  h-2.5
-                                  w-2.5
-                                  rounded-full
-                                  border-2
-                                  border-white
-                                  bg-[#172B6B]
-                                  shadow-sm
-                                "
-                              />
-
-                              <div
-                                className="
-                                  rounded-xl
-                                  border
-                                  border-slate-100
-                                  bg-slate-50
-                                  p-4
-                                "
-                              >
-
-                                <div className="flex items-start justify-between gap-4">
-
-                                  <span className="text-sm font-bold text-slate-800">
-                                    {getStageLabel(
-                                      history.stage
-                                    )}
-                                  </span>
-
-                                  <span className="shrink-0 text-[11px] text-slate-400">
-                                    {formatDate(
-                                      history.changedAt
-                                    )}
-                                  </span>
-
-                                </div>
-
-                                {history.note && (
-                                  <p className="mt-2 text-sm leading-5 text-slate-600">
-                                    {history.note}
-                                  </p>
-                                )}
-
-                                {history.changedBy?.name && (
-                                  <p className="mt-2 text-[11px] text-slate-400">
-                                    Managed by{" "}
-                                    {history.changedBy.name}
-                                  </p>
-                                )}
-
-                              </div>
-
-                            </div>
-                          )
-                        )}
-
-                    </div>
-
-                  </section>
-                )}
-
-              </div>
+                    <span className="truncate">
+                      {name}
+                    </span>
+                  </span>
+                )
+              )}
+
+            </div>
+          ) : (
+            <span className="text-[10px] text-slate-400">
+              Unassigned
+            </span>
+          )}
+
+        </div>
+
+        <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+
+          <div className="flex gap-2">
+
+            <FiClock
+              size={12}
+              className="mt-0.5 shrink-0 text-slate-400"
+            />
+
+            <div>
+
+              <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                Last Contact
+              </p>
+
+              <p className="mt-0.5 text-[10px] font-semibold text-slate-600">
+                {record.lastContactDate
+                  ? formatDate(
+                      record.lastContactDate
+                    )
+                  : "Not contacted"}
+              </p>
 
             </div>
 
-            {/* FOOTER */}
+          </div>
 
-            <div
-              className="
-                flex
-                shrink-0
-                flex-col-reverse
-                gap-2
-                border-t
-                border-slate-100
-                bg-slate-50/70
-                p-4
-                sm:flex-row
-                sm:justify-end
-                sm:p-5
-              "
-            >
+          <div className="flex gap-2">
 
-              <button
-                type="button"
-                onClick={closeEdit}
-                disabled={saving}
-                className="
-                  h-11
-                  rounded-xl
-                  border
-                  border-slate-200
-                  bg-white
-                  px-5
-                  text-sm
-                  font-semibold
-                  text-slate-600
-                  transition
-                  hover:bg-slate-50
-                  disabled:opacity-50
-                "
-              >
-                Cancel
-              </button>
+            <FiCalendar
+              size={12}
+              className={`mt-0.5 shrink-0 ${
+                overdue
+                  ? "text-red-500"
+                  : today
+                  ? "text-amber-500"
+                  : "text-slate-400"
+              }`}
+            />
 
-              <button
-                type="button"
-                onClick={savePipeline}
-                disabled={saving}
-                className="
-                  inline-flex
-                  h-11
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  bg-[#172B6B]
-                  px-6
-                  text-sm
-                  font-semibold
-                  text-white
-                  shadow-sm
-                  transition
-                  hover:bg-[#20398F]
-                  hover:shadow-md
-                  active:scale-[0.98]
-                  disabled:cursor-not-allowed
-                  disabled:opacity-60
-                "
-              >
+            <div className="min-w-0">
 
-                {saving ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <FiCheckCircle size={16} />
-                    Save Pipeline
-                  </>
+              <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                Next Follow-up
+              </p>
+
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+
+                <span
+                  className={`text-[10px] ${
+                    overdue
+                      ? "font-bold text-red-600"
+                      : today
+                      ? "font-bold text-amber-600"
+                      : "font-semibold text-slate-600"
+                  }`}
+                >
+                  {record.nextFollowUpDate
+                    ? formatDate(
+                        record.nextFollowUpDate
+                      )
+                    : "Not set"}
+                </span>
+
+                {overdue && (
+                  <span className="rounded bg-red-50 px-1.5 py-0.5 text-[8px] font-bold text-red-600">
+                    OVERDUE
+                  </span>
                 )}
 
-              </button>
+                {today &&
+                  !overdue && (
+                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[8px] font-bold text-amber-600">
+                      TODAY
+                    </span>
+                  )}
+
+              </div>
 
             </div>
 
           </div>
 
         </div>
-      )}
 
-    </>
+        {record.nextAction && (
+          <div className="mt-3 rounded-lg bg-slate-50 px-2.5 py-2">
+
+            <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+              Next Action
+            </p>
+
+            <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-600">
+              {record.nextAction}
+            </p>
+
+          </div>
+        )}
+
+        {conversationCount > 0 && (
+          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-slate-400">
+
+            <FiMessageSquare
+              size={11}
+            />
+
+            {conversationCount} conversation
+            {conversationCount !==
+            1
+              ? "s"
+              : ""}
+
+          </div>
+        )}
+
+      </button>
+
+      <div className="mt-2 flex justify-end">
+
+        <button
+          type="button"
+          onClick={
+            onEdit
+          }
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 hover:bg-slate-50 hover:text-[#172B6B]"
+        >
+          <FiEdit3
+            size={11}
+          />
+
+          Manage
+        </button>
+
+      </div>
+
+    </article>
   );
 };
 
-const KpiCard = ({
-  label,
-  value,
-  description,
-  icon,
-  highlighted = false,
-  warning = false,
-  danger = false,
+/* =========================================================
+   PROFILE DRAWER
+========================================================= */
+
+const ProfileDrawer = ({
+  record,
+  onClose,
+  onEdit,
+  onAddConversation,
+  onUpdateConversation,
+  onDeleteConversation,
 }: {
-  label: string;
-  value: number;
-  description: string;
-  icon: React.ReactNode;
-  highlighted?: boolean;
-  warning?: boolean;
-  danger?: boolean;
+  record: PipelineRecord;
+  onClose: () => void;
+  onEdit: () => void;
+  onAddConversation: (
+    record: PipelineRecord,
+    conversation: ConversationForm
+  ) => Promise<boolean>;
+  onUpdateConversation: (
+    record: PipelineRecord,
+    noteId: string,
+    data: Partial<ConversationNote>
+  ) => Promise<boolean>;
+  onDeleteConversation: (
+    record: PipelineRecord,
+    noteId: string
+  ) => Promise<boolean>;
 }) => {
-  return (
-    <div
-      className={`
-        rounded-2xl
-        border
-        p-5
-        ${
-          highlighted
-            ? "border-blue-100 bg-blue-50/50"
-            : warning
-            ? "border-amber-100 bg-amber-50/50"
-            : danger
-            ? "border-red-100 bg-red-50/50"
-            : "border-slate-200 bg-white shadow-sm"
+  const type =
+    getType(record);
+
+  const stage =
+    getStage(record);
+
+  const names =
+    getSalespersonNames(
+      record
+    );
+
+  const notes =
+    getConversationNotes(
+      record
+    );
+
+  const [
+    showAddConversation,
+    setShowAddConversation,
+  ] = useState(false);
+
+  const [
+    editingNoteId,
+    setEditingNoteId,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    conversationForm,
+    setConversationForm,
+  ] = useState<ConversationForm>(
+    EMPTY_CONVERSATION
+  );
+
+  const [
+    conversationSaving,
+    setConversationSaving,
+  ] = useState(false);
+
+  const [
+    editText,
+    setEditText,
+  ] = useState("");
+
+  const [
+    deleteSaving,
+    setDeleteSaving,
+  ] = useState<string | null>(
+    null
+  );
+
+  const resetConversationForm =
+    () => {
+      setConversationForm(
+        EMPTY_CONVERSATION
+      );
+
+      setShowAddConversation(
+        false
+      );
+    };
+
+  const saveConversation =
+    async () => {
+      if (
+        !conversationForm.note.trim()
+      ) {
+        return;
+      }
+
+      try {
+        setConversationSaving(
+          true
+        );
+
+        const success =
+          await onAddConversation(
+            record,
+            conversationForm
+          );
+
+        if (success) {
+          resetConversationForm();
         }
-      `}
-    >
-      <div className="flex items-start justify-between">
+      } finally {
+        setConversationSaving(
+          false
+        );
+      }
+    };
 
-        <div>
+  const startEditNote = (
+    note: ConversationNote
+  ) => {
+    if (!note._id) {
+      return;
+    }
 
-          <p
-            className={`
-              text-xs
-              font-semibold
-              uppercase
-              tracking-wide
-              ${
-                highlighted
-                  ? "text-blue-600"
-                  : warning
-                  ? "text-amber-600"
-                  : danger
-                  ? "text-red-600"
-                  : "text-slate-400"
+    setEditingNoteId(
+      note._id
+    );
+
+    setEditText(
+      note.note || ""
+    );
+  };
+
+  const saveEditedNote =
+    async () => {
+      if (
+        !editingNoteId ||
+        !editText.trim()
+      ) {
+        return;
+      }
+
+      const success =
+        await onUpdateConversation(
+          record,
+          editingNoteId,
+          {
+            note:
+              editText.trim(),
+          }
+        );
+
+      if (success) {
+        setEditingNoteId(
+          null
+        );
+
+        setEditText("");
+      }
+    };
+
+  const removeNote = async (
+    noteId: string
+  ) => {
+    const confirmed =
+      window.confirm(
+        "Delete this conversation?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeleteSaving(
+        noteId
+      );
+
+      await onDeleteConversation(
+        record,
+        noteId
+      );
+    } finally {
+      setDeleteSaving(
+        null
+      );
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-slate-950/50 backdrop-blur-sm">
+
+      <div className="absolute inset-y-0 right-0 flex w-full max-w-2xl flex-col bg-white shadow-2xl">
+
+        {/* HEADER */}
+
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-5 py-5">
+
+          <div className="flex items-start gap-3">
+
+            <button
+              type="button"
+              onClick={
+                onClose
               }
-            `}
-          >
-            {label}
-          </p>
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100"
+            >
+              <FiArrowLeft
+                size={17}
+              />
+            </button>
 
-          <p
-            className={`
-              mt-2
-              text-3xl
-              font-bold
-              ${
-                highlighted
-                  ? "text-[#172B6B]"
-                  : warning
-                  ? "text-amber-700"
-                  : danger
-                  ? "text-red-600"
-                  : "text-slate-900"
-              }
-            `}
-          >
-            {value}
-          </p>
+            <div>
 
-          <p
-            className={`
-              mt-1
-              text-xs
-              ${
-                highlighted
-                  ? "text-blue-600/70"
-                  : warning
-                  ? "text-amber-600/70"
-                  : danger
-                  ? "text-red-600/70"
-                  : "text-slate-500"
-              }
-            `}
+              <div className="flex items-center gap-2">
+
+                <span className="rounded-md bg-[#172B6B]/10 px-2 py-1 text-[9px] font-bold uppercase text-[#172B6B]">
+                  {type}
+                </span>
+
+                <span className="text-xs text-slate-400">
+                  {getStageLabel(
+                    stage
+                  )}
+                </span>
+
+              </div>
+
+              <h2 className="mt-2 text-xl font-bold text-slate-900">
+                {record.companyName ||
+                  record.firmName ||
+                  "Unnamed Company"}
+              </h2>
+
+              <p className="mt-1 text-xs text-slate-400">
+                {record.contactPerson ||
+                  "No contact"}
+              </p>
+
+            </div>
+
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              onClose
+            }
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
           >
-            {description}
-          </p>
+            <FiX />
+          </button>
 
         </div>
 
-        <div className="rounded-xl bg-white p-2.5 text-slate-600 shadow-sm">
-          {icon}
+        {/* ACTION */}
+
+        <div className="flex gap-2 border-b border-slate-100 px-5 py-3">
+
+          <button
+            type="button"
+            onClick={
+              onEdit
+            }
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#172B6B] px-4 text-xs font-bold text-white"
+          >
+            <FiEdit3 size={13} />
+
+            Manage
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddConversation(
+                true
+              );
+
+              setEditingNoteId(
+                null
+              );
+            }}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#172B6B]/20 bg-[#172B6B]/5 px-4 text-xs font-bold text-[#172B6B]"
+          >
+            <FiPlus size={13} />
+
+            Add Conversation
+          </button>
+
+        </div>
+
+        {/* CONTENT */}
+
+        <div className="flex-1 overflow-y-auto p-5">
+
+          <div className="space-y-5">
+
+            {/* SALES INFO */}
+
+            <ProfileSection
+              title="Sales Information"
+              icon={
+                <FiTarget
+                  size={14}
+                />
+              }
+            >
+
+              <div className="grid gap-3 sm:grid-cols-2">
+
+                <InfoBox
+                  label="Stage"
+                  value={getStageLabel(
+                    stage
+                  )}
+                />
+
+                <InfoBox
+                  label="Salesperson"
+                  value={
+                    names.length
+                      ? names.join(
+                          ", "
+                        )
+                      : "Unassigned"
+                  }
+                />
+
+                <InfoBox
+                  label="Last Contact"
+                  value={formatDate(
+                    record.lastContactDate
+                  )}
+                />
+
+                <InfoBox
+                  label="Next Follow-up"
+                  value={formatDate(
+                    record.nextFollowUpDate
+                  )}
+                />
+
+                <InfoBox
+                  label="Next Action"
+                  value={
+                    record.nextAction
+                  }
+                />
+
+                <InfoBox
+                  label="Pipeline"
+                  value={
+                    record.crmPipeline ||
+                    "Sales Pipeline"
+                  }
+                />
+
+              </div>
+
+            </ProfileSection>
+
+            {/* ADD CONVERSATION */}
+
+            {showAddConversation && (
+              <section className="rounded-2xl border border-[#172B6B]/15 bg-[#172B6B]/[0.025] p-4">
+
+                <div className="flex items-center justify-between">
+
+                  <div>
+
+                    <h3 className="text-sm font-bold text-slate-800">
+                      New Conversation
+                    </h3>
+
+                    <p className="mt-0.5 text-[10px] text-slate-400">
+                      This interaction will be saved to the permanent history.
+                    </p>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={
+                      resetConversationForm
+                    }
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-white"
+                  >
+                    <FiX
+                      size={15}
+                    />
+                  </button>
+
+                </div>
+
+                <div className="mt-4 space-y-4">
+
+                  <div>
+
+                    <label className="mb-2 block text-xs font-semibold text-slate-700">
+                      Conversation
+                    </label>
+
+                    <textarea
+                      autoFocus
+                      value={
+                        conversationForm.note
+                      }
+                      onChange={e =>
+                        setConversationForm(
+                          previous => ({
+                            ...previous,
+                            note:
+                              e.target.value,
+                          })
+                        )
+                      }
+                      rows={5}
+                      placeholder="What did the customer say? Record the discussion, requirement, objection, quotation response, etc."
+                      className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 outline-none focus:border-[#172B6B]"
+                    />
+
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+
+                    <FilterSelect
+                      label="Interaction Type"
+                      value={
+                        conversationForm.type
+                      }
+                      onChange={value =>
+                        setConversationForm(
+                          previous => ({
+                            ...previous,
+                            type:
+                              value as ConversationForm["type"],
+                          })
+                        )
+                      }
+                      options={[
+                        {
+                          value:
+                            "GENERAL",
+                          label:
+                            "General",
+                        },
+                        {
+                          value:
+                            "PAYMENT",
+                          label:
+                            "Payment",
+                        },
+                        {
+                          value:
+                            "MEETING",
+                          label:
+                            "Meeting",
+                        },
+                        {
+                          value:
+                            "FOLLOW_UP",
+                          label:
+                            "Follow-up",
+                        },
+                        {
+                          value:
+                            "COMPLAINT",
+                          label:
+                            "Complaint",
+                        },
+                        {
+                          value:
+                            "PRODUCT",
+                          label:
+                            "Product",
+                        },
+                      ]}
+                    />
+
+                    <FilterSelect
+                      label="Priority"
+                      value={
+                        conversationForm.priority
+                      }
+                      onChange={value =>
+                        setConversationForm(
+                          previous => ({
+                            ...previous,
+                            priority:
+                              value as ConversationForm["priority"],
+                          })
+                        )
+                      }
+                      options={[
+                        {
+                          value:
+                            "LOW",
+                          label:
+                            "Low",
+                        },
+                        {
+                          value:
+                            "MEDIUM",
+                          label:
+                            "Medium",
+                        },
+                        {
+                          value:
+                            "HIGH",
+                          label:
+                            "High",
+                        },
+                      ]}
+                    />
+
+                  </div>
+
+                  {/* CUSTOMER ONLY:
+                      AccountParty currently does not
+                      have CRM follow-up date fields. */}
+
+                  {type !==
+                    "PARTY" && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+
+                      <DateField
+                        label="Next Follow-up"
+                        value={
+                          conversationForm.nextFollowUpDate
+                        }
+                        onChange={value =>
+                          setConversationForm(
+                            previous => ({
+                              ...previous,
+                              nextFollowUpDate:
+                                value,
+                            })
+                          )
+                        }
+                      />
+
+                      <div>
+
+                        <label className="mb-2 block text-xs font-semibold text-slate-700">
+                          Next Action
+                        </label>
+
+                        <input
+                          value={
+                            conversationForm.nextAction
+                          }
+                          onChange={e =>
+                            setConversationForm(
+                              previous => ({
+                                ...previous,
+                                nextAction:
+                                  e.target.value,
+                              })
+                            )
+                          }
+                          placeholder="Call, send catalogue, quotation..."
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none focus:border-[#172B6B]"
+                        />
+
+                      </div>
+
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2">
+
+                    <button
+                      type="button"
+                      onClick={
+                        resetConversationForm
+                      }
+                      disabled={
+                        conversationSaving
+                      }
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={
+                        saveConversation
+                      }
+                      disabled={
+                        conversationSaving ||
+                        !conversationForm.note.trim()
+                      }
+                      className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#172B6B] px-5 text-xs font-bold text-white disabled:opacity-50"
+                    >
+                      <FiCheck
+                        size={13}
+                      />
+
+                      {conversationSaving
+                        ? "Saving..."
+                        : "Save Conversation"}
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </section>
+            )}
+
+            {/* CONVERSATION HISTORY */}
+
+            <ProfileSection
+              title={`Conversation History${
+                notes.length
+                  ? ` (${notes.length})`
+                  : ""
+              }`}
+              icon={
+                <FiMessageSquare
+                  size={14}
+                />
+              }
+            >
+
+              {notes.length ? (
+                <div className="space-y-3">
+
+                  {notes.map(
+                    (
+                      note,
+                      index
+                    ) => {
+                      const author =
+                        typeof note.addedBy ===
+                        "object"
+                          ? note.addedBy
+                              ?.name
+                          : undefined;
+
+                      const isEditing =
+                        editingNoteId ===
+                        note._id;
+
+                      return (
+                        <div
+                          key={
+                            note._id ||
+                            index
+                          }
+                          className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
+                        >
+
+                          <div className="flex items-start justify-between gap-3">
+
+                            <div className="min-w-0">
+
+                              <div className="flex flex-wrap items-center gap-2">
+
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                                  <FiUser
+                                    size={11}
+                                    className="text-slate-400"
+                                  />
+
+                                  {author ||
+                                    "Salesperson"}
+                                </span>
+
+                                {note.type && (
+                                  <span className="rounded-md bg-slate-100 px-2 py-1 text-[8px] font-bold uppercase tracking-wide text-slate-500">
+                                    {
+                                      note.type
+                                    }
+                                  </span>
+                                )}
+
+                                {note.priority &&
+                                  note.priority !==
+                                    "MEDIUM" && (
+                                    <span
+                                      className={`rounded-md px-2 py-1 text-[8px] font-bold uppercase ${
+                                        note.priority ===
+                                        "HIGH"
+                                          ? "bg-red-50 text-red-600"
+                                          : "bg-slate-100 text-slate-500"
+                                      }`}
+                                    >
+                                      {
+                                        note.priority
+                                      }
+                                    </span>
+                                  )}
+
+                              </div>
+
+                              <p className="mt-1 text-[10px] text-slate-400">
+                                {formatDateTime(
+                                  note.createdAt
+                                )}
+                              </p>
+
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-1">
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  startEditNote(
+                                    note
+                                  )
+                                }
+                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-[#172B6B]"
+                                title="Edit conversation"
+                              >
+                                <FiEdit3
+                                  size={12}
+                                />
+                              </button>
+
+                              {note._id && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeNote(
+                                      note._id!
+                                    )
+                                  }
+                                  disabled={
+                                    deleteSaving ===
+                                    note._id
+                                  }
+                                  className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                  title="Delete conversation"
+                                >
+                                  <FiTrash2
+                                    size={12}
+                                  />
+                                </button>
+                              )}
+
+                            </div>
+
+                          </div>
+
+                          {isEditing ? (
+                            <div className="mt-3">
+
+                              <textarea
+                                value={
+                                  editText
+                                }
+                                onChange={e =>
+                                  setEditText(
+                                    e.target.value
+                                  )
+                                }
+                                rows={4}
+                                className="w-full resize-none rounded-xl border border-slate-200 px-3.5 py-3 text-sm leading-6 outline-none focus:border-[#172B6B]"
+                              />
+
+                              <div className="mt-2 flex justify-end gap-2">
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingNoteId(
+                                      null
+                                    );
+
+                                    setEditText(
+                                      ""
+                                    );
+                                  }}
+                                  className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-semibold text-slate-600"
+                                >
+                                  Cancel
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={
+                                    saveEditedNote
+                                  }
+                                  disabled={
+                                    !editText.trim()
+                                  }
+                                  className="rounded-lg bg-[#172B6B] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+
+                              </div>
+
+                            </div>
+                          ) : (
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                              {note.note ||
+                                ""}
+                            </p>
+                          )}
+
+                          {note.reminderDate && (
+                            <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-slate-400">
+                              <FiCalendar
+                                size={11}
+                              />
+
+                              Follow-up:
+                              {" "}
+                              {formatDate(
+                                note.reminderDate
+                              )}
+                            </div>
+                          )}
+
+                        </div>
+                      );
+                    }
+                  )}
+
+                </div>
+              ) : (
+                <EmptyState text="No conversation history recorded yet." />
+              )}
+
+            </ProfileSection>
+
+            {/* NEGOTIATION SUMMARY */}
+
+            {record.negotiationNotes && (
+              <ProfileSection
+                title="Current Negotiation Summary"
+                icon={
+                  <FiMessageSquare
+                    size={14}
+                  />
+                }
+              >
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                    {
+                      record.negotiationNotes
+                    }
+                  </p>
+
+                </div>
+              </ProfileSection>
+            )}
+
+            {/* STAGE HISTORY */}
+
+            <ProfileSection
+              title="Stage History"
+              icon={
+                <FiClock
+                  size={14}
+                />
+              }
+            >
+
+              {Array.isArray(
+                record.stageHistory
+              ) &&
+              record.stageHistory.length ? (
+                <div className="space-y-2">
+
+                  {[
+                    ...record.stageHistory,
+                  ]
+                    .reverse()
+                    .map(
+                      (
+                        item: any,
+                        index: number
+                      ) => (
+                        <div
+                          key={
+                            item._id ||
+                            index
+                          }
+                          className="rounded-xl bg-slate-50 p-3.5"
+                        >
+
+                          <div className="flex justify-between gap-3">
+
+                            <div>
+
+                              <p className="text-xs font-bold text-slate-700">
+                                {getStageLabel(
+                                  item.stage
+                                )}
+                              </p>
+
+                              {item.note && (
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {
+                                    item.note
+                                  }
+                                </p>
+                              )}
+
+                              {item.changedBy?.name && (
+                                <p className="mt-1 text-[10px] text-slate-400">
+                                  {
+                                    item.changedBy.name
+                                  }
+                                </p>
+                              )}
+
+                            </div>
+
+                            <span className="text-[10px] text-slate-400">
+                              {formatDateTime(
+                                item.changedAt
+                              )}
+                            </span>
+
+                          </div>
+
+                        </div>
+                      )
+                    )}
+
+                </div>
+              ) : (
+                <EmptyState text="No stage history available." />
+              )}
+
+            </ProfileSection>
+
+          </div>
+
         </div>
 
       </div>
+
     </div>
   );
 };
+
+/* =========================================================
+   EDIT MODAL
+========================================================= */
+
+const EditModal = ({
+  record,
+  form,
+  setForm,
+  salespeople,
+  dropdownOpen,
+  setDropdownOpen,
+  saving,
+  onClose,
+  onSave,
+}: {
+  record: PipelineRecord;
+  form: PipelineForm;
+  setForm: Dispatch<
+    SetStateAction<PipelineForm>
+  >;
+  salespeople: CRMUser[];
+  dropdownOpen: boolean;
+  setDropdownOpen: (
+    value: boolean
+  ) => void;
+  saving: boolean;
+  onClose: () => void;
+  onSave: () => void;
+}) => {
+  const names =
+    form.assignedSalespeople
+      .map(
+        id =>
+          salespeople.find(
+            person =>
+              person._id === id
+          )?.name
+      )
+      .filter(Boolean);
+
+  const update = (
+    field: keyof PipelineForm,
+    value: string
+  ) => {
+    setForm(
+      previous => ({
+        ...previous,
+        [field]: value,
+      })
+    );
+  };
+
+  const toggleSalesperson =
+    (id: string) => {
+      setForm(
+        previous => {
+          const exists =
+            previous.assignedSalespeople.includes(
+              id
+            );
+
+          return {
+            ...previous,
+            assignedSalespeople:
+              exists
+                ? previous.assignedSalespeople.filter(
+                    item =>
+                      item !==
+                      id
+                  )
+                : [
+                    ...previous.assignedSalespeople,
+                    id,
+                  ],
+          };
+        }
+      );
+    };
+
+  const isParty =
+    getType(record) ===
+    "PARTY";
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl">
+
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-100 p-5">
+
+          <div>
+
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#172B6B]">
+              Manage CRM Record
+            </p>
+
+            <h3 className="mt-1 text-xl font-bold text-slate-900">
+              {record.companyName ||
+                record.firmName ||
+                "Unnamed Company"}
+            </h3>
+
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              onClose
+            }
+            disabled={
+              saving
+            }
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"
+          >
+            <FiX />
+          </button>
+
+        </div>
+
+        <div className="overflow-y-auto p-5">
+
+          <div className="space-y-5">
+
+            {/* STAGE */}
+
+            <div>
+
+              <label className="mb-2 block text-sm font-semibold text-slate-800">
+                Stage
+              </label>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+
+                {STAGES.map(
+                  stage => (
+                    <button
+                      key={
+                        stage.id
+                      }
+                      type="button"
+                      onClick={() =>
+                        update(
+                          "stage",
+                          stage.id
+                        )
+                      }
+                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold ${
+                        form.stage ===
+                        stage.id
+                          ? "border-[#172B6B] bg-[#172B6B]/5 text-[#172B6B]"
+                          : "border-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {
+                        stage.label
+                      }
+                    </button>
+                  )
+                )}
+
+              </div>
+
+            </div>
+
+            {/* SALESPERSON */}
+
+            <div>
+
+              <label className="mb-2 block text-sm font-semibold text-slate-800">
+                Assigned Salesperson(s)
+              </label>
+
+              <div className="relative">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDropdownOpen(
+                      !dropdownOpen
+                    )
+                  }
+                  className="flex min-h-11 w-full items-center justify-between rounded-xl border border-slate-200 px-3 text-left"
+                >
+
+                  <div className="flex flex-wrap gap-1.5">
+
+                    {names.length ? (
+                      names.map(
+                        name => (
+                          <span
+                            key={
+                              name
+                            }
+                            className="rounded-lg bg-[#172B6B]/10 px-2.5 py-1 text-xs font-semibold text-[#172B6B]"
+                          >
+                            {name}
+                          </span>
+                        )
+                      )
+                    ) : (
+                      <span className="text-sm text-slate-400">
+                        Select salesperson
+                      </span>
+                    )}
+
+                  </div>
+
+                  <FiChevronDown
+                    size={15}
+                    className={`text-slate-400 ${
+                      dropdownOpen
+                        ? "rotate-180"
+                        : ""
+                    }`}
+                  />
+
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+
+                    {salespeople.map(
+                      person => {
+                        const selected =
+                          form.assignedSalespeople.includes(
+                            person._id
+                          );
+
+                        return (
+                          <button
+                            key={
+                              person._id
+                            }
+                            type="button"
+                            onClick={() =>
+                              toggleSalesperson(
+                                person._id
+                              )
+                            }
+                            className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left hover:bg-slate-50"
+                          >
+
+                            <span className="text-sm font-semibold text-slate-700">
+                              {
+                                person.name
+                              }
+                            </span>
+
+                            <span
+                              className={`flex h-5 w-5 items-center justify-center rounded-md border ${
+                                selected
+                                  ? "border-[#172B6B] bg-[#172B6B] text-white"
+                                  : "border-slate-300"
+                              }`}
+                            >
+                              {selected && (
+                                <FiCheck
+                                  size={12}
+                                />
+                              )}
+                            </span>
+
+                          </button>
+                        );
+                      }
+                    )}
+
+                  </div>
+                )}
+
+              </div>
+
+            </div>
+
+            {/* DATES */}
+
+            {!isParty && (
+              <div className="grid gap-4 sm:grid-cols-2">
+
+                <DateField
+                  label="Last Contact"
+                  value={
+                    form.lastContactDate
+                  }
+                  onChange={value =>
+                    update(
+                      "lastContactDate",
+                      value
+                    )
+                  }
+                />
+
+                <DateField
+                  label="Next Follow-up"
+                  value={
+                    form.nextFollowUpDate
+                  }
+                  onChange={value =>
+                    update(
+                      "nextFollowUpDate",
+                      value
+                    )
+                  }
+                />
+
+              </div>
+            )}
+
+            {/* NEXT ACTION */}
+
+            {!isParty && (
+              <div>
+
+                <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  Next Action
+                </label>
+
+                <input
+                  value={
+                    form.nextAction
+                  }
+                  onChange={e =>
+                    update(
+                      "nextAction",
+                      e.target.value
+                    )
+                  }
+                  placeholder="Call, send catalogue, quotation..."
+                  className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm outline-none focus:border-[#172B6B]"
+                />
+
+              </div>
+            )}
+
+            {/* NEGOTIATION SUMMARY */}
+
+            {!isParty && (
+              <div>
+
+                <label className="mb-2 block text-sm font-semibold text-slate-800">
+                  Negotiation Summary
+                </label>
+
+                <textarea
+                  value={
+                    form.negotiationNotes
+                  }
+                  onChange={e =>
+                    update(
+                      "negotiationNotes",
+                      e.target.value
+                    )
+                  }
+                  rows={4}
+                  placeholder="Keep the current negotiation status/summary here..."
+                  className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none focus:border-[#172B6B]"
+                />
+
+              </div>
+            )}
+
+            {/* STAGE NOTE */}
+
+            <div>
+
+              <label className="mb-2 block text-sm font-semibold text-slate-800">
+                Stage Change Note
+              </label>
+
+              <textarea
+                value={
+                  form.stageNote
+                }
+                onChange={e =>
+                  update(
+                    "stageNote",
+                    e.target.value
+                  )
+                }
+                rows={3}
+                placeholder="Why is this record moving to this stage?"
+                className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#172B6B]"
+              />
+
+            </div>
+
+            {isParty && (
+              <div className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                Conversation history for Account Parties is managed from the profile drawer using <strong>Add Conversation</strong>.
+              </div>
+            )}
+
+          </div>
+
+        </div>
+
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50 p-4">
+
+          <button
+            type="button"
+            onClick={
+              onClose
+            }
+            disabled={
+              saving
+            }
+            className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={
+              onSave
+            }
+            disabled={
+              saving
+            }
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#172B6B] px-5 text-xs font-bold text-white disabled:opacity-50"
+          >
+            <FiCheck
+              size={13}
+            />
+
+            {saving
+              ? "Saving..."
+              : "Save Changes"}
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+};
+
+/* =========================================================
+   SMALL COMPONENTS
+========================================================= */
+
+const FilterSelect = ({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (
+    value: string
+  ) => void;
+  options: {
+    value: string;
+    label: string;
+  }[];
+}) => (
+  <div>
+
+    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-400">
+      {label}
+    </label>
+
+    <div className="relative">
+
+      <select
+        value={value}
+        onChange={e =>
+          onChange(
+            e.target.value
+          )
+        }
+        className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 pr-8 text-xs font-medium text-slate-700 outline-none focus:border-[#172B6B]"
+      >
+        {options.map(
+          option => (
+            <option
+              key={
+                option.value
+              }
+              value={
+                option.value
+              }
+            >
+              {
+                option.label
+              }
+            </option>
+          )
+        )}
+      </select>
+
+      <FiChevronDown
+        size={13}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+      />
+
+    </div>
+
+  </div>
+);
 
 const DateField = ({
   label,
@@ -2317,54 +4112,99 @@ const DateField = ({
 }: {
   label: string;
   value: string;
-  onChange: (value: string) => void;
-}) => {
-  return (
-    <div>
+  onChange: (
+    value: string
+  ) => void;
+}) => (
+  <div>
 
-      <label className="mb-2 block text-sm font-semibold text-slate-800">
-        {label}
-      </label>
+    <label className="mb-2 block text-sm font-semibold text-slate-800">
+      {label}
+    </label>
 
-      <div className="relative">
+    <div className="relative">
 
-        <FiCalendar
-          size={15}
-          className="
-            pointer-events-none
-            absolute
-            left-3.5
-            top-1/2
-            -translate-y-1/2
-            text-slate-400
-          "
-        />
+      <FiCalendar
+        size={14}
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+      />
 
-        <input
-          type="date"
-          value={value}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
-          className="
-            h-11
-            w-full
-            rounded-xl
-            border
-            border-slate-200
-            bg-white
-            px-4
-            pl-10
-            text-sm
-            outline-none
-            focus:border-[#172B6B]
-          "
-        />
-
-      </div>
+      <input
+        type="date"
+        value={value}
+        onChange={e =>
+          onChange(
+            e.target.value
+          )
+        }
+        className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-[#172B6B]"
+      />
 
     </div>
-  );
-};
+
+  </div>
+);
+
+const ProfileSection = ({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) => (
+  <section>
+
+    <div className="mb-3 flex items-center gap-2">
+
+      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#172B6B]/10 text-[#172B6B]">
+        {icon}
+      </div>
+
+      <h3 className="text-xs font-bold text-slate-800">
+        {title}
+      </h3>
+
+    </div>
+
+    {children}
+
+  </section>
+);
+
+const InfoBox = ({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) => (
+  <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+
+    <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+      {label}
+    </p>
+
+    <p className="mt-1 break-words text-xs font-semibold text-slate-700">
+      {value || "Not available"}
+    </p>
+
+  </div>
+);
+
+const EmptyState = ({
+  text,
+}: {
+  text: string;
+}) => (
+  <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center">
+
+    <p className="text-xs text-slate-400">
+      {text}
+    </p>
+
+  </div>
+);
 
 export default SalesPipeline;

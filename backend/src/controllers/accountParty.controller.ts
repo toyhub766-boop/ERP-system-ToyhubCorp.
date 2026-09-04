@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import AccountParty from "../models/AccountParty";
 
+import {
+  AuthRequest,
+} from "../middlewares/auth.middleware";
+
 // ==============================
 // GET ALL PARTIES
 // ==============================
@@ -11,14 +15,18 @@ export const getParties = async (
 ) => {
   try {
     const parties =
-      await AccountParty.find()
-        .populate(
-          "assignedSalespeople",
-          "name role status"
-        )
-        .sort({
-          createdAt: -1,
-        });
+  await AccountParty.find()
+    .populate(
+      "assignedSalespeople",
+      "name role status"
+    )
+    .populate(
+      "specialNotes.addedBy",
+      "name employeeId role"
+    )
+    .sort({
+      createdAt: -1,
+    });
 
     return res.json(parties);
   } catch (error) {
@@ -43,8 +51,17 @@ export const getPartyById = async (
   res: Response
 ) => {
   try {
-    const party = await AccountParty.findById(
-      req.params.id
+    const party =
+  await AccountParty.findById(
+    req.params.id
+  )
+    .populate(
+      "assignedSalespeople",
+      "name employeeId role status"
+    )
+    .populate(
+      "specialNotes.addedBy",
+      "name employeeId role"
     );
 
     if (!party) {
@@ -514,6 +531,362 @@ export const deleteParty = async (
 
     return res.status(500).json({
       message: "Failed to delete party",
+    });
+  }
+};
+
+// ==============================
+// UPDATE PARTY CRM PIPELINE
+// ==============================
+
+export const updatePartyPipeline = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {
+      crmPipeline,
+      crmStage,
+      crmAssociation,
+    } = req.body;
+
+    const party =
+      await AccountParty.findById(
+        req.params.id
+      );
+
+    if (!party) {
+      return res.status(404).json({
+        message:
+          "Party not found",
+      });
+    }
+
+    if (
+      crmPipeline !== undefined
+    ) {
+      party.crmPipeline =
+        crmPipeline;
+    }
+
+    if (
+      crmStage !== undefined
+    ) {
+      party.crmStage =
+        crmStage;
+    }
+
+    if (
+      crmAssociation !== undefined
+    ) {
+      party.crmAssociation =
+        crmAssociation;
+    }
+
+    await party.save();
+
+    const updatedParty =
+      await AccountParty.findById(
+        req.params.id
+      ).populate(
+        "assignedSalespeople",
+        "name employeeId role status"
+      );
+
+    return res.json(
+      updatedParty
+    );
+  } catch (error) {
+    console.error(
+      "UPDATE PARTY CRM PIPELINE ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to update party pipeline",
+    });
+  }
+};
+
+
+// ==============================
+// ADD PARTY NOTE / CONVERSATION
+// ==============================
+
+export const addPartyNote = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const party =
+      await AccountParty.findById(
+        req.params.id
+      );
+
+    if (!party) {
+      return res.status(404).json({
+        message: "Party not found",
+      });
+    }
+
+    const note =
+      String(req.body.note || "").trim();
+
+    if (!note) {
+      return res.status(400).json({
+        message:
+          "Conversation note is required",
+      });
+    }
+
+    party.specialNotes.unshift({
+      title:
+        String(
+          req.body.title || ""
+        ).trim(),
+
+      note,
+
+      type:
+        req.body.type ||
+        "GENERAL",
+
+      priority:
+        req.body.priority ||
+        "MEDIUM",
+
+      reminderDate:
+        req.body.reminderDate
+          ? new Date(
+              req.body.reminderDate
+            )
+          : undefined,
+
+      completed: false,
+
+      addedBy:
+        req.user?.userId,
+
+      createdAt:
+        new Date(),
+    } as any);
+
+    await party.save();
+
+    const updatedParty =
+      await AccountParty.findById(
+        req.params.id
+      )
+        .populate(
+          "assignedSalespeople",
+          "name employeeId role status"
+        )
+        .populate(
+          "specialNotes.addedBy",
+          "name employeeId role"
+        );
+
+    return res.status(201).json(
+      updatedParty
+    );
+  } catch (error) {
+    console.error(
+      "ADD PARTY NOTE ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to add conversation",
+    });
+  }
+};
+
+
+// ==============================
+// UPDATE PARTY NOTE
+// ==============================
+
+export const updatePartyNote = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const party =
+      await AccountParty.findById(
+        req.params.id
+      );
+
+    if (!party) {
+      return res.status(404).json({
+        message: "Party not found",
+      });
+    }
+
+    const note =
+      party.specialNotes.find(
+        (item: any) =>
+          item._id?.toString() ===
+          req.params.noteId
+      );
+
+    if (!note) {
+      return res.status(404).json({
+        message: "Conversation not found",
+      });
+    }
+
+    if (
+      req.body.note !== undefined
+    ) {
+      const value =
+        String(
+          req.body.note
+        ).trim();
+
+      if (!value) {
+        return res.status(400).json({
+          message:
+            "Conversation note cannot be empty",
+        });
+      }
+
+      note.note = value;
+    }
+
+    if (
+      req.body.title !== undefined
+    ) {
+      note.title =
+        String(
+          req.body.title || ""
+        ).trim();
+    }
+
+    if (
+      req.body.type !== undefined
+    ) {
+      note.type =
+        req.body.type;
+    }
+
+    if (
+      req.body.priority !== undefined
+    ) {
+      note.priority =
+        req.body.priority;
+    }
+
+    if (
+      req.body.reminderDate !==
+      undefined
+    ) {
+      note.reminderDate =
+        req.body.reminderDate
+          ? new Date(
+              req.body.reminderDate
+            )
+          : undefined;
+    }
+
+    if (
+      req.body.completed !==
+      undefined
+    ) {
+      note.completed =
+        Boolean(
+          req.body.completed
+        );
+    }
+
+    await party.save();
+
+    const updatedParty =
+      await AccountParty.findById(
+        req.params.id
+      )
+        .populate(
+          "assignedSalespeople",
+          "name employeeId role status"
+        )
+        .populate(
+          "specialNotes.addedBy",
+          "name employeeId role"
+        );
+
+    return res.json(
+      updatedParty
+    );
+  } catch (error) {
+    console.error(
+      "UPDATE PARTY NOTE ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to update conversation",
+    });
+  }
+};
+
+
+// ==============================
+// DELETE PARTY NOTE
+// ==============================
+
+export const deletePartyNote = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const party =
+      await AccountParty.findById(
+        req.params.id
+      );
+
+    if (!party) {
+      return res.status(404).json({
+        message: "Party not found",
+      });
+    }
+
+    const originalLength =
+      party.specialNotes.length;
+
+    party.specialNotes =
+      party.specialNotes.filter(
+        (note: any) =>
+          note._id?.toString() !==
+          req.params.noteId
+      ) as any;
+
+    if (
+      party.specialNotes.length ===
+      originalLength
+    ) {
+      return res.status(404).json({
+        message:
+          "Conversation not found",
+      });
+    }
+
+    await party.save();
+
+    return res.json({
+      message:
+        "Conversation deleted",
+    });
+  } catch (error) {
+    console.error(
+      "DELETE PARTY NOTE ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to delete conversation",
     });
   }
 };

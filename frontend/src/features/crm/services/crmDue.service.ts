@@ -9,6 +9,13 @@ export interface CRMDueDate {
   paymentTerms: number;
   dueDate?: string | null;
   partyType: string;
+
+  assignedSalespeople?: {
+    _id: string;
+    name: string;
+    role?: string;
+    status?: string;
+  }[];
 }
 
 export const getCRMDueDates = async (): Promise<
@@ -58,6 +65,19 @@ export const getCRMDueDates = async (): Promise<
         partyType:
           party.partyType ||
           "CUSTOMER",
+
+        assignedSalespeople:
+  Array.isArray(
+    party.assignedSalespeople
+  )
+    ? party.assignedSalespeople
+        .map((person: any) => ({
+          _id: person._id,
+          name: person.name,
+          role: person.role,
+          status: person.status,
+        }))
+    : [],
       })
     );
 };

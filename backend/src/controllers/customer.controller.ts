@@ -9,6 +9,7 @@ import {
 
 import Customer from "../models/customer";
 
+import AccountParty from "../models/AccountParty";
 
 // ==============================
 // GET ALL CUSTOMERS
@@ -489,27 +490,148 @@ export const updateCustomerPipeline = async (
 // ==============================
 // GET SALES PIPELINE
 // ==============================
+// ==============================
+// GET SALES PIPELINE
+// ==============================
 
 export const getSalesPipeline = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const customers = await Customer.find()
-      .populate(
-        "assignedSalespeople",
-        "name employeeId role status"
-      )
-      .populate(
-        "stageHistory.changedBy",
-        "name employeeId"
-      )
-      .sort({
-        nextFollowUpDate: 1,
-        createdAt: -1,
-      });
+    // --------------------------------
+    // CRM CUSTOMERS / LEADS
+    // --------------------------------
 
-    return res.status(200).json(customers);
+    const customers =
+  await Customer.find()
+    .populate(
+      "assignedSalespeople",
+      "name employeeId role status"
+    )
+    .populate(
+      "stageHistory.changedBy",
+      "name employeeId"
+    )
+    .populate(
+      "specialNotes.addedBy",
+      "name employeeId role"
+    )
+    .sort({
+      nextFollowUpDate: 1,
+      createdAt: -1,
+    });
+
+    // --------------------------------
+    // ACCOUNTS PARTIES
+    // --------------------------------
+
+    const parties =
+      await AccountParty.find({
+        status: "Active",
+        partyType: {
+          $in: [
+            "CUSTOMER",
+            "SUPPLIER",
+          ],
+        },
+      })
+        .populate(
+          "assignedSalespeople",
+          "name employeeId role status"
+        )
+        .sort({
+          createdAt: -1,
+        });
+
+    // --------------------------------
+    // NORMALIZE CRM CUSTOMERS
+    // --------------------------------
+
+    const customerRecords =
+      customers.map(
+        (customer: any) => ({
+          ...customer.toObject(),
+
+          source: "CRM",
+
+          crmType:
+            customer.stage === "LEAD"
+              ? "LEAD"
+              : "CUSTOMER",
+        })
+      );
+
+    // --------------------------------
+    // NORMALIZE ACCOUNTS PARTIES
+    // --------------------------------
+
+    const partyRecords =
+      parties.map(
+        (party: any) => ({
+          ...party.toObject(),
+
+          source: "ACCOUNTS",
+
+          crmType: "PARTY",
+
+          /*
+           * AccountParty does not currently
+           * own a CRM stage.
+           *
+           * Until party pipeline stages are
+           * persisted, start them at Lead.
+           */
+          stage:
+            party.crmStage ||
+            "LEAD",
+
+          crmPipeline:
+            party.crmPipeline ||
+            "Sales Pipeline",
+
+          crmAssociation:
+            party.crmAssociation ||
+            "PARTY",
+
+          assignedSalespeople:
+            Array.isArray(
+              party.assignedSalespeople
+            )
+              ? party.assignedSalespeople
+              : [],
+
+          customerCode:
+            party.partyCode,
+
+          gstNumber:
+            party.customerDetails
+              ?.gstNumber ||
+            party.supplierDetails
+              ?.gstNumber ||
+            "",
+
+          dueDate:
+            party.customerDetails
+              ?.dueDate ||
+            party.supplierDetails
+              ?.dueDate ||
+            null,
+        })
+      );
+
+    // --------------------------------
+    // COMBINED PIPELINE
+    // --------------------------------
+
+    const pipeline = [
+      ...customerRecords,
+      ...partyRecords,
+    ];
+
+    return res.status(200).json(
+      pipeline
+    );
   } catch (error) {
     console.error(
       "Failed to fetch sales pipeline:",
@@ -517,7 +639,9 @@ export const getSalesPipeline = async (
     );
 
     return res.status(500).json({
-      message: "Failed to fetch sales pipeline",
+      message:
+        "Failed to fetch sales pipeline",
+
       error:
         error instanceof Error
           ? error.message

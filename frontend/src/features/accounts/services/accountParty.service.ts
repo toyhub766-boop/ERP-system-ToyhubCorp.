@@ -61,3 +61,17 @@ export const deleteParty = async (
 
   return res.data;
 };
+
+export const updatePartySalespeople = async (
+  partyId: string,
+  assignedSalespeople: string[]
+) => {
+  const res = await api.patch(
+    `/accounts/party/${partyId}/salespeople`,
+    {
+      assignedSalespeople,
+    }
+  );
+
+  return res.data;
+};

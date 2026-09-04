@@ -7,6 +7,8 @@ export interface IAccountParty extends Document {
 
   firmName?: string;
 
+  assignedSalespeople?: mongoose.Types.ObjectId[];
+
   companyName: string;
   contactPerson: string;
 
@@ -70,15 +72,22 @@ const accountPartySchema = new Schema<IAccountParty>(
     },
 
     firmName: {
-  type: String,
-  enum: [
-    "Mehak Enterprises",
-    "ToyHub Corp",
-    "Firm 3",
-  ],
-  default: "",
-  trim: true,
-},
+      type: String,
+      enum: [
+        "Mehak Enterprises",
+        "ToyHub Corp",
+        "Firm 3",
+      ],
+      default: "",
+      trim: true,
+    },
+
+    assignedSalespeople: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
 
     companyName: {
       type: String,

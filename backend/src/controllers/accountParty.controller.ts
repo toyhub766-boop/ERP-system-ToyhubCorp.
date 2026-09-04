@@ -10,16 +10,26 @@ export const getParties = async (
   res: Response
 ) => {
   try {
-    const parties = await AccountParty.find().sort({
-      createdAt: -1,
-    });
+    const parties =
+      await AccountParty.find()
+        .populate(
+          "assignedSalespeople",
+          "name role status"
+        )
+        .sort({
+          createdAt: -1,
+        });
 
     return res.json(parties);
   } catch (error) {
-    console.error(error);
+    console.error(
+      "GET PARTIES ERROR:",
+      error
+    );
 
     return res.status(500).json({
-      message: "Failed to fetch parties",
+      message:
+        "Failed to fetch parties",
     });
   }
 };
@@ -407,6 +417,70 @@ export const updatePartyDueDate = async (
       message:
         error?.message ||
         "Failed to update due date",
+    });
+  }
+};
+
+// ==============================
+// UPDATE PARTY SALESPERSONS
+// ==============================
+
+export const updatePartySalespeople = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {
+      assignedSalespeople,
+    } = req.body;
+
+    if (
+      !Array.isArray(
+        assignedSalespeople
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "assignedSalespeople must be an array",
+      });
+    }
+
+    const party =
+      await AccountParty.findById(
+        req.params.id
+      );
+
+    if (!party) {
+      return res.status(404).json({
+        message: "Party not found",
+      });
+    }
+
+    party.assignedSalespeople =
+      assignedSalespeople;
+
+    await party.save();
+
+    const updatedParty =
+      await AccountParty.findById(
+        req.params.id
+      ).populate(
+        "assignedSalespeople",
+        "name role status"
+      );
+
+    return res.json(
+      updatedParty
+    );
+  } catch (error) {
+    console.error(
+      "UPDATE PARTY SALESPERSONS ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to update party salesperson assignment",
     });
   }
 };

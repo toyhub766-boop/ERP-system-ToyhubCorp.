@@ -6,6 +6,7 @@ import {
   createParty,
   updateParty,
   updatePartyDueDate,
+  updatePartySalespeople,
   deleteParty,
 } from "../controllers/accountParty.controller";
 
@@ -23,6 +24,12 @@ router.patch(
   "/:id/due-date",
   updatePartyDueDate
 );
+
+router.patch(
+  "/:id/salespeople",
+  updatePartySalespeople
+);
+
 
 // Get single party
 router.get("/:id", getPartyById);

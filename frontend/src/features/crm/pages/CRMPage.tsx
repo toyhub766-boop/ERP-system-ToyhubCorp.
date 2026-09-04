@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import AdminLayout from "../../../app/layouts/AdminLayout";
 
@@ -16,6 +20,10 @@ import {
   getCustomers,
   deleteCustomer,
 } from "../services/customer.service";
+
+import {
+  getParties,
+} from "../../accounts/services/accountParty.service";
 
 import CRMHeader from "../components/CRMHeader";
 import CRMStats from "../components/CRMStats";
@@ -52,6 +60,8 @@ type CRMTab =
   | "orders"
   | "payments";
 
+type CRMRecord = any;
+
 const CRMPage = () => {
   // =========================================================
   // TAB
@@ -61,23 +71,38 @@ const CRMPage = () => {
     useState<CRMTab>("customers");
 
   // =========================================================
-  // CUSTOMER DATA
+  // CRM LEADS / CUSTOMERS
   // =========================================================
 
   const [customers, setCustomers] =
     useState<Customer[]>([]);
 
-  const [selectedCustomer, setSelectedCustomer] =
-    useState<any>(null);
+  // =========================================================
+  // ACCOUNTS PARTIES
+  // =========================================================
 
-  const [search, setSearch] = useState("");
+  const [accountParties, setAccountParties] =
+    useState<any[]>([]);
+
+  // =========================================================
+  // SELECTED CRM RECORD
+  // =========================================================
+
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CRMRecord>(null);
+
+  const [search, setSearch] =
+    useState("");
 
   // =========================================================
   // ORDERS / PAYMENTS
   // =========================================================
 
-  const [orders, setOrders] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [orders, setOrders] =
+    useState<any[]>([]);
+
+  const [payments, setPayments] =
+    useState<any[]>([]);
 
   // =========================================================
   // CUSTOMER MODAL
@@ -120,78 +145,159 @@ const CRMPage = () => {
     useState(false);
 
   // =========================================================
-  // LOAD CUSTOMER DATA
-  // =========================================================
-
-  const loadCustomerData = async (
-    customerId?: string
-  ) => {
-    const id =
-      customerId ||
-      selectedCustomer?._id;
-
-    if (!id) {
-      setOrders([]);
-      setPayments([]);
-      return;
-    }
-
-    try {
-      const [
-        ordersData,
-        paymentsData,
-      ] = await Promise.all([
-        getOrdersByCustomer(id),
-        getPaymentsByCustomer(id),
-      ]);
-
-      setOrders(ordersData || []);
-      setPayments(paymentsData || []);
-    } catch (error) {
-      console.error(
-        "Failed to load customer data:",
-        error
-      );
-    }
-  };
-
-  // =========================================================
-  // LOAD CUSTOMERS
+  // LOAD CRM RECORDS
   // =========================================================
 
   const loadCustomers = async () => {
     try {
-      const data = await getCustomers();
+      const data =
+        await getCustomers();
 
-      setCustomers(data || []);
+      const safeData =
+        Array.isArray(data)
+          ? data
+          : [];
 
-      setSelectedCustomer((current: any) => {
-        if (!data?.length) {
-          return null;
+      setCustomers(
+        safeData
+      );
+
+      /*
+       * Keep the currently selected CRM record
+       * synchronized after reload.
+       *
+       * Accounts Party records are handled separately
+       * by loadAccountParties().
+       */
+
+      setSelectedCustomer(
+        (current: any) => {
+          if (!safeData.length) {
+            /*
+             * Do not clear an Accounts Party selection
+             * when only CRM records are being refreshed.
+             */
+            if (
+              current?.source ===
+              "ACCOUNTS"
+            ) {
+              return current;
+            }
+
+            return null;
+          }
+
+          /*
+           * Nothing selected yet.
+           *
+           * We intentionally do not automatically select
+           * the first CRM record because Accounts Parties
+           * are also part of the workspace.
+           */
+          if (!current?._id) {
+            return null;
+          }
+
+          /*
+           * If current selection is a CRM record,
+           * update it from the fresh CRM response.
+           */
+          if (
+            current.source ===
+            "CRM"
+          ) {
+            const stillExists =
+              safeData.find(
+                (customer: any) =>
+                  customer._id ===
+                  current._id
+              );
+
+            return (
+              stillExists
+                ? {
+                    ...stillExists,
+                    source: "CRM",
+                    crmType: "LEAD",
+                  }
+                : current
+            );
+          }
+
+          return current;
         }
-
-        if (!current?._id) {
-          return data[0];
-        }
-
-        const updatedCustomer =
-          data.find(
-            (customer: any) =>
-              customer._id === current._id
-          );
-
-        return (
-          updatedCustomer ||
-          data[0]
-        );
-      });
+      );
     } catch (error) {
       console.error(
-        "Failed to load customers:",
+        "Failed to load CRM customers:",
         error
       );
     }
   };
+
+  // =========================================================
+  // LOAD ACCOUNTS PARTIES
+  // =========================================================
+
+  const loadAccountParties =
+    async () => {
+      try {
+        const data =
+          await getParties();
+
+        const safeData =
+          Array.isArray(data)
+            ? data
+            : [];
+
+        setAccountParties(
+          safeData
+        );
+
+        /*
+         * Keep selected Accounts Party synchronized
+         * with the latest Accounts response.
+         */
+        setSelectedCustomer(
+          (current: any) => {
+            if (
+              !current?._id
+            ) {
+              return current;
+            }
+
+            if (
+              current.source !==
+              "ACCOUNTS"
+            ) {
+              return current;
+            }
+
+            const updatedParty =
+              safeData.find(
+                (party: any) =>
+                  party._id ===
+                  current._id
+              );
+
+            if (!updatedParty) {
+              return current;
+            }
+
+            return normalizeAccountParty(
+              updatedParty
+            );
+          }
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load account parties:",
+          error
+        );
+
+        setAccountParties([]);
+      }
+    };
 
   // =========================================================
   // INITIAL LOAD
@@ -199,14 +305,236 @@ const CRMPage = () => {
 
   useEffect(() => {
     loadCustomers();
+    loadAccountParties();
   }, []);
+
+  // =========================================================
+  // COMBINED CRM WORKSPACE DATA
+  // =========================================================
+
+  const crmRecords =
+    useMemo(() => {
+      /*
+       * =====================================================
+       * CRM RECORDS
+       * =====================================================
+       *
+       * These are records created through CRM.
+       *
+       * They remain CRM-owned records.
+       */
+      const crmRecords =
+        customers.map(
+          (customer: any) => ({
+            ...customer,
+
+            source: "CRM",
+            crmType: "LEAD",
+          })
+        );
+
+      /*
+       * =====================================================
+       * ACCOUNTS PARTIES
+       * =====================================================
+       *
+       * Accounts is the source of truth for Party records.
+       *
+       * CRM reads those records.
+       *
+       * We DO NOT create duplicate CRM customers.
+       *
+       * CUSTOMER + SUPPLIER parties are included.
+       * COMPANY_EXPENSE records are not CRM records.
+       */
+      const partyRecords =
+        accountParties
+          .filter(
+            (party: any) => {
+              /*
+               * Inactive parties should not appear
+               * in the active CRM workspace.
+               */
+              if (
+                party.status ===
+                "Inactive"
+              ) {
+                return false;
+              }
+
+              /*
+               * Company expenses are accounting records,
+               * not CRM relationships.
+               */
+              if (
+                party.partyType ===
+                "COMPANY_EXPENSE"
+              ) {
+                return false;
+              }
+
+              /*
+               * Only actual Account Parties belong
+               * in the CRM Party view.
+               */
+              return (
+                party.partyType ===
+                  "CUSTOMER" ||
+                party.partyType ===
+                  "SUPPLIER"
+              );
+            }
+          )
+          .map(
+            (party: any) =>
+              normalizeAccountParty(
+                party
+              )
+          );
+
+      /*
+       * =====================================================
+       * COMBINED WORKSPACE
+       * =====================================================
+       *
+       * CRM Leads first.
+       * Accounts Parties second.
+       *
+       * CustomerList will classify these using:
+       *
+       * CRM       -> Leads
+       * ACCOUNTS  -> Parties
+       */
+      return [
+        ...crmRecords,
+        ...partyRecords,
+      ];
+    }, [
+      customers,
+      accountParties,
+    ]);
+
+  // =========================================================
+  // KEEP SELECTED RECORD IN SYNC
+  // =========================================================
+
+  useEffect(() => {
+    if (
+      !selectedCustomer?._id
+    ) {
+      return;
+    }
+
+    const updated =
+      crmRecords.find(
+        (record: any) =>
+          record._id ===
+            selectedCustomer._id &&
+          record.source ===
+            selectedCustomer.source
+      );
+
+    if (updated) {
+      setSelectedCustomer(
+        updated
+      );
+    }
+  }, [
+    crmRecords,
+    selectedCustomer?._id,
+    selectedCustomer?.source,
+  ]);
+
+  // =========================================================
+  // LOAD ORDERS / PAYMENTS
+  // =========================================================
+
+  const loadCustomerData =
+    async (
+      customerId?: string
+    ) => {
+      const customer =
+        selectedCustomer;
+
+      /*
+       * =====================================================
+       * ACCOUNTS PARTY
+       * =====================================================
+       *
+       * An Accounts Party is NOT a CRM Customer document.
+       *
+       * Therefore do not use the AccountParty _id with:
+       *
+       * /orders/customer/:id
+       *
+       * or:
+       *
+       * /payments/customer/:id
+       *
+       * The financial source of truth remains Accounts.
+       */
+      if (
+        customer?.source ===
+        "ACCOUNTS"
+      ) {
+        setOrders([]);
+        setPayments([]);
+        return;
+      }
+
+      const id =
+        customerId ||
+        selectedCustomer?._id;
+
+      if (!id) {
+        setOrders([]);
+        setPayments([]);
+        return;
+      }
+
+      try {
+        const [
+          ordersData,
+          paymentsData,
+        ] = await Promise.all([
+          getOrdersByCustomer(id),
+          getPaymentsByCustomer(id),
+        ]);
+
+        setOrders(
+          Array.isArray(
+            ordersData
+          )
+            ? ordersData
+            : []
+        );
+
+        setPayments(
+          Array.isArray(
+            paymentsData
+          )
+            ? paymentsData
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load customer data:",
+          error
+        );
+
+        setOrders([]);
+        setPayments([]);
+      }
+    };
 
   // =========================================================
   // LOAD SELECTED CUSTOMER DATA
   // =========================================================
 
   useEffect(() => {
-    if (!selectedCustomer?._id) {
+    if (
+      !selectedCustomer?._id
+    ) {
       setOrders([]);
       setPayments([]);
       return;
@@ -215,150 +543,249 @@ const CRMPage = () => {
     loadCustomerData(
       selectedCustomer._id
     );
-  }, [selectedCustomer?._id]);
+  }, [
+    selectedCustomer?._id,
+    selectedCustomer?.source,
+  ]);
 
   // =========================================================
   // REMINDER DATA
   // =========================================================
 
-  const reminderStats = useMemo(() => {
-    const today = new Date();
+  const reminderStats =
+    useMemo(() => {
+      const today =
+        new Date();
 
-    today.setHours(0, 0, 0, 0);
+      today.setHours(
+        0,
+        0,
+        0,
+        0
+      );
 
-    let overdue = 0;
-    let todayCount = 0;
-    let upcoming = 0;
+      let overdue = 0;
+      let todayCount = 0;
+      let upcoming = 0;
 
-    customers.forEach((customer: any) => {
-      customer.specialNotes?.forEach(
-        (note: any) => {
-          if (
-            !note.reminderDate ||
-            note.completed
-          ) {
-            return;
-          }
+      /*
+       * Reminder activities currently live
+       * on CRM Customer records.
+       *
+       * Accounts Parties are intentionally not
+       * included here until their activity layer
+       * is connected.
+       */
+      customers.forEach(
+        (customer: any) => {
+          customer.specialNotes?.forEach(
+            (note: any) => {
+              if (
+                !note.reminderDate ||
+                note.completed
+              ) {
+                return;
+              }
 
-          const reminder =
-            new Date(note.reminderDate);
+              const reminder =
+                new Date(
+                  note.reminderDate
+                );
 
-          reminder.setHours(
-            0,
-            0,
-            0,
-            0
+              reminder.setHours(
+                0,
+                0,
+                0,
+                0
+              );
+
+              if (
+                reminder.getTime() ===
+                today.getTime()
+              ) {
+                todayCount++;
+              } else if (
+                reminder < today
+              ) {
+                overdue++;
+              } else {
+                upcoming++;
+              }
+            }
           );
-
-          if (
-            reminder.getTime() ===
-            today.getTime()
-          ) {
-            todayCount++;
-          } else if (reminder < today) {
-            overdue++;
-          } else {
-            upcoming++;
-          }
         }
       );
-    });
 
-    return {
-      overdue,
-      today: todayCount,
-      upcoming,
-    };
-  }, [customers]);
+      return {
+        overdue,
+        today: todayCount,
+        upcoming,
+      };
+    }, [customers]);
 
   // =========================================================
   // DELETE CUSTOMER
   // =========================================================
 
-  const handleDeleteCustomer = async (
-    customer: any
-  ) => {
-    if (
-      !window.confirm(
-        "Delete customer?"
-      )
-    ) {
-      return;
-    }
+  const handleDeleteCustomer =
+    async (
+      customer: any
+    ) => {
+      /*
+       * Accounts owns Party records.
+       *
+       * They must never be deleted from CRM.
+       */
+      if (
+        customer.source ===
+        "ACCOUNTS"
+      ) {
+        window.alert(
+          "This customer is managed from Accounts. Open Accounts to manage this party."
+        );
 
-    try {
-      await deleteCustomer(
-        customer._id
-      );
+        return;
+      }
 
-      setSelectedCustomer(null);
-      setOrders([]);
-      setPayments([]);
+      if (
+        !window.confirm(
+          "Delete customer?"
+        )
+      ) {
+        return;
+      }
 
-      await loadCustomers();
-    } catch (error) {
-      console.error(
-        "Failed to delete customer:",
-        error
-      );
-    }
-  };
+      try {
+        await deleteCustomer(
+          customer._id
+        );
+
+        setSelectedCustomer(
+          null
+        );
+
+        setOrders([]);
+        setPayments([]);
+
+        await loadCustomers();
+      } catch (error) {
+        console.error(
+          "Failed to delete customer:",
+          error
+        );
+      }
+    };
 
   // =========================================================
   // DELETE ORDER
   // =========================================================
 
-  const handleDeleteOrder = async (
-    order: any
-  ) => {
-    if (
-      !window.confirm(
-        "Delete order?"
-      )
-    ) {
-      return;
-    }
+  const handleDeleteOrder =
+    async (
+      order: any
+    ) => {
+      if (
+        !window.confirm(
+          "Delete order?"
+        )
+      ) {
+        return;
+      }
 
-    try {
-      await deleteOrder(order._id);
+      try {
+        await deleteOrder(
+          order._id
+        );
 
-      await loadCustomerData();
-    } catch (error) {
-      console.error(
-        "Failed to delete order:",
-        error
-      );
-    }
-  };
+        await loadCustomerData();
+      } catch (error) {
+        console.error(
+          "Failed to delete order:",
+          error
+        );
+      }
+    };
 
   // =========================================================
   // DELETE PAYMENT
   // =========================================================
 
-  const handleDeletePayment = async (
-    payment: any
-  ) => {
-    if (
-      !window.confirm(
-        "Delete payment?"
-      )
-    ) {
-      return;
-    }
+  const handleDeletePayment =
+    async (
+      payment: any
+    ) => {
+      if (
+        !window.confirm(
+          "Delete payment?"
+        )
+      ) {
+        return;
+      }
 
-    try {
-      await deletePayment(
-        payment._id
-      );
+      try {
+        await deletePayment(
+          payment._id
+        );
 
-      await loadCustomerData();
-    } catch (error) {
-      console.error(
-        "Failed to delete payment:",
-        error
+        await loadCustomerData();
+      } catch (error) {
+        console.error(
+          "Failed to delete payment:",
+          error
+        );
+      }
+    };
+
+  // =========================================================
+  // CREATE ORDER
+  // =========================================================
+
+  const handleCreateOrder =
+    () => {
+      /*
+       * AccountParty order integration will use
+       * the existing Party relationship.
+       *
+       * Do not create a duplicate CRM customer.
+       */
+      if (
+        selectedCustomer?.source ===
+        "ACCOUNTS"
+      ) {
+        window.alert(
+          "This customer comes from Accounts. Order integration will use the existing party relationship without creating a duplicate customer."
+        );
+
+        return;
+      }
+
+      setEditingOrder(null);
+      setShowOrderModal(
+        true
       );
-    }
-  };
+    };
+
+  // =========================================================
+  // RECORD PAYMENT
+  // =========================================================
+
+  const handleRecordPayment =
+    () => {
+      if (
+        selectedCustomer?.source ===
+        "ACCOUNTS"
+      ) {
+        window.alert(
+          "Payments for Account Parties are managed through Accounts."
+        );
+
+        return;
+      }
+
+      /*
+       * Existing CRM payment flow remains unchanged.
+       */
+    };
 
   // =========================================================
   // RENDER
@@ -366,7 +793,14 @@ const CRMPage = () => {
 
   return (
     <AdminLayout>
-      <div className="mx-auto w-full max-w-[1500px] space-y-6">
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-[1500px]
+          space-y-6
+        "
+      >
 
         {/* =====================================================
             HEADER
@@ -374,8 +808,13 @@ const CRMPage = () => {
 
         <CRMHeader
           onAddCustomer={() => {
-            setEditingCustomer(null);
-            setShowAddCustomer(true);
+            setEditingCustomer(
+              null
+            );
+
+            setShowAddCustomer(
+              true
+            );
           }}
         />
 
@@ -383,9 +822,15 @@ const CRMPage = () => {
             CRM OVERVIEW
         ===================================================== */}
 
-        <section className="grid gap-4 lg:grid-cols-[1fr_auto]">
+        <section
+          className="
+            grid
+            gap-4
+            lg:grid-cols-[1fr_auto]
+          "
+        >
 
-          {/* Reminder Command Center */}
+          {/* FOLLOW-UP COMMAND CENTER */}
 
           <div
             className="
@@ -397,6 +842,7 @@ const CRMPage = () => {
               shadow-sm
             "
           >
+
             <div
               className="
                 flex
@@ -411,7 +857,9 @@ const CRMPage = () => {
             >
 
               <div>
+
                 <div className="flex items-center gap-2">
+
                   <span
                     className="
                       h-2
@@ -432,26 +880,51 @@ const CRMPage = () => {
                   >
                     Follow-up Command Center
                   </span>
+
                 </div>
 
-                <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-900">
+                <h2
+                  className="
+                    mt-2
+                    text-xl
+                    font-bold
+                    tracking-tight
+                    text-slate-900
+                  "
+                >
                   Stay ahead of customer conversations
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p
+                  className="
+                    mt-1
+                    text-sm
+                    text-slate-500
+                  "
+                >
                   Track overdue, today's and upcoming
                   customer activities.
                 </p>
+
               </div>
 
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div
+                className="
+                  grid
+                  grid-cols-3
+                  gap-2
+                  sm:gap-3
+                "
+              >
 
                 {/* OVERDUE */}
 
                 <button
                   type="button"
                   onClick={() =>
-                    setActiveTab("dues")
+                    setActiveTab(
+                      "dues"
+                    )
                   }
                   className="
                     group
@@ -467,7 +940,9 @@ const CRMPage = () => {
                     hover:bg-red-50
                   "
                 >
+
                   <div className="flex items-center justify-between">
+
                     <FiAlertCircle
                       size={15}
                       className="text-red-500"
@@ -475,17 +950,41 @@ const CRMPage = () => {
 
                     <FiArrowUpRight
                       size={13}
-                      className="text-red-300 transition group-hover:text-red-500"
+                      className="
+                        text-red-300
+                        transition
+                        group-hover:text-red-500
+                      "
                     />
+
                   </div>
 
-                  <p className="mt-3 text-2xl font-bold text-red-600">
-                    {reminderStats.overdue}
+                  <p
+                    className="
+                      mt-3
+                      text-2xl
+                      font-bold
+                      text-red-600
+                    "
+                  >
+                    {
+                      reminderStats.overdue
+                    }
                   </p>
 
-                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-500">
+                  <p
+                    className="
+                      mt-0.5
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-wide
+                      text-red-500
+                    "
+                  >
                     Overdue
                   </p>
+
                 </button>
 
                 {/* TODAY */}
@@ -493,7 +992,9 @@ const CRMPage = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    setActiveTab("dues")
+                    setActiveTab(
+                      "dues"
+                    )
                   }
                   className="
                     group
@@ -509,7 +1010,9 @@ const CRMPage = () => {
                     hover:bg-amber-50
                   "
                 >
+
                   <div className="flex items-center justify-between">
+
                     <FiClock
                       size={15}
                       className="text-amber-600"
@@ -517,17 +1020,41 @@ const CRMPage = () => {
 
                     <FiArrowUpRight
                       size={13}
-                      className="text-amber-300 transition group-hover:text-amber-600"
+                      className="
+                        text-amber-300
+                        transition
+                        group-hover:text-amber-600
+                      "
                     />
+
                   </div>
 
-                  <p className="mt-3 text-2xl font-bold text-amber-700">
-                    {reminderStats.today}
+                  <p
+                    className="
+                      mt-3
+                      text-2xl
+                      font-bold
+                      text-amber-700
+                    "
+                  >
+                    {
+                      reminderStats.today
+                    }
                   </p>
 
-                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+                  <p
+                    className="
+                      mt-0.5
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-wide
+                      text-amber-600
+                    "
+                  >
                     Today
                   </p>
+
                 </button>
 
                 {/* UPCOMING */}
@@ -535,7 +1062,9 @@ const CRMPage = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    setActiveTab("dues")
+                    setActiveTab(
+                      "dues"
+                    )
                   }
                   className="
                     group
@@ -551,7 +1080,9 @@ const CRMPage = () => {
                     hover:bg-green-50
                   "
                 >
+
                   <div className="flex items-center justify-between">
+
                     <FiCalendar
                       size={15}
                       className="text-green-600"
@@ -559,24 +1090,50 @@ const CRMPage = () => {
 
                     <FiArrowUpRight
                       size={13}
-                      className="text-green-300 transition group-hover:text-green-600"
+                      className="
+                        text-green-300
+                        transition
+                        group-hover:text-green-600
+                      "
                     />
+
                   </div>
 
-                  <p className="mt-3 text-2xl font-bold text-green-700">
-                    {reminderStats.upcoming}
+                  <p
+                    className="
+                      mt-3
+                      text-2xl
+                      font-bold
+                      text-green-700
+                    "
+                  >
+                    {
+                      reminderStats.upcoming
+                    }
                   </p>
 
-                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-600">
+                  <p
+                    className="
+                      mt-0.5
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-wide
+                      text-green-600
+                    "
+                  >
                     Upcoming
                   </p>
+
                 </button>
 
               </div>
+
             </div>
+
           </div>
 
-          {/* Quick status */}
+          {/* CRM STATUS */}
 
           <div
             className="
@@ -593,6 +1150,7 @@ const CRMPage = () => {
               lg:min-w-[250px]
             "
           >
+
             <div
               className="
                 flex
@@ -606,22 +1164,50 @@ const CRMPage = () => {
                 text-green-600
               "
             >
-              <FiCheckCircle size={19} />
+              <FiCheckCircle
+                size={19}
+              />
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+
+              <p
+                className="
+                  text-xs
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
                 CRM Status
               </p>
 
-              <p className="mt-1 text-sm font-bold text-slate-900">
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  font-bold
+                  text-slate-900
+                "
+              >
                 Workspace Active
               </p>
 
-              <p className="mt-0.5 text-xs text-slate-400">
-                {customers.length} customers managed
+              <p
+                className="
+                  mt-0.5
+                  text-xs
+                  text-slate-400
+                "
+              >
+                {
+                  crmRecords.length
+                } records managed
               </p>
+
             </div>
+
           </div>
 
         </section>
@@ -663,21 +1249,34 @@ const CRMPage = () => {
               sm:px-5
             "
           >
+
             <CRMTabs
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
+              activeTab={
+                activeTab
+              }
+              setActiveTab={
+                setActiveTab
+              }
             />
+
           </div>
 
           {/* CONTENT */}
 
-          <div className="p-4 sm:p-5 lg:p-6">
+          <div
+            className="
+              p-4
+              sm:p-5
+              lg:p-6
+            "
+          >
 
             {/* =================================================
                 CUSTOMERS
             ================================================= */}
 
-            {activeTab === "customers" && (
+            {activeTab ===
+              "customers" && (
               <div
                 className="
                   grid
@@ -687,10 +1286,17 @@ const CRMPage = () => {
               >
 
                 <div className="min-w-0">
+
                   <CustomerList
-                    search={search}
-                    setSearch={setSearch}
-                    customers={customers}
+                    search={
+                      search
+                    }
+                    setSearch={
+                      setSearch
+                    }
+                    customers={
+                      crmRecords
+                    }
                     selectedCustomer={
                       selectedCustomer
                     }
@@ -698,15 +1304,37 @@ const CRMPage = () => {
                       setSelectedCustomer
                     }
                   />
+
                 </div>
 
                 <div className="min-w-0">
+
                   <CustomerProfile
                     customer={
                       selectedCustomer
                     }
-                    orders={orders}
-                    onEdit={(customer) => {
+                    orders={
+                      orders
+                    }
+                    onEdit={(
+                      customer
+                    ) => {
+
+                      /*
+                       * Accounts Parties remain owned
+                       * by Accounts.
+                       */
+                      if (
+                        customer?.source ===
+                        "ACCOUNTS"
+                      ) {
+                        window.alert(
+                          "This customer is managed from Accounts."
+                        );
+
+                        return;
+                      }
+
                       setEditingCustomer(
                         customer
                       );
@@ -718,22 +1346,35 @@ const CRMPage = () => {
                     onDelete={
                       handleDeleteCustomer
                     }
-                    onCreateOrder={() => {
-                      setEditingOrder(null);
-                      setShowOrderModal(
-                        true
-                      );
-                    }}
+                    onCreateOrder={
+                      handleCreateOrder
+                    }
                     onAddNote={() => {
+
+                      /*
+                       * CRM notes remain attached
+                       * to CRM records for now.
+                       */
+                      if (
+                        selectedCustomer?.source ===
+                        "ACCOUNTS"
+                      ) {
+                        window.alert(
+                          "Conversation notes for Account Parties will be connected to the CRM activity layer."
+                        );
+
+                        return;
+                      }
+
                       setShowNoteModal(
                         true
                       );
                     }}
-                    onRecordPayment={() => {
-                      // Payment recording is handled
-                      // from the selected order.
-                    }}
+                    onRecordPayment={
+                      handleRecordPayment
+                    }
                   />
+
                 </div>
 
               </div>
@@ -743,7 +1384,8 @@ const CRMPage = () => {
                 PIPELINE
             ================================================= */}
 
-            {activeTab === "pipeline" && (
+            {activeTab ===
+              "pipeline" && (
               <SalesPipeline />
             )}
 
@@ -751,7 +1393,8 @@ const CRMPage = () => {
                 DUE DATES
             ================================================= */}
 
-            {activeTab === "dues" && (
+            {activeTab ===
+              "dues" && (
               <CRMDueDates />
             )}
 
@@ -759,11 +1402,19 @@ const CRMPage = () => {
                 ORDERS
             ================================================= */}
 
-            {activeTab === "orders" && (
+            {activeTab ===
+              "orders" && (
               <OrdersTable
-                orders={orders}
-                onEdit={(order) => {
-                  setEditingOrder(order);
+                orders={
+                  orders
+                }
+                onEdit={(
+                  order
+                ) => {
+                  setEditingOrder(
+                    order
+                  );
+
                   setShowOrderModal(
                     true
                   );
@@ -774,8 +1425,14 @@ const CRMPage = () => {
                 onRecordPayment={(
                   order
                 ) => {
-                  setSelectedOrder(order);
-                  setEditingPayment(null);
+                  setSelectedOrder(
+                    order
+                  );
+
+                  setEditingPayment(
+                    null
+                  );
+
                   setShowPaymentModal(
                     true
                   );
@@ -787,10 +1444,15 @@ const CRMPage = () => {
                 PAYMENTS
             ================================================= */}
 
-            {activeTab === "payments" && (
+            {activeTab ===
+              "payments" && (
               <PaymentsOverview
-                payments={payments}
-                onEdit={(payment) => {
+                payments={
+                  payments
+                }
+                onEdit={(
+                  payment
+                ) => {
                   setEditingPayment(
                     payment
                   );
@@ -810,6 +1472,7 @@ const CRMPage = () => {
             )}
 
           </div>
+
         </section>
 
         {/* =====================================================
@@ -817,17 +1480,31 @@ const CRMPage = () => {
         ===================================================== */}
 
         <CustomerModal
-          open={showAddCustomer}
-          customer={editingCustomer}
+          open={
+            showAddCustomer
+          }
+          customer={
+            editingCustomer
+          }
           onClose={() => {
-            setShowAddCustomer(false);
-            setEditingCustomer(null);
+            setShowAddCustomer(
+              false
+            );
+
+            setEditingCustomer(
+              null
+            );
           }}
           onSuccess={async () => {
             await loadCustomers();
 
-            setShowAddCustomer(false);
-            setEditingCustomer(null);
+            setShowAddCustomer(
+              false
+            );
+
+            setEditingCustomer(
+              null
+            );
           }}
         />
 
@@ -836,18 +1513,34 @@ const CRMPage = () => {
         ===================================================== */}
 
         <OrderModal
-          open={showOrderModal}
-          customer={selectedCustomer}
-          order={editingOrder}
+          open={
+            showOrderModal
+          }
+          customer={
+            selectedCustomer
+          }
+          order={
+            editingOrder
+          }
           onClose={() => {
-            setShowOrderModal(false);
-            setEditingOrder(null);
+            setShowOrderModal(
+              false
+            );
+
+            setEditingOrder(
+              null
+            );
           }}
           onSuccess={async () => {
             await loadCustomerData();
 
-            setShowOrderModal(false);
-            setEditingOrder(null);
+            setShowOrderModal(
+              false
+            );
+
+            setEditingOrder(
+              null
+            );
           }}
         />
 
@@ -856,20 +1549,42 @@ const CRMPage = () => {
         ===================================================== */}
 
         <PaymentModal
-          open={showPaymentModal}
-          order={selectedOrder}
-          payment={editingPayment}
+          open={
+            showPaymentModal
+          }
+          order={
+            selectedOrder
+          }
+          payment={
+            editingPayment
+          }
           onClose={() => {
-            setShowPaymentModal(false);
-            setEditingPayment(null);
-            setSelectedOrder(null);
+            setShowPaymentModal(
+              false
+            );
+
+            setEditingPayment(
+              null
+            );
+
+            setSelectedOrder(
+              null
+            );
           }}
           onSuccess={async () => {
             await loadCustomerData();
 
-            setShowPaymentModal(false);
-            setEditingPayment(null);
-            setSelectedOrder(null);
+            setShowPaymentModal(
+              false
+            );
+
+            setEditingPayment(
+              null
+            );
+
+            setSelectedOrder(
+              null
+            );
           }}
         />
 
@@ -878,24 +1593,135 @@ const CRMPage = () => {
         ===================================================== */}
 
         <AddNoteModal
-          open={showNoteModal}
+          open={
+            showNoteModal
+          }
           customerId={
-            selectedCustomer?._id
+            selectedCustomer?.source ===
+            "CRM"
+              ? selectedCustomer?._id
+              : undefined
           }
           onClose={() =>
-            setShowNoteModal(false)
+            setShowNoteModal(
+              false
+            )
           }
           onSuccess={async () => {
             await loadCustomers();
+
             await loadCustomerData();
 
-            setShowNoteModal(false);
+            setShowNoteModal(
+              false
+            );
           }}
         />
 
       </div>
     </AdminLayout>
   );
+};
+
+/* =========================================================
+   ACCOUNT PARTY NORMALIZER
+========================================================= */
+
+const normalizeAccountParty = (
+  party: any
+) => {
+  return {
+    ...party,
+
+    /*
+     * =======================================================
+     * SOURCE / CRM TYPE
+     * =======================================================
+     *
+     * This is the important correction.
+     *
+     * AccountParty is a PARTY in CRM,
+     * not a CRM Customer.
+     */
+    source: "ACCOUNTS",
+    crmType: "PARTY",
+
+    /*
+     * =======================================================
+     * COMMON CRM FIELDS
+     * =======================================================
+     */
+
+    customerCode:
+      party.partyCode ||
+      "",
+
+    companyName:
+      party.companyName ||
+      party.firmName ||
+      "",
+
+    contactPerson:
+      party.contactPerson ||
+      "",
+
+    phone:
+      party.phone ||
+      "",
+
+    email:
+      party.email ||
+      "",
+
+    address:
+      party.address ||
+      "",
+
+    city:
+      party.city ||
+      "",
+
+    state:
+      party.state ||
+      "",
+
+    pincode:
+      party.pincode ||
+      "",
+
+    openingBalance:
+      party.openingBalance ||
+      0,
+
+    currentBalance:
+      party.currentBalance ||
+      0,
+
+    status:
+      party.status ||
+      "Active",
+
+    partyType:
+      party.partyType ||
+      "",
+
+    /*
+     * =======================================================
+     * SALESPERSON RELATIONSHIP
+     * =======================================================
+     *
+     * This comes directly from Accounts.
+     *
+     * Database stores IDs.
+     * CRM UI resolves/displays names.
+     */
+    assignedSalespeople:
+      Array.isArray(
+        party.assignedSalespeople
+      )
+        ? party.assignedSalespeople
+        : [],
+  };
 };
 
 export default CRMPage;

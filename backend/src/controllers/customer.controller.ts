@@ -341,121 +341,145 @@ export const deleteCustomer = async (
 // UPDATE SALES PIPELINE
 // ==============================
 
-export const updateCustomerPipeline =
-  async (
-    req: AuthRequest,
-    res: Response
-  ) => {
-    try {
-      const customer =
-        await Customer.findById(
-          req.params.id
-        );
+export const updateCustomerPipeline = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
 
-      if (!customer) {
-        return res.status(404).json({
-          message:
-            "Customer not found",
-        });
-      }
+    const {
+      stage,
+      assignedSalesperson,
+      assignedSalespeople,
+      lastContactDate,
+      nextFollowUpDate,
+      nextAction,
+      negotiationNotes,
+      stageNote,
+    } = req.body;
 
-      const {
+    const customer =
+      await Customer.findById(id);
+
+    if (!customer) {
+      return res.status(404).json({
+        message: "Customer not found",
+      });
+    }
+
+    /*
+     * STAGE
+     */
+
+    if (
+      stage !== undefined &&
+      stage !== customer.stage
+    ) {
+      customer.stage = stage;
+
+      customer.stageHistory.push({
         stage,
-        assignedSalesperson,
-        lastContactDate,
-        nextFollowUpDate,
-        nextAction,
-        negotiationNotes,
-        stageNote,
-      } = req.body;
+        changedAt: new Date(),
+        changedBy: req.user?.userId,
+        note: stageNote?.trim() || "",
+      });
+    }
 
-      const stageChanged =
-        stage &&
-        stage !== customer.stage;
+    /*
+     * SALESPERSON ASSIGNMENT
+     */
 
-      if (stageChanged) {
-        customer.stage =
-          stage;
+    if (
+      assignedSalespeople !== undefined
+    ) {
+      customer.assignedSalespeople =
+        Array.isArray(
+          assignedSalespeople
+        )
+          ? assignedSalespeople
+          : [];
+    }
 
-        customer.stageHistory.push(
-          {
-            stage,
-            changedAt:
-              new Date(),
+    /*
+     * OLD FIELD — BACKWARD COMPATIBILITY
+     */
 
-            changedBy:
-              req.user?.userId,
+    if (
+      assignedSalesperson !== undefined
+    ) {
+      customer.assignedSalesperson =
+        assignedSalesperson;
+    }
 
-            note:
-              stageNote || "",
-          } as any
-        );
-      }
+    /*
+     * CONTACT / FOLLOW-UP
+     */
 
-      if (
-        assignedSalesperson !==
-        undefined
-      ) {
-        customer.assignedSalesperson =
-          assignedSalesperson;
-      }
+    if (
+      lastContactDate !== undefined
+    ) {
+      customer.lastContactDate =
+        lastContactDate
+          ? new Date(lastContactDate)
+          : undefined;
+    }
 
-      if (
-        lastContactDate !==
-        undefined
-      ) {
-        customer.lastContactDate =
-          lastContactDate ||
-          undefined;
-      }
+    if (
+      nextFollowUpDate !== undefined
+    ) {
+      customer.nextFollowUpDate =
+        nextFollowUpDate
+          ? new Date(nextFollowUpDate)
+          : undefined;
+    }
 
-      if (
-        nextFollowUpDate !==
-        undefined
-      ) {
-        customer.nextFollowUpDate =
-          nextFollowUpDate ||
-          undefined;
-      }
+    /*
+     * CRM ACTION DATA
+     */
 
-      if (
-        nextAction !==
-        undefined
-      ) {
-        customer.nextAction =
-          nextAction;
-      }
+    if (
+      nextAction !== undefined
+    ) {
+      customer.nextAction =
+        nextAction.trim();
+    }
 
-      if (
-        negotiationNotes !==
-        undefined
-      ) {
-        customer.negotiationNotes =
-          negotiationNotes;
-      }
+    if (
+      negotiationNotes !== undefined
+    ) {
+      customer.negotiationNotes =
+        negotiationNotes.trim();
+    }
 
-      await customer.save();
+    await customer.save();
 
-      const updated =
-        await Customer.findById(
-          customer._id
-        ).populate(
+    const updatedCustomer =
+      await Customer.findById(id)
+        .populate(
+          "assignedSalespeople",
+          "name employeeId role status"
+        )
+        .populate(
           "stageHistory.changedBy",
           "name employeeId"
         );
 
-      return res.json(
-        updated
-      );
-    } catch (error) {
-      console.error(error);
+    return res.json(
+      updatedCustomer
+    );
+  } catch (error) {
+    console.error(
+      "Update customer pipeline error:",
+      error
+    );
 
-      return res.status(500).json({
-        message:
-          "Failed to update sales pipeline",
-      });
-    }
-  };
+    return res.status(500).json({
+      message:
+        "Failed to update customer pipeline",
+    });
+  }
+};
 
 
 // ==============================
@@ -466,34 +490,41 @@ export const updateCustomerPipeline =
 // GET SALES PIPELINE
 // ==============================
 
-export const getSalesPipeline =
-  async (
-    req: Request,
-    res: Response
-  ) => {
-    try {
-      const customers =
-        await Customer.find()
-          .populate(
-            "stageHistory.changedBy",
-            "name employeeId"
-          )
-          .sort({
-            nextFollowUpDate: 1,
-            createdAt: -1,
-          });
-
-      return res.json(customers);
-    } catch (error) {
-      console.error(error);
-
-      return res.status(500).json({
-        message:
-          "Failed to fetch sales pipeline",
+export const getSalesPipeline = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const customers = await Customer.find()
+      .populate(
+        "assignedSalespeople",
+        "name employeeId role status"
+      )
+      .populate(
+        "stageHistory.changedBy",
+        "name employeeId"
+      )
+      .sort({
+        nextFollowUpDate: 1,
+        createdAt: -1,
       });
-    }
-  };
 
+    return res.status(200).json(customers);
+  } catch (error) {
+    console.error(
+      "Failed to fetch sales pipeline:",
+      error
+    );
+
+    return res.status(500).json({
+      message: "Failed to fetch sales pipeline",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error",
+    });
+  }
+};
 
 // ==============================
 // ADD CUSTOMER NOTE

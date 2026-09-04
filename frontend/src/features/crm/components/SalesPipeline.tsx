@@ -7,6 +7,7 @@ import {
 import {
   FiArrowRight,
   FiCalendar,
+  FiCheck,
   FiCheckCircle,
   FiChevronDown,
   FiClock,
@@ -21,57 +22,37 @@ import {
   FiX,
 } from "react-icons/fi";
 
+import api from "../../../services/api/axios";
+
 import {
   getSalesPipeline,
   updateCustomerPipeline,
 } from "../services/pipeline.service";
 
 const STAGES = [
-  {
-    id: "LEAD",
-    label: "Lead",
-  },
-  {
-    id: "RINGING",
-    label: "Ringing",
-  },
-  {
-    id: "NEGOTIATION",
-    label: "Negotiation",
-  },
-  {
-    id: "CATALOG_SHARED",
-    label: "Catalog Shared",
-  },
-  {
-    id: "VERIFICATION",
-    label: "Verification",
-  },
-  {
-    id: "ACTIVE_DEALER",
-    label: "Active Dealer",
-  },
-  {
-    id: "SUPPLIER",
-    label: "Supplier",
-  },
-  {
-    id: "DELAYED_PAYMENT",
-    label: "Delayed Payment",
-  },
-  {
-    id: "CLOSED",
-    label: "Closed",
-  },
-  {
-    id: "NO_DEALER",
-    label: "No Dealer",
-  },
+  { id: "LEAD", label: "Lead" },
+  { id: "RINGING", label: "Ringing" },
+  { id: "NEGOTIATION", label: "Negotiation" },
+  { id: "CATALOG_SHARED", label: "Catalog Shared" },
+  { id: "VERIFICATION", label: "Verification" },
+  { id: "ACTIVE_DEALER", label: "Active Dealer" },
+  { id: "SUPPLIER", label: "Supplier" },
+  { id: "DELAYED_PAYMENT", label: "Delayed Payment" },
+  { id: "CLOSED", label: "Closed" },
+  { id: "NO_DEALER", label: "No Dealer" },
 ] as const;
+
+type CRMUser = {
+  _id: string;
+  name: string;
+  employeeId: string;
+  role: string;
+  status?: string;
+};
 
 type PipelineForm = {
   stage: string;
-  assignedSalesperson: string;
+  assignedSalespeople: string[];
   lastContactDate: string;
   nextFollowUpDate: string;
   nextAction: string;
@@ -81,7 +62,7 @@ type PipelineForm = {
 
 const EMPTY_FORM: PipelineForm = {
   stage: "LEAD",
-  assignedSalesperson: "",
+  assignedSalespeople: [],
   lastContactDate: "",
   nextFollowUpDate: "",
   nextAction: "",
@@ -143,6 +124,8 @@ const isOverdue = (date?: string | null) => {
 
 const SalesPipeline = () => {
   const [customers, setCustomers] = useState<any[]>([]);
+  const [salespeople, setSalespeople] = useState<CRMUser[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -154,34 +137,92 @@ const SalesPipeline = () => {
   const [selectedCustomer, setSelectedCustomer] =
     useState<any>(null);
 
-  const [showEdit, setShowEdit] = useState(false);
+  const [showEdit, setShowEdit] =
+    useState(false);
+
+  const [showSalespersonDropdown, setShowSalespersonDropdown] =
+    useState(false);
 
   const [form, setForm] =
     useState<PipelineForm>(EMPTY_FORM);
 
-  const loadPipeline = async () => {
-    try {
-      setLoading(true);
+const loadPipeline = async () => {
+  try {
+    setLoading(true);
 
-      const data = await getSalesPipeline();
+    console.log(
+      "CRM PIPELINE: requesting /customers/pipeline"
+    );
 
-      setCustomers(
-        Array.isArray(data) ? data : []
-      );
-    } catch (error) {
+    const data = await getSalesPipeline();
+
+    console.log(
+      "CRM PIPELINE: response",
+      data
+    );
+
+    if (!Array.isArray(data)) {
       console.error(
-        "Failed to load sales pipeline:",
-        error
+        "CRM PIPELINE: expected array but received:",
+        data
       );
 
       setCustomers([]);
-    } finally {
-      setLoading(false);
+      return;
+    }
+
+    setCustomers(data);
+
+  } catch (error: any) {
+    console.error(
+      "CRM PIPELINE API ERROR:",
+      error
+    );
+
+    console.error(
+      "CRM PIPELINE STATUS:",
+      error?.response?.status
+    );
+
+    console.error(
+      "CRM PIPELINE RESPONSE:",
+      error?.response?.data
+    );
+
+    setCustomers([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const loadSalespeople = async () => {
+    try {
+      const response = await api.get("/users");
+
+      const users = Array.isArray(response.data)
+        ? response.data
+        : [];
+
+      const crmUsers = users.filter(
+        (user: CRMUser) =>
+          user.role === "CRM" &&
+          user.status !== "INACTIVE"
+      );
+
+      setSalespeople(crmUsers);
+    } catch (error) {
+      console.error(
+        "Failed to load CRM salespeople:",
+        error
+      );
+
+      setSalespeople([]);
     }
   };
 
   useEffect(() => {
     loadPipeline();
+    loadSalespeople();
   }, []);
 
   const filteredCustomers = useMemo(() => {
@@ -199,16 +240,31 @@ const SalesPipeline = () => {
       const phone =
         customer.phone?.toLowerCase() || "";
 
-      const salesperson =
+      const oldSalesperson =
         customer.assignedSalesperson?.toLowerCase() ||
         "";
+
+      const assignedSalespeople =
+        Array.isArray(
+          customer.assignedSalespeople
+        )
+          ? customer.assignedSalespeople
+              .map((person: any) =>
+                typeof person === "string"
+                  ? person
+                  : person?.name || ""
+              )
+              .join(" ")
+              .toLowerCase()
+          : "";
 
       const matchesSearch =
         !query ||
         companyName.includes(query) ||
         contactPerson.includes(query) ||
         phone.includes(query) ||
-        salesperson.includes(query);
+        oldSalesperson.includes(query) ||
+        assignedSalespeople.includes(query);
 
       const matchesStage =
         selectedStage === "ALL" ||
@@ -242,6 +298,10 @@ const SalesPipeline = () => {
 
     const assigned = customers.filter(
       (customer) =>
+        (Array.isArray(
+          customer.assignedSalespeople
+        ) &&
+          customer.assignedSalespeople.length > 0) ||
         Boolean(
           customer.assignedSalesperson?.trim()
         )
@@ -281,12 +341,25 @@ const SalesPipeline = () => {
   const openEdit = (customer: any) => {
     setSelectedCustomer(customer);
 
+    const assignedIds =
+      Array.isArray(
+        customer.assignedSalespeople
+      )
+        ? customer.assignedSalespeople
+            .map((person: any) =>
+              typeof person === "string"
+                ? person
+                : person?._id
+            )
+            .filter(Boolean)
+        : [];
+
     setForm({
       stage:
         customer.stage || "LEAD",
 
-      assignedSalesperson:
-        customer.assignedSalesperson || "",
+      assignedSalespeople:
+        assignedIds,
 
       lastContactDate:
         formatDateInput(
@@ -307,6 +380,7 @@ const SalesPipeline = () => {
       stageNote: "",
     });
 
+    setShowSalespersonDropdown(false);
     setShowEdit(true);
   };
 
@@ -316,16 +390,43 @@ const SalesPipeline = () => {
     setShowEdit(false);
     setSelectedCustomer(null);
     setForm(EMPTY_FORM);
+    setShowSalespersonDropdown(false);
   };
 
   const updateForm = (
     field: keyof PipelineForm,
-    value: string
+    value: string | string[]
   ) => {
     setForm((previous) => ({
       ...previous,
       [field]: value,
     }));
+  };
+
+  const toggleSalesperson = (
+    salespersonId: string
+  ) => {
+    setForm((previous) => {
+      const alreadySelected =
+        previous.assignedSalespeople.includes(
+          salespersonId
+        );
+
+      return {
+        ...previous,
+
+        assignedSalespeople:
+          alreadySelected
+            ? previous.assignedSalespeople.filter(
+                (id) =>
+                  id !== salespersonId
+              )
+            : [
+                ...previous.assignedSalespeople,
+                salespersonId,
+              ],
+      };
+    });
   };
 
   const savePipeline = async () => {
@@ -341,8 +442,8 @@ const SalesPipeline = () => {
         {
           stage: form.stage,
 
-          assignedSalesperson:
-            form.assignedSalesperson.trim(),
+          assignedSalespeople:
+            form.assignedSalespeople,
 
           lastContactDate:
             form.lastContactDate ||
@@ -368,6 +469,7 @@ const SalesPipeline = () => {
       setShowEdit(false);
       setSelectedCustomer(null);
       setForm(EMPTY_FORM);
+      setShowSalespersonDropdown(false);
     } catch (error) {
       console.error(
         "Failed to update sales pipeline:",
@@ -416,9 +518,7 @@ const SalesPipeline = () => {
     <>
       <div className="space-y-6">
 
-        {/* =====================================================
-            HEADER
-        ===================================================== */}
+        {/* HEADER */}
 
         <section
           className="
@@ -510,8 +610,6 @@ const SalesPipeline = () => {
                 </p>
               </div>
             </div>
-
-            {/* Search */}
 
             <div className="flex w-full flex-col gap-2 sm:flex-row xl:w-auto">
 
@@ -653,179 +751,51 @@ const SalesPipeline = () => {
           </div>
         </section>
 
-        {/* =====================================================
-            KPI CARDS
-        ===================================================== */}
+        {/* KPI */}
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
 
-          <div
-            className="
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              p-5
-              shadow-sm
-            "
-          >
-            <div className="flex items-start justify-between">
+          <KpiCard
+            label="Pipeline"
+            value={pipelineStats.total}
+            description="Total customers"
+            icon={<FiUsers size={17} />}
+          />
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Pipeline
-                </p>
+          <KpiCard
+            label="Active Deals"
+            value={pipelineStats.activeDeals}
+            description="In active sales stages"
+            icon={<FiTarget size={17} />}
+            highlighted
+          />
 
-                <p className="mt-2 text-3xl font-bold text-slate-900">
-                  {pipelineStats.total}
-                </p>
+          <KpiCard
+            label="Assigned"
+            value={pipelineStats.assigned}
+            description="With salesperson"
+            icon={<FiUser size={17} />}
+          />
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Total customers
-                </p>
-              </div>
+          <KpiCard
+            label="Follow-ups"
+            value={pipelineStats.followUps}
+            description="Scheduled contacts"
+            icon={<FiCalendar size={17} />}
+            warning
+          />
 
-              <div className="rounded-xl bg-slate-100 p-2.5 text-slate-600">
-                <FiUsers size={17} />
-              </div>
-
-            </div>
-          </div>
-
-          <div
-            className="
-              rounded-2xl
-              border
-              border-blue-100
-              bg-blue-50/50
-              p-5
-            "
-          >
-            <div className="flex items-start justify-between">
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                  Active Deals
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-[#172B6B]">
-                  {pipelineStats.activeDeals}
-                </p>
-
-                <p className="mt-1 text-xs text-blue-600/70">
-                  In active sales stages
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-white p-2.5 text-[#172B6B] shadow-sm">
-                <FiTarget size={17} />
-              </div>
-
-            </div>
-          </div>
-
-          <div
-            className="
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              p-5
-              shadow-sm
-            "
-          >
-            <div className="flex items-start justify-between">
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Assigned
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-slate-900">
-                  {pipelineStats.assigned}
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  With salesperson
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-slate-100 p-2.5 text-slate-600">
-                <FiUser size={17} />
-              </div>
-
-            </div>
-          </div>
-
-          <div
-            className="
-              rounded-2xl
-              border
-              border-amber-100
-              bg-amber-50/50
-              p-5
-            "
-          >
-            <div className="flex items-start justify-between">
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
-                  Follow-ups
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-amber-700">
-                  {pipelineStats.followUps}
-                </p>
-
-                <p className="mt-1 text-xs text-amber-600/70">
-                  Scheduled contacts
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-white p-2.5 text-amber-600 shadow-sm">
-                <FiCalendar size={17} />
-              </div>
-
-            </div>
-          </div>
-
-          <div
-            className="
-              rounded-2xl
-              border
-              border-red-100
-              bg-red-50/50
-              p-5
-            "
-          >
-            <div className="flex items-start justify-between">
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-600">
-                  Overdue
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-red-600">
-                  {pipelineStats.overdue}
-                </p>
-
-                <p className="mt-1 text-xs text-red-600/70">
-                  Requires attention
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-white p-2.5 text-red-600 shadow-sm">
-                <FiClock size={17} />
-              </div>
-
-            </div>
-          </div>
+          <KpiCard
+            label="Overdue"
+            value={pipelineStats.overdue}
+            description="Requires attention"
+            icon={<FiClock size={17} />}
+            danger
+          />
 
         </section>
 
-        {/* =====================================================
-            STAGE STRIP
-        ===================================================== */}
+        {/* STAGES */}
 
         <section
           className="
@@ -930,9 +900,7 @@ const SalesPipeline = () => {
           </div>
         </section>
 
-        {/* =====================================================
-            TABLE
-        ===================================================== */}
+        {/* TABLE */}
 
         <section
           className="
@@ -1056,8 +1024,6 @@ const SalesPipeline = () => {
                         "
                       >
 
-                        {/* CUSTOMER */}
-
                         <td className="px-6 py-4">
 
                           <div className="flex items-center gap-3">
@@ -1115,11 +1081,51 @@ const SalesPipeline = () => {
 
                         </td>
 
-                        {/* SALESPERSON */}
-
                         <td className="px-5 py-4">
 
-                          {customer.assignedSalesperson ? (
+                          {Array.isArray(
+                            customer.assignedSalespeople
+                          ) &&
+                          customer.assignedSalespeople.length > 0 ? (
+                            <div className="flex max-w-[240px] flex-wrap gap-1.5">
+
+                              {customer.assignedSalespeople.map(
+                                (person: any) => {
+                                  const name =
+                                    typeof person === "string"
+                                      ? person
+                                      : person?.name;
+
+                                  const key =
+                                    typeof person === "string"
+                                      ? person
+                                      : person?._id;
+
+                                  return (
+                                    <span
+                                      key={key}
+                                      className="
+                                        inline-flex
+                                        items-center
+                                        gap-1.5
+                                        rounded-lg
+                                        bg-slate-100
+                                        px-2.5
+                                        py-1.5
+                                        text-xs
+                                        font-medium
+                                        text-slate-700
+                                      "
+                                    >
+                                      <FiUser size={12} />
+                                      {name || "Salesperson"}
+                                    </span>
+                                  );
+                                }
+                              )}
+
+                            </div>
+                          ) : customer.assignedSalesperson ? (
                             <div className="flex items-center gap-2.5">
 
                               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
@@ -1150,8 +1156,6 @@ const SalesPipeline = () => {
 
                         </td>
 
-                        {/* STAGE */}
-
                         <td className="px-5 py-4">
 
                           <span
@@ -1177,8 +1181,6 @@ const SalesPipeline = () => {
 
                         </td>
 
-                        {/* LAST CONTACT */}
-
                         <td className="px-5 py-4">
 
                           <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -1195,8 +1197,6 @@ const SalesPipeline = () => {
                           </div>
 
                         </td>
-
-                        {/* FOLLOW-UP */}
 
                         <td className="px-5 py-4">
 
@@ -1230,8 +1230,6 @@ const SalesPipeline = () => {
 
                         </td>
 
-                        {/* NEXT ACTION */}
-
                         <td className="max-w-[250px] px-5 py-4">
 
                           <p
@@ -1250,8 +1248,6 @@ const SalesPipeline = () => {
                           </p>
 
                         </td>
-
-                        {/* MANAGE */}
 
                         <td className="px-6 py-4 text-right">
 
@@ -1303,8 +1299,6 @@ const SalesPipeline = () => {
 
           </div>
 
-          {/* EMPTY */}
-
           {!filteredCustomers.length && (
             <div className="px-6 py-20 text-center">
 
@@ -1341,9 +1335,7 @@ const SalesPipeline = () => {
 
       </div>
 
-      {/* =====================================================
-          EDIT PIPELINE MODAL
-      ===================================================== */}
+      {/* EDIT PIPELINE MODAL */}
 
       {showEdit && selectedCustomer && (
         <div
@@ -1381,8 +1373,6 @@ const SalesPipeline = () => {
               shadow-2xl
             "
           >
-
-            {/* MODAL HEADER */}
 
             <div
               className="
@@ -1495,13 +1485,9 @@ const SalesPipeline = () => {
 
             </div>
 
-            {/* MODAL BODY */}
-
             <div className="overflow-y-auto">
 
               <div className="space-y-6 p-5 sm:p-6">
-
-                {/* CURRENT STAGE */}
 
                 <section
                   className="
@@ -1542,6 +1528,8 @@ const SalesPipeline = () => {
 
                 <div className="grid gap-5 md:grid-cols-2">
 
+                  {/* SALESPERSON */}
+
                   <div>
 
                     <label className="mb-2 block text-sm font-semibold text-slate-800">
@@ -1550,50 +1538,263 @@ const SalesPipeline = () => {
 
                     <div className="relative">
 
-                      <FiUser
-                        size={16}
-                        className="
-                          pointer-events-none
-                          absolute
-                          left-3.5
-                          top-1/2
-                          -translate-y-1/2
-                          text-slate-400
-                        "
-                      />
-
-                      <input
-                        value={
-                          form.assignedSalesperson
-                        }
-                        onChange={(event) =>
-                          updateForm(
-                            "assignedSalesperson",
-                            event.target.value
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowSalespersonDropdown(
+                            (previous) =>
+                              !previous
                           )
                         }
-                        placeholder="Enter salesperson name"
                         className="
-                          h-11
+                          flex
+                          min-h-11
                           w-full
+                          items-center
+                          justify-between
+                          gap-3
                           rounded-xl
                           border
                           border-slate-200
                           bg-white
-                          pl-10
-                          pr-4
+                          px-3.5
+                          py-2
+                          text-left
                           text-sm
                           outline-none
                           transition
+                          hover:border-slate-300
                           focus:border-[#172B6B]
                           focus:ring-4
                           focus:ring-[#172B6B]/10
                         "
-                      />
+                      >
+
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+
+                          {form.assignedSalespeople.length === 0 ? (
+                            <span className="text-slate-400">
+                              Select salesperson(s)
+                            </span>
+                          ) : (
+                            form.assignedSalespeople.map(
+                              (id) => {
+                                const person =
+                                  salespeople.find(
+                                    (user) =>
+                                      user._id === id
+                                  );
+
+                                if (!person) {
+                                  return null;
+                                }
+
+                                return (
+                                  <span
+                                    key={id}
+                                    className="
+                                      inline-flex
+                                      items-center
+                                      gap-1.5
+                                      rounded-lg
+                                      bg-[#172B6B]/10
+                                      px-2.5
+                                      py-1
+                                      text-xs
+                                      font-semibold
+                                      text-[#172B6B]
+                                    "
+                                  >
+
+                                    {person.name}
+
+                                    <span
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+
+                                        toggleSalesperson(
+                                          person._id
+                                        );
+                                      }}
+                                      onKeyDown={(event) => {
+                                        if (
+                                          event.key ===
+                                          "Enter"
+                                        ) {
+                                          event.stopPropagation();
+
+                                          toggleSalesperson(
+                                            person._id
+                                          );
+                                        }
+                                      }}
+                                      className="
+                                        cursor-pointer
+                                        rounded
+                                        p-0.5
+                                        hover:bg-[#172B6B]/10
+                                      "
+                                    >
+                                      <FiX size={12} />
+                                    </span>
+
+                                  </span>
+                                );
+                              }
+                            )
+                          )}
+
+                        </div>
+
+                        <FiChevronDown
+                          size={16}
+                          className={`
+                            shrink-0
+                            text-slate-400
+                            transition-transform
+                            ${
+                              showSalespersonDropdown
+                                ? "rotate-180"
+                                : ""
+                            }
+                          `}
+                        />
+
+                      </button>
+
+                      {showSalespersonDropdown && (
+                        <div
+                          className="
+                            absolute
+                            left-0
+                            right-0
+                            top-full
+                            z-50
+                            mt-2
+                            max-h-56
+                            overflow-y-auto
+                            rounded-xl
+                            border
+                            border-slate-200
+                            bg-white
+                            p-1.5
+                            shadow-xl
+                          "
+                        >
+
+                          {salespeople.length === 0 ? (
+                            <div className="px-3 py-4 text-center text-xs text-slate-400">
+                              No CRM salespeople found
+                            </div>
+                          ) : (
+                            salespeople.map(
+                              (person) => {
+                                const selected =
+                                  form.assignedSalespeople.includes(
+                                    person._id
+                                  );
+
+                                return (
+                                  <button
+                                    key={person._id}
+                                    type="button"
+                                    onClick={() =>
+                                      toggleSalesperson(
+                                        person._id
+                                      )
+                                    }
+                                    className="
+                                      flex
+                                      w-full
+                                      items-center
+                                      justify-between
+                                      gap-3
+                                      rounded-lg
+                                      px-3
+                                      py-2.5
+                                      text-left
+                                      transition
+                                      hover:bg-slate-50
+                                    "
+                                  >
+
+                                    <div className="flex min-w-0 items-center gap-3">
+
+                                      <div
+                                        className="
+                                          flex
+                                          h-8
+                                          w-8
+                                          shrink-0
+                                          items-center
+                                          justify-center
+                                          rounded-lg
+                                          bg-slate-100
+                                          text-xs
+                                          font-bold
+                                          text-slate-600
+                                        "
+                                      >
+                                        {person.name
+                                          ?.charAt(0)
+                                          ?.toUpperCase() ||
+                                          "U"}
+                                      </div>
+
+                                      <div className="min-w-0">
+
+                                        <p className="truncate text-sm font-semibold text-slate-800">
+                                          {person.name}
+                                        </p>
+
+                                        <p className="text-[10px] text-slate-400">
+                                          {person.employeeId}
+                                        </p>
+
+                                      </div>
+
+                                    </div>
+
+                                    <div
+                                      className={`
+                                        flex
+                                        h-5
+                                        w-5
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-md
+                                        border
+                                        ${
+                                          selected
+                                            ? "border-[#172B6B] bg-[#172B6B] text-white"
+                                            : "border-slate-300 bg-white text-transparent"
+                                        }
+                                      `}
+                                    >
+                                      <FiCheck size={13} />
+                                    </div>
+
+                                  </button>
+                                );
+                              }
+                            )
+                          )}
+
+                        </div>
+                      )}
 
                     </div>
 
+                    <p className="mt-1.5 text-[11px] text-slate-400">
+                      Select one or more CRM salespeople responsible for this customer.
+                    </p>
+
                   </div>
+
+                  {/* STAGE */}
 
                   <div>
 
@@ -1629,6 +1830,7 @@ const SalesPipeline = () => {
                           focus:ring-[#172B6B]/10
                         "
                       >
+
                         {STAGES.map(
                           (stage) => (
                             <option
@@ -1639,6 +1841,7 @@ const SalesPipeline = () => {
                             </option>
                           )
                         )}
+
                       </select>
 
                       <FiChevronDown
@@ -1663,105 +1866,27 @@ const SalesPipeline = () => {
 
                 <div className="grid gap-5 md:grid-cols-2">
 
-                  <div>
+                  <DateField
+                    label="Last Contact Date"
+                    value={form.lastContactDate}
+                    onChange={(value) =>
+                      updateForm(
+                        "lastContactDate",
+                        value
+                      )
+                    }
+                  />
 
-                    <label className="mb-2 block text-sm font-semibold text-slate-800">
-                      Last Contact Date
-                    </label>
-
-                    <div className="relative">
-
-                      <FiCalendar
-                        size={15}
-                        className="
-                          pointer-events-none
-                          absolute
-                          left-3.5
-                          top-1/2
-                          -translate-y-1/2
-                          text-slate-400
-                        "
-                      />
-
-                      <input
-                        type="date"
-                        value={
-                          form.lastContactDate
-                        }
-                        onChange={(event) =>
-                          updateForm(
-                            "lastContactDate",
-                            event.target.value
-                          )
-                        }
-                        className="
-                          h-11
-                          w-full
-                          rounded-xl
-                          border
-                          border-slate-200
-                          bg-white
-                          px-4
-                          pl-10
-                          text-sm
-                          outline-none
-                          focus:border-[#172B6B]
-                        "
-                      />
-
-                    </div>
-
-                  </div>
-
-                  <div>
-
-                    <label className="mb-2 block text-sm font-semibold text-slate-800">
-                      Next Follow-up
-                    </label>
-
-                    <div className="relative">
-
-                      <FiCalendar
-                        size={15}
-                        className="
-                          pointer-events-none
-                          absolute
-                          left-3.5
-                          top-1/2
-                          -translate-y-1/2
-                          text-slate-400
-                        "
-                      />
-
-                      <input
-                        type="date"
-                        value={
-                          form.nextFollowUpDate
-                        }
-                        onChange={(event) =>
-                          updateForm(
-                            "nextFollowUpDate",
-                            event.target.value
-                          )
-                        }
-                        className="
-                          h-11
-                          w-full
-                          rounded-xl
-                          border
-                          border-slate-200
-                          bg-white
-                          px-4
-                          pl-10
-                          text-sm
-                          outline-none
-                          focus:border-[#172B6B]
-                        "
-                      />
-
-                    </div>
-
-                  </div>
+                  <DateField
+                    label="Next Follow-up"
+                    value={form.nextFollowUpDate}
+                    onChange={(value) =>
+                      updateForm(
+                        "nextFollowUpDate",
+                        value
+                      )
+                    }
+                  />
 
                 </div>
 
@@ -1885,24 +2010,20 @@ const SalesPipeline = () => {
                 {selectedCustomer.stageHistory?.length > 0 && (
                   <section>
 
-                    <div className="mb-4 flex items-center justify-between">
+                    <div className="mb-4 flex items-center gap-2.5">
 
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                        <FiClock size={15} />
+                      </div>
 
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                          <FiClock size={15} />
-                        </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900">
+                          Stage History
+                        </h4>
 
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900">
-                            Stage History
-                          </h4>
-
-                          <p className="text-xs text-slate-400">
-                            Recent pipeline activity
-                          </p>
-                        </div>
-
+                        <p className="text-xs text-slate-400">
+                          Recent pipeline activity
+                        </p>
                       </div>
 
                     </div>
@@ -1995,7 +2116,7 @@ const SalesPipeline = () => {
 
             </div>
 
-            {/* MODAL FOOTER */}
+            {/* FOOTER */}
 
             <div
               className="
@@ -2060,6 +2181,7 @@ const SalesPipeline = () => {
                   disabled:opacity-60
                 "
               >
+
                 {saving ? (
                   "Saving..."
                 ) : (
@@ -2068,14 +2190,180 @@ const SalesPipeline = () => {
                     Save Pipeline
                   </>
                 )}
+
               </button>
 
             </div>
 
           </div>
+
         </div>
       )}
+
     </>
+  );
+};
+
+const KpiCard = ({
+  label,
+  value,
+  description,
+  icon,
+  highlighted = false,
+  warning = false,
+  danger = false,
+}: {
+  label: string;
+  value: number;
+  description: string;
+  icon: React.ReactNode;
+  highlighted?: boolean;
+  warning?: boolean;
+  danger?: boolean;
+}) => {
+  return (
+    <div
+      className={`
+        rounded-2xl
+        border
+        p-5
+        ${
+          highlighted
+            ? "border-blue-100 bg-blue-50/50"
+            : warning
+            ? "border-amber-100 bg-amber-50/50"
+            : danger
+            ? "border-red-100 bg-red-50/50"
+            : "border-slate-200 bg-white shadow-sm"
+        }
+      `}
+    >
+      <div className="flex items-start justify-between">
+
+        <div>
+
+          <p
+            className={`
+              text-xs
+              font-semibold
+              uppercase
+              tracking-wide
+              ${
+                highlighted
+                  ? "text-blue-600"
+                  : warning
+                  ? "text-amber-600"
+                  : danger
+                  ? "text-red-600"
+                  : "text-slate-400"
+              }
+            `}
+          >
+            {label}
+          </p>
+
+          <p
+            className={`
+              mt-2
+              text-3xl
+              font-bold
+              ${
+                highlighted
+                  ? "text-[#172B6B]"
+                  : warning
+                  ? "text-amber-700"
+                  : danger
+                  ? "text-red-600"
+                  : "text-slate-900"
+              }
+            `}
+          >
+            {value}
+          </p>
+
+          <p
+            className={`
+              mt-1
+              text-xs
+              ${
+                highlighted
+                  ? "text-blue-600/70"
+                  : warning
+                  ? "text-amber-600/70"
+                  : danger
+                  ? "text-red-600/70"
+                  : "text-slate-500"
+              }
+            `}
+          >
+            {description}
+          </p>
+
+        </div>
+
+        <div className="rounded-xl bg-white p-2.5 text-slate-600 shadow-sm">
+          {icon}
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+const DateField = ({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  return (
+    <div>
+
+      <label className="mb-2 block text-sm font-semibold text-slate-800">
+        {label}
+      </label>
+
+      <div className="relative">
+
+        <FiCalendar
+          size={15}
+          className="
+            pointer-events-none
+            absolute
+            left-3.5
+            top-1/2
+            -translate-y-1/2
+            text-slate-400
+          "
+        />
+
+        <input
+          type="date"
+          value={value}
+          onChange={(event) =>
+            onChange(event.target.value)
+          }
+          className="
+            h-11
+            w-full
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            px-4
+            pl-10
+            text-sm
+            outline-none
+            focus:border-[#172B6B]
+          "
+        />
+
+      </div>
+
+    </div>
   );
 };
 

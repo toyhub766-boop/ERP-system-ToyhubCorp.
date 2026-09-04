@@ -32,50 +32,42 @@ export interface IStageHistory {
 
 export interface ICustomer extends Document {
   customerCode: string;
-
   companyName: string;
   contactPerson: string;
-
   phone: string;
   email: string;
-
   address: string;
   city: string;
   state: string;
   pincode: string;
-
   gstNumber: string;
-
   billingName: string;
   station: string;
-
   packingCharges: number;
   transportCharges: number;
   paymentTerms: number;
-
   stage: CustomerStage;
-
   category: CustomerCategory;
 
   /*
    * Sales pipeline
    */
+
+  // Existing field preserved for backward compatibility
   assignedSalesperson?: string;
 
+  // New relationship: allows multiple CRM users
+  assignedSalespeople?: mongoose.Types.ObjectId[];
+
   lastContactDate?: Date;
-
   nextFollowUpDate?: Date;
-
   nextAction: string;
-
   negotiationNotes: string;
-
   stageHistory: IStageHistory[];
 
   specialNotes: {
     title?: string;
     note: string;
-
     type:
       | "GENERAL"
       | "PAYMENT"
@@ -83,31 +75,21 @@ export interface ICustomer extends Document {
       | "FOLLOW_UP"
       | "COMPLAINT"
       | "PRODUCT";
-
     priority:
       | "LOW"
       | "MEDIUM"
       | "HIGH";
-
     reminderDate?: Date;
-
     completed: boolean;
-
     addedBy?: mongoose.Types.ObjectId;
-
     createdAt: Date;
   }[];
 
   reminderDate?: Date;
-
   reminderSet: boolean;
-
   status: "Active" | "Inactive";
-
   partyType: "CUSTOMER" | "SUPPLIER";
-
   openingBalance: number;
-
   currentBalance: number;
 }
 
@@ -212,11 +194,20 @@ const customerSchema = new Schema(
      * =========================
      */
 
+    // Existing field preserved
     assignedSalesperson: {
       type: String,
       default: "",
       trim: true,
     },
+
+    // New field for multiple salesperson assignments
+    assignedSalespeople: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
 
     lastContactDate: {
       type: Date,

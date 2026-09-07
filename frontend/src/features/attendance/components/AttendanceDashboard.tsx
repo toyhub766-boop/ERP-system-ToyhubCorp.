@@ -69,9 +69,9 @@ const AttendanceDashboard = ({
   onExportPdf,
 }: Props) => {
   const [activeTab, setActiveTab] =
-    useState<
-      "employee" | "labour"
-    >("employee");
+    useState<"employee" | "labour">(
+      "employee"
+    );
 
   const [search, setSearch] =
     useState("");
@@ -88,12 +88,6 @@ const AttendanceDashboard = ({
   const [previewDate, setPreviewDate] =
     useState("");
 
-  /*
-   * =========================================================
-   * TAB RECORDS
-   * =========================================================
-   */
-
   const tabRecords = useMemo(() => {
     const type =
       activeTab === "employee"
@@ -104,75 +98,48 @@ const AttendanceDashboard = ({
       (record) =>
         record.attendanceType === type
     );
+  }, [attendance, activeTab]);
+
+  const filteredRecords = useMemo(() => {
+    const normalizedSearch =
+      search.trim().toLowerCase();
+
+    return tabRecords.filter((record) => {
+      const person =
+        activeTab === "employee"
+          ? record.employee
+          : record.labour;
+
+      const name =
+        person?.name?.toLowerCase() || "";
+
+      const role =
+        person?.role?.toLowerCase() || "";
+
+      const employeeId =
+        person?.employeeId?.toLowerCase() || "";
+
+      const matchesSearch =
+        !normalizedSearch ||
+        name.includes(normalizedSearch) ||
+        role.includes(normalizedSearch) ||
+        employeeId.includes(normalizedSearch);
+
+      const matchesStatus =
+        status === "All" ||
+        record.status === status;
+
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
+    });
   }, [
-    attendance,
+    tabRecords,
+    search,
+    status,
     activeTab,
   ]);
-
-  /*
-   * =========================================================
-   * FILTERED RECORDS
-   * =========================================================
-   */
-
-  const filteredRecords =
-    useMemo(() => {
-      const normalizedSearch =
-        search.trim().toLowerCase();
-
-      return tabRecords.filter(
-        (record) => {
-          const person =
-            activeTab === "employee"
-              ? record.employee
-              : record.labour;
-
-          const name =
-            person?.name
-              ?.toLowerCase() || "";
-
-          const role =
-            person?.role
-              ?.toLowerCase() || "";
-
-          const employeeId =
-            person?.employeeId
-              ?.toLowerCase() || "";
-
-          const matchesSearch =
-            !normalizedSearch ||
-            name.includes(
-              normalizedSearch
-            ) ||
-            role.includes(
-              normalizedSearch
-            ) ||
-            employeeId.includes(
-              normalizedSearch
-            );
-
-          const matchesStatus =
-            status === "All" ||
-            record.status === status;
-
-          return (
-            matchesSearch &&
-            matchesStatus
-          );
-        }
-      );
-    }, [
-      tabRecords,
-      search,
-      status,
-      activeTab,
-    ]);
-
-  /*
-   * =========================================================
-   * TAB CHANGE
-   * =========================================================
-   */
 
   const handleTabChange = (
     tab: "employee" | "labour"
@@ -180,17 +147,8 @@ const AttendanceDashboard = ({
     setActiveTab(tab);
     setSearch("");
     setStatus("All");
-
-    // Close any open photo when
-    // switching between datasets.
     closePhotoPreview();
   };
-
-  /*
-   * =========================================================
-   * PHOTO PREVIEW
-   * =========================================================
-   */
 
   const handleViewPhoto = (
     photo: string,
@@ -200,12 +158,8 @@ const AttendanceDashboard = ({
     if (!photo) return;
 
     setPreviewPhoto(photo);
-    setPreviewEmployee(
-      employeeName
-    );
-    setPreviewDate(
-      date || ""
-    );
+    setPreviewEmployee(employeeName);
+    setPreviewDate(date || "");
   };
 
   const closePhotoPreview = () => {
@@ -216,7 +170,6 @@ const AttendanceDashboard = ({
 
   return (
     <div className="min-h-full bg-[#F6F8FC]">
-
       <div
         className="
           mx-auto
@@ -230,75 +183,44 @@ const AttendanceDashboard = ({
           lg:py-10
         "
       >
-
-        {/* =================================================
-            HEADER
-        ================================================= */}
-
         <AttendanceHeader
           activeTab={activeTab}
-          onTabChange={
-            handleTabChange
-          }
+          onTabChange={handleTabChange}
           onAddAttendance={
             onAddAttendance
           }
         />
 
-        {/* =================================================
-            OVERVIEW
-        ================================================= */}
-
         <AttendanceOverview
           records={tabRecords}
         />
 
-        {/* =================================================
-            TOOLBAR
-        ================================================= */}
-
         <div className="mt-7">
-
           <AttendanceToolbar
             search={search}
             status={status}
-            onSearchChange={
-              setSearch
-            }
-            onStatusChange={
-              setStatus
-            }
+            onSearchChange={setSearch}
+            onStatusChange={setStatus}
             onExportExcel={() =>
-              onExportExcel(
-                filteredRecords
-              )
+              onExportExcel(filteredRecords)
             }
             onExportPdf={() =>
-              onExportPdf(
-                filteredRecords
-              )
+              onExportPdf(filteredRecords)
             }
           />
-
         </div>
-
-        {/* =================================================
-            TABLE
-        ================================================= */}
 
         <div className="mt-5">
-
-          {activeTab ===
-            "employee" && (
+          {activeTab === "employee" && (
             <EmployeeAttendanceTable
               records={
-                filteredRecords
+                filteredRecords as any
               }
               onEdit={
-                onEditAttendance
+                onEditAttendance as any
               }
               onDelete={
-                onDeleteAttendance
+                onDeleteAttendance as any
               }
               onViewPhoto={
                 handleViewPhoto
@@ -306,46 +228,32 @@ const AttendanceDashboard = ({
             />
           )}
 
-          {activeTab ===
-            "labour" && (
+          {activeTab === "labour" && (
             <LabourAttendanceTable
               records={
-                filteredRecords
+                filteredRecords as any
               }
               onEdit={
-                onEditAttendance
+                onEditAttendance as any
               }
               onDelete={
-                onDeleteAttendance
+                onDeleteAttendance as any
               }
               onViewPhoto={
                 handleViewPhoto
               }
             />
           )}
-
         </div>
-
       </div>
 
-      {/* ===================================================
-          PHOTO PREVIEW
-      =================================================== */}
-
       <AttendancePhotoPreview
-        open={Boolean(
-          previewPhoto
-        )}
+        open={Boolean(previewPhoto)}
         photo={previewPhoto}
-        employeeName={
-          previewEmployee
-        }
+        employeeName={previewEmployee}
         date={previewDate}
-        onClose={
-          closePhotoPreview
-        }
+        onClose={closePhotoPreview}
       />
-
     </div>
   );
 };

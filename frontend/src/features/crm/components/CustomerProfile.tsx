@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   FiActivity,
   FiBriefcase,
@@ -17,6 +19,7 @@ import {
   FiUser,
   FiUsers,
   FiXCircle,
+  FiArrowLeft,
 } from "react-icons/fi";
 
 import { exportCustomerPortfolio } from "../services/customerPdf";
@@ -33,6 +36,14 @@ interface Props {
   onAddNote: () => void;
 
   onRecordPayment: (customer: any) => void;
+
+  /*
+    Mobile list -> detail navigation.
+
+    CRMPage will provide this when the profile is opened
+    on mobile/tablet. Desktop can simply leave it undefined.
+  */
+  onBackToList?: () => void;
 }
 
 
@@ -145,9 +156,9 @@ const StatusBadge = ({
 interface SectionProps {
   title: string;
   subtitle?: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  action?: React.ReactNode;
+  icon?: ReactNode;
+  children: ReactNode;
+  action?: ReactNode;
   className?: string;
 }
 
@@ -187,7 +198,6 @@ const Section = ({
         "
       >
         <div className="flex items-start gap-3">
-
           {icon && (
             <div
               className="
@@ -241,8 +251,8 @@ const InfoItem = ({
   full = false,
 }: {
   label: string;
-  value?: React.ReactNode;
-  icon?: React.ReactNode;
+  value?: ReactNode;
+  icon?: ReactNode;
   full?: boolean;
 }) => {
   return (
@@ -261,7 +271,6 @@ const InfoItem = ({
       </p>
 
       <div className="flex items-start gap-2">
-
         {icon && (
           <span className="mt-0.5 shrink-0 text-slate-400">
             {icon}
@@ -280,7 +289,6 @@ const InfoItem = ({
         >
           {value || "-"}
         </p>
-
       </div>
     </div>
   );
@@ -299,6 +307,7 @@ const CustomerProfile = ({
   onCreateOrder,
   onAddNote,
   onRecordPayment,
+  onBackToList,
 }: Props) => {
   if (!customer) {
     return (
@@ -318,7 +327,6 @@ const CustomerProfile = ({
         "
       >
         <div>
-
           <div
             className="
               mx-auto
@@ -342,12 +350,10 @@ const CustomerProfile = ({
           <p className="mt-1 max-w-xs text-sm leading-6 text-slate-500">
             Choose a customer from the list to view their complete CRM profile.
           </p>
-
         </div>
       </div>
     );
   }
-
 
   const outstanding = Number(
     customer.currentBalance || 0
@@ -355,12 +361,60 @@ const CustomerProfile = ({
 
   const isOutstanding = outstanding > 0;
 
-  return (
+    return (
     <div className="space-y-5 sm:space-y-6">
+
+      {/* ======================================================
+          MOBILE BACK / CONTEXT BAR
+      ====================================================== */}
+
+      {onBackToList && (
+        <div className="xl:hidden">
+          <button
+            type="button"
+            onClick={onBackToList}
+            className="
+              inline-flex
+              h-10
+              items-center
+              gap-2
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              px-3.5
+              text-sm
+              font-semibold
+              text-slate-700
+              shadow-sm
+              transition
+              hover:border-slate-300
+              hover:bg-slate-50
+              active:scale-[0.98]
+            "
+          >
+            <FiArrowLeft size={16} />
+
+            <span>
+              Customers
+            </span>
+          </button>
+
+          <div className="mt-3 min-w-0">
+            <p className="truncate text-xs font-medium text-slate-400">
+              Customer Profile
+            </p>
+
+            <p className="mt-0.5 truncate text-sm font-bold text-slate-900">
+              {customer.companyName}
+            </p>
+          </div>
+        </div>
+      )}
 
 
       {/* ======================================================
-          HERO
+          1. CUSTOMER HERO
       ====================================================== */}
 
       <section
@@ -374,9 +428,6 @@ const CustomerProfile = ({
           shadow-[0_4px_20px_rgba(15,23,42,0.06)]
         "
       >
-
-        {/* Blue hero */}
-
         <div
           className="
             relative
@@ -389,9 +440,6 @@ const CustomerProfile = ({
             sm:py-8
           "
         >
-
-          {/* Decorative elements */}
-
           <div
             className="
               pointer-events-none
@@ -431,11 +479,9 @@ const CustomerProfile = ({
               lg:justify-between
             "
           >
-
             {/* Identity */}
 
             <div className="flex min-w-0 items-start gap-4 sm:gap-5">
-
               <div
                 className="
                   flex
@@ -456,13 +502,10 @@ const CustomerProfile = ({
                   sm:text-3xl
                 "
               >
-                {getInitial(
-                  customer.companyName
-                )}
+                {getInitial(customer.companyName)}
               </div>
 
               <div className="min-w-0">
-
                 <div
                   className="
                     flex
@@ -471,7 +514,6 @@ const CustomerProfile = ({
                     gap-2
                   "
                 >
-
                   <h1
                     className="
                       max-w-full
@@ -488,7 +530,6 @@ const CustomerProfile = ({
                   <StatusBadge
                     status={customer.status}
                   />
-
                 </div>
 
                 <div
@@ -524,7 +565,6 @@ const CustomerProfile = ({
                     gap-2
                   "
                 >
-
                   {[
                     customer.customerCode,
                     customer.stage,
@@ -550,13 +590,9 @@ const CustomerProfile = ({
                         {item}
                       </span>
                     ))}
-
                 </div>
-
               </div>
-
             </div>
-
 
             {/* Financial KPIs */}
 
@@ -569,7 +605,6 @@ const CustomerProfile = ({
                 lg:min-w-[360px]
               "
             >
-
               <div
                 className="
                   rounded-2xl
@@ -613,7 +648,6 @@ const CustomerProfile = ({
                 </p>
               </div>
 
-
               <div
                 className="
                   rounded-2xl
@@ -654,16 +688,13 @@ const CustomerProfile = ({
                   Customer orders
                 </p>
               </div>
-
             </div>
-
           </div>
-
         </div>
 
 
         {/* ====================================================
-            ACTION BAR
+            2. ACTION BAR
         ==================================================== */}
 
         <div
@@ -681,7 +712,6 @@ const CustomerProfile = ({
             sm:p-5
           "
         >
-
           <button
             onClick={() => onEdit(customer)}
             className="
@@ -706,7 +736,6 @@ const CustomerProfile = ({
             <FiEdit3 size={15} />
             Edit Customer
           </button>
-
 
           <button
             onClick={onAddNote}
@@ -733,7 +762,6 @@ const CustomerProfile = ({
             Add Activity
           </button>
 
-
           <button
             onClick={() => onCreateOrder(customer)}
             className="
@@ -758,7 +786,6 @@ const CustomerProfile = ({
             <FiPlus size={15} />
             New Order
           </button>
-
 
           <button
             onClick={() =>
@@ -787,9 +814,7 @@ const CustomerProfile = ({
             Record Payment
           </button>
 
-
           <div className="hidden h-6 w-px bg-slate-200 sm:block" />
-
 
           <button
             onClick={() =>
@@ -822,7 +847,6 @@ const CustomerProfile = ({
             Export Portfolio
           </button>
 
-
           <button
             onClick={() => onDelete(customer)}
             className="
@@ -846,254 +870,13 @@ const CustomerProfile = ({
             <FiTrash2 size={15} />
             Delete
           </button>
-
         </div>
-
       </section>
 
 
       {/* ======================================================
-          CONTACT + BUSINESS
-      ====================================================== */}
-
-      <div className="grid gap-5 xl:grid-cols-2">
-
-
-        {/* Contact */}
-
-        <Section
-          title="Contact Information"
-          subtitle="Primary communication and registration details."
-          icon={<FiUser size={17} />}
-        >
-
-          <div className="grid gap-x-6 gap-y-6 sm:grid-cols-2">
-
-            <InfoItem
-              label="Contact Person"
-              value={
-                customer.contactPerson
-              }
-              icon={<FiUser size={14} />}
-            />
-
-            <InfoItem
-              label="Phone"
-              value={customer.phone}
-              icon={<FiPhone size={14} />}
-            />
-
-            <InfoItem
-              label="Email"
-              value={customer.email}
-              icon={<FiMail size={14} />}
-            />
-
-            <InfoItem
-              label="GST Number"
-              value={customer.gstNumber}
-              icon={<FiFileText size={14} />}
-            />
-
-            <InfoItem
-              label="Address"
-              value={customer.address}
-              icon={<FiMapPin size={14} />}
-              full
-            />
-
-            <div className="sm:col-span-2">
-
-              <p
-                className="
-                  mb-2
-                  text-[10px]
-                  font-bold
-                  uppercase
-                  tracking-[0.12em]
-                  text-slate-400
-                "
-              >
-                Location
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-
-                {[
-                  customer.city,
-                  customer.state,
-                  customer.pincode,
-                ]
-                  .filter(Boolean)
-                  .map((item) => (
-                    <span
-                      key={item}
-                      className="
-                        rounded-lg
-                        border
-                        border-slate-200
-                        bg-slate-50
-                        px-3
-                        py-1.5
-                        text-xs
-                        font-semibold
-                        text-slate-600
-                      "
-                    >
-                      {item}
-                    </span>
-                  ))}
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </Section>
-
-
-        {/* Business */}
-
-        <Section
-          title="Business Information"
-          subtitle="CRM classification and customer profile."
-          icon={<FiBriefcase size={17} />}
-        >
-
-          <div className="grid gap-x-6 gap-y-6 sm:grid-cols-2">
-
-            <InfoItem
-              label="Billing Name"
-              value={customer.billingName}
-            />
-
-            <InfoItem
-              label="Station"
-              value={customer.station}
-            />
-
-            <InfoItem
-              label="Party Type"
-              value={
-                <span
-                  className="
-                    inline-flex
-                    rounded-lg
-                    bg-blue-50
-                    px-2.5
-                    py-1
-                    text-[11px]
-                    font-bold
-                    text-blue-700
-                  "
-                >
-                  {customer.partyType || "-"}
-                </span>
-              }
-            />
-
-            <InfoItem
-              label="CRM Stage"
-              value={
-                <span
-                  className="
-                    inline-flex
-                    rounded-lg
-                    bg-amber-50
-                    px-2.5
-                    py-1
-                    text-[11px]
-                    font-bold
-                    text-amber-700
-                  "
-                >
-                  {customer.stage || "-"}
-                </span>
-              }
-            />
-
-            <InfoItem
-              label="Category"
-              value={customer.category}
-            />
-
-            <InfoItem
-              label="Account Status"
-              value={
-                <StatusBadge
-                  status={customer.status}
-                />
-              }
-            />
-
-          </div>
-
-        </Section>
-
-      </div>
-
-
-      {/* ======================================================
-          COMMERCIAL
-      ====================================================== */}
-
-      <Section
-        title="Commercial Information"
-        subtitle="Pricing, payment terms and account balances."
-        icon={<FiCreditCard size={17} />}
-      >
-
-        <div
-          className="
-            grid
-            gap-3
-            sm:grid-cols-2
-            lg:grid-cols-5
-          "
-        >
-
-          <CommercialCard
-            label="Packing Charges"
-            value={`₹${formatCurrency(
-              customer.packingCharges
-            )}`}
-          />
-
-          <CommercialCard
-            label="Transport Charges"
-            value={`₹${formatCurrency(
-              customer.transportCharges
-            )}`}
-          />
-
-          <CommercialCard
-            label="Payment Terms"
-            value={`${customer.paymentTerms || 0} Days`}
-          />
-
-          <CommercialCard
-            label="Opening Balance"
-            value={`₹${formatCurrency(
-              customer.openingBalance
-            )}`}
-          />
-
-          <CommercialCard
-            label="Outstanding"
-            value={`₹${formatCurrency(
-              customer.currentBalance
-            )}`}
-            danger={isOutstanding}
-          />
-
-        </div>
-
-      </Section>
-
-
-      {/* ======================================================
-          CRM TIMELINE
+          3. CRM ACTIVITY TIMELINE
+          WORKING INFORMATION COMES BEFORE STATIC INFORMATION
       ====================================================== */}
 
       <Section
@@ -1124,9 +907,7 @@ const CustomerProfile = ({
           </button>
         }
       >
-
         {!customer.specialNotes?.length ? (
-
           <EmptyState
             icon={<FiActivity size={24} />}
             title="No CRM activity yet"
@@ -1154,13 +935,8 @@ const CustomerProfile = ({
               </button>
             }
           />
-
         ) : (
-
           <div className="relative">
-
-            {/* Timeline line */}
-
             <div
               className="
                 absolute
@@ -1173,10 +949,8 @@ const CustomerProfile = ({
             />
 
             <div className="space-y-6">
-
               {customer.specialNotes.map(
                 (note: any) => (
-
                   <div
                     key={note._id}
                     className="
@@ -1185,7 +959,6 @@ const CustomerProfile = ({
                       gap-4
                     "
                   >
-
                     <div
                       className="
                         relative
@@ -1209,7 +982,6 @@ const CustomerProfile = ({
                       />
                     </div>
 
-
                     <div
                       className="
                         min-w-0
@@ -1226,7 +998,6 @@ const CustomerProfile = ({
                         sm:p-5
                       "
                     >
-
                       <div
                         className="
                           flex
@@ -1237,11 +1008,8 @@ const CustomerProfile = ({
                           sm:justify-between
                         "
                       >
-
                         <div className="min-w-0">
-
                           <div className="flex flex-wrap items-center gap-2">
-
                             <h4
                               className="
                                 text-sm
@@ -1256,7 +1024,6 @@ const CustomerProfile = ({
                             <ActivityBadge
                               type={note.type}
                             />
-
                           </div>
 
                           {note.note && (
@@ -1272,15 +1039,12 @@ const CustomerProfile = ({
                               {note.note}
                             </p>
                           )}
-
                         </div>
 
                         <PriorityBadge
                           priority={note.priority}
                         />
-
                       </div>
-
 
                       <div
                         className="
@@ -1297,7 +1061,6 @@ const CustomerProfile = ({
                           text-slate-400
                         "
                       >
-
                         <span className="flex items-center gap-1.5">
                           <FiClock size={12} />
                           {formatDateTime(
@@ -1321,27 +1084,20 @@ const CustomerProfile = ({
                             Completed
                           </span>
                         )}
-
                       </div>
-
                     </div>
-
                   </div>
-
                 )
               )}
-
             </div>
-
           </div>
-
         )}
-
       </Section>
 
 
       {/* ======================================================
-          ORDERS
+          4. RECENT ORDERS
+          CURRENT BUSINESS ACTIVITY COMES NEXT
       ====================================================== */}
 
       <Section
@@ -1377,9 +1133,7 @@ const CustomerProfile = ({
           ) : null
         }
       >
-
         {!orders.length ? (
-
           <EmptyState
             icon={<FiPackage size={24} />}
             title="No orders yet"
@@ -1409,14 +1163,10 @@ const CustomerProfile = ({
               </button>
             }
           />
-
         ) : (
-
           <div className="space-y-3">
-
             {orders.slice(0, 5).map(
               (order: any) => (
-
                 <div
                   key={order._id}
                   className="
@@ -1438,9 +1188,7 @@ const CustomerProfile = ({
                     sm:p-5
                   "
                 >
-
                   <div className="flex items-center gap-3">
-
                     <div
                       className="
                         flex
@@ -1461,9 +1209,7 @@ const CustomerProfile = ({
                     </div>
 
                     <div className="min-w-0">
-
                       <div className="flex items-center gap-2">
-
                         <h4 className="truncate text-sm font-bold text-slate-900">
                           {order.orderNumber ||
                             "Order"}
@@ -1472,7 +1218,6 @@ const CustomerProfile = ({
                         <OrderStatus
                           status={order.status}
                         />
-
                       </div>
 
                       <p className="mt-1 text-xs text-slate-400">
@@ -1481,11 +1226,8 @@ const CustomerProfile = ({
                           order.createdAt
                         )}
                       </p>
-
                     </div>
-
                   </div>
-
 
                   <div
                     className="
@@ -1496,11 +1238,9 @@ const CustomerProfile = ({
                       sm:justify-end
                     "
                   >
-
                     {order.totalAmount !==
                       undefined && (
                       <div className="text-right">
-
                         <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                           Order Value
                         </p>
@@ -1511,7 +1251,6 @@ const CustomerProfile = ({
                             order.totalAmount
                           )}
                         </p>
-
                       </div>
                     )}
 
@@ -1524,17 +1263,13 @@ const CustomerProfile = ({
                         group-hover:text-slate-500
                       "
                     />
-
                   </div>
-
                 </div>
-
               )
             )}
 
             {orders.length > 5 && (
               <div className="pt-2 text-center">
-
                 <span
                   className="
                     text-xs
@@ -1545,14 +1280,228 @@ const CustomerProfile = ({
                   Showing latest 5 of{" "}
                   {orders.length} orders
                 </span>
-
               </div>
             )}
-
           </div>
-
         )}
+      </Section>
 
+
+      {/* ======================================================
+          5. CONTACT INFORMATION
+          STATIC CUSTOMER INFORMATION
+      ====================================================== */}
+
+      <Section
+        title="Contact Information"
+        subtitle="Primary communication and registration details."
+        icon={<FiUser size={17} />}
+      >
+        <div className="grid gap-x-6 gap-y-6 sm:grid-cols-2">
+          <InfoItem
+            label="Contact Person"
+            value={customer.contactPerson}
+            icon={<FiUser size={14} />}
+          />
+
+          <InfoItem
+            label="Phone"
+            value={customer.phone}
+            icon={<FiPhone size={14} />}
+          />
+
+          <InfoItem
+            label="Email"
+            value={customer.email}
+            icon={<FiMail size={14} />}
+          />
+
+          <InfoItem
+            label="GST Number"
+            value={customer.gstNumber}
+            icon={<FiFileText size={14} />}
+          />
+
+          <InfoItem
+            label="Address"
+            value={customer.address}
+            icon={<FiMapPin size={14} />}
+            full
+          />
+
+          <div className="sm:col-span-2">
+            <p
+              className="
+                mb-2
+                text-[10px]
+                font-bold
+                uppercase
+                tracking-[0.12em]
+                text-slate-400
+              "
+            >
+              Location
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                customer.city,
+                customer.state,
+                customer.pincode,
+              ]
+                .filter(Boolean)
+                .map((item) => (
+                  <span
+                    key={item}
+                    className="
+                      rounded-lg
+                      border
+                      border-slate-200
+                      bg-slate-50
+                      px-3
+                      py-1.5
+                      text-xs
+                      font-semibold
+                      text-slate-600
+                    "
+                  >
+                    {item}
+                  </span>
+                ))}
+            </div>
+          </div>
+        </div>
+      </Section>
+
+
+      {/* ======================================================
+          6. BUSINESS INFORMATION
+      ====================================================== */}
+
+      <Section
+        title="Business Information"
+        subtitle="CRM classification and customer profile."
+        icon={<FiBriefcase size={17} />}
+      >
+        <div className="grid gap-x-6 gap-y-6 sm:grid-cols-2">
+          <InfoItem
+            label="Billing Name"
+            value={customer.billingName}
+          />
+
+          <InfoItem
+            label="Station"
+            value={customer.station}
+          />
+
+          <InfoItem
+            label="Party Type"
+            value={
+              <span
+                className="
+                  inline-flex
+                  rounded-lg
+                  bg-blue-50
+                  px-2.5
+                  py-1
+                  text-[11px]
+                  font-bold
+                  text-blue-700
+                "
+              >
+                {customer.partyType || "-"}
+              </span>
+            }
+          />
+
+          <InfoItem
+            label="CRM Stage"
+            value={
+              <span
+                className="
+                  inline-flex
+                  rounded-lg
+                  bg-amber-50
+                  px-2.5
+                  py-1
+                  text-[11px]
+                  font-bold
+                  text-amber-700
+                "
+              >
+                {customer.stage || "-"}
+              </span>
+            }
+          />
+
+          <InfoItem
+            label="Category"
+            value={customer.category}
+          />
+
+          <InfoItem
+            label="Account Status"
+            value={
+              <StatusBadge
+                status={customer.status}
+              />
+            }
+          />
+        </div>
+      </Section>
+
+
+      {/* ======================================================
+          7. COMMERCIAL INFORMATION
+      ====================================================== */}
+
+      <Section
+        title="Commercial Information"
+        subtitle="Pricing, payment terms and account balances."
+        icon={<FiCreditCard size={17} />}
+      >
+        <div
+          className="
+            grid
+            gap-3
+            sm:grid-cols-2
+            lg:grid-cols-5
+          "
+        >
+          <CommercialCard
+            label="Packing Charges"
+            value={`₹${formatCurrency(
+              customer.packingCharges
+            )}`}
+          />
+
+          <CommercialCard
+            label="Transport Charges"
+            value={`₹${formatCurrency(
+              customer.transportCharges
+            )}`}
+          />
+
+          <CommercialCard
+            label="Payment Terms"
+            value={`${customer.paymentTerms || 0} Days`}
+          />
+
+          <CommercialCard
+            label="Opening Balance"
+            value={`₹${formatCurrency(
+              customer.openingBalance
+            )}`}
+          />
+
+          <CommercialCard
+            label="Outstanding"
+            value={`₹${formatCurrency(
+              customer.currentBalance
+            )}`}
+            danger={isOutstanding}
+          />
+        </div>
       </Section>
 
     </div>
@@ -1633,10 +1582,10 @@ const EmptyState = ({
   description,
   action,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) => {
   return (
     <div
@@ -1651,7 +1600,6 @@ const EmptyState = ({
         text-center
       "
     >
-
       <div
         className="
           mx-auto
@@ -1682,7 +1630,6 @@ const EmptyState = ({
           {action}
         </div>
       )}
-
     </div>
   );
 };
@@ -1804,8 +1751,7 @@ const OrderStatus = ({
 }: {
   status?: string;
 }) => {
-  const normalized =
-    status?.toLowerCase();
+  const normalized = status?.toLowerCase();
 
   let style =
     "bg-slate-100 text-slate-600";
@@ -1826,10 +1772,7 @@ const OrderStatus = ({
       "bg-amber-50 text-amber-700";
   }
 
-  if (
-    normalized === "cancelled" ||
-    normalized === "cancelled"
-  ) {
+  if (normalized === "cancelled") {
     style =
       "bg-red-50 text-red-700";
   }

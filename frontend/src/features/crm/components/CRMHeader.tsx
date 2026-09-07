@@ -22,17 +22,16 @@ const CRMHeader = ({
       "
     >
       {/* Subtle decorative layer */}
-
       <div
         className="
           pointer-events-none
           absolute
           right-0
           top-0
-          h-40
-          w-40
-          translate-x-16
-          -translate-y-16
+          h-32
+          w-32
+          translate-x-12
+          -translate-y-12
           rounded-full
           bg-blue-50
           blur-2xl
@@ -44,11 +43,11 @@ const CRMHeader = ({
           relative
           flex
           flex-col
-          gap-6
-          px-6
-          py-6
-          sm:px-7
-          sm:py-7
+          gap-4
+          px-5
+          py-4
+          sm:px-6
+          sm:py-5
           lg:flex-row
           lg:items-center
           lg:justify-between
@@ -57,17 +56,14 @@ const CRMHeader = ({
         {/* =====================================================
             LEFT
         ===================================================== */}
-
         <div className="min-w-0">
-
           {/* Breadcrumb */}
-
           <div
             className="
               flex
               items-center
               gap-2
-              text-xs
+              text-[11px]
               font-semibold
               uppercase
               tracking-[0.1em]
@@ -90,24 +86,20 @@ const CRMHeader = ({
             )}
           </div>
 
-
           {/* Title */}
-
           <div
             className="
-              mt-3
+              mt-1.5
               flex
-              items-start
+              items-center
               gap-3
             "
           >
-
             <div
               className="
-                mt-1
                 hidden
-                h-10
-                w-10
+                h-9
+                w-9
                 shrink-0
                 items-center
                 justify-center
@@ -117,52 +109,30 @@ const CRMHeader = ({
                 sm:flex
               "
             >
-              <FiUsers size={19} />
+              <FiUsers size={17} />
             </div>
 
-
-            <div>
-
+            <div className="min-w-0">
               <h1
                 className="
                   text-2xl
                   font-bold
+                  leading-tight
                   tracking-tight
                   text-slate-900
                   sm:text-3xl
-                  lg:text-4xl
                 "
               >
                 Customer Relationship
                 Management
               </h1>
-
-              <p
-                className="
-                  mt-2
-                  max-w-2xl
-                  text-sm
-                  leading-6
-                  text-slate-500
-                  sm:text-[15px]
-                "
-              >
-                Manage customers, sales orders,
-                payment records and outstanding
-                balances from a single workspace.
-              </p>
-
             </div>
-
           </div>
-
         </div>
-
 
         {/* =====================================================
             ACTION
         ===================================================== */}
-
         <div
           className="
             flex
@@ -170,14 +140,13 @@ const CRMHeader = ({
             items-center
           "
         >
-
           <button
             type="button"
             onClick={onAddCustomer}
             className="
               group
               inline-flex
-              h-11
+              h-10
               w-full
               items-center
               justify-center
@@ -191,16 +160,14 @@ const CRMHeader = ({
               shadow-sm
               transition-all
               duration-200
-              hover:bg-[#20398F]
               hover:-translate-y-0.5
+              hover:bg-[#20398F]
               hover:shadow-md
               active:translate-y-0
               active:scale-[0.98]
               sm:w-auto
-              sm:px-6
             "
           >
-
             <span
               className="
                 flex
@@ -221,11 +188,8 @@ const CRMHeader = ({
             </span>
 
             Add Customer
-
           </button>
-
         </div>
-
       </div>
     </section>
   );

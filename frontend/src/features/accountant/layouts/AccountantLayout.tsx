@@ -6,6 +6,7 @@ import {
   WalletCards,
   LogOut,
   ChevronRight,
+  CheckSquare,
 } from "lucide-react";
 import {
   NavLink,
@@ -208,6 +209,7 @@ const AccountantLayout = ({
 
           <NavLink
             to="/accountant"
+            end
             onClick={() =>
               setOpen(false)
             }
@@ -219,6 +221,8 @@ const AccountantLayout = ({
               }`
             }
           >
+
+          
 
             {({ isActive }) => (
               <>
@@ -250,6 +254,45 @@ const AccountantLayout = ({
             )}
 
           </NavLink>
+
+          <NavLink
+  to="/accountant/my-tasks"
+  onClick={() => setOpen(false)}
+  className={({ isActive }) =>
+    `group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition ${
+      isActive
+        ? "bg-[#17357A] text-white shadow-[0_5px_14px_rgba(23,53,122,0.16)]"
+        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+    }`
+  }
+>
+  {({ isActive }) => (
+    <>
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+          isActive
+            ? "bg-white/10 text-white"
+            : "bg-slate-100 text-slate-500 group-hover:bg-[#17357A]/10 group-hover:text-[#17357A]"
+        }`}
+      >
+        <CheckSquare size={17} />
+      </span>
+
+      <span className="flex-1">
+        My Tasks
+      </span>
+
+      <ChevronRight
+        size={15}
+        className={`transition-transform ${
+          isActive
+            ? "translate-x-0.5 opacity-100"
+            : "opacity-0 group-hover:translate-x-0.5 group-hover:opacity-70"
+        }`}
+      />
+    </>
+  )}
+</NavLink>
 
         </nav>
 

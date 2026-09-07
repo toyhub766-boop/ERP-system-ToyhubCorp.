@@ -5,32 +5,71 @@ import authMiddleware from "../middlewares/auth.middleware";
 import {
   getTasks,
   getTasksByUser,
+  getMyTasks,
   createTask,
   updateTask,
   toggleTaskCompletion,
+  toggleChecklistItem,
   deleteTask,
 } from "../controllers/task.controller";
 
-const router = express.Router();
+const router =
+  express.Router();
 
-router.use(authMiddleware);
+router.use(
+  authMiddleware
+);
 
-router.get("/", getTasks);
+// =========================================================
+// GENERAL / ADMIN
+// =========================================================
+
+router.get(
+  "/",
+  getTasks
+);
+
+// IMPORTANT:
+// /my MUST come before /user/:userId
+router.get(
+  "/my",
+  getMyTasks
+);
 
 router.get(
   "/user/:userId",
   getTasksByUser
 );
 
-router.post("/", createTask);
+// =========================================================
+// TASK MANAGEMENT
+// =========================================================
 
-router.put("/:id", updateTask);
+router.post(
+  "/",
+  createTask
+);
 
+router.put(
+  "/:id",
+  updateTask
+);
+
+// Whole task
 router.patch(
   "/:id/toggle",
   toggleTaskCompletion
 );
 
-router.delete("/:id", deleteTask);
+// Individual checklist item
+router.patch(
+  "/:taskId/checklist/:itemId",
+  toggleChecklistItem
+);
+
+router.delete(
+  "/:id",
+  deleteTask
+);
 
 export default router;

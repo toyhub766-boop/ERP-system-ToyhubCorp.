@@ -734,31 +734,15 @@ const CRMDueDates = () => {
 
           <h1
             className="
-              text-3xl
+              text-md
               font-bold
               tracking-tight
               text-slate-900
-              sm:text-4xl
+              sm:text-2xl
             "
           >
             Due Dates
           </h1>
-
-          <p
-            className="
-              mt-2
-              max-w-2xl
-              text-sm
-              leading-6
-              text-slate-500
-              sm:text-base
-            "
-          >
-            Monitor customer payment
-            deadlines, outstanding
-            balances and upcoming
-            collection dates.
-          </p>
 
         </div>
 

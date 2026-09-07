@@ -64,10 +64,16 @@ import ReportsPage from "../../features/reports/pages/ReportsPage";
 
 import ReminderPage from "../../features/reminders/pages/ReminderPage";
 
+import MyTasksPage from "../../features/tasks/pages/MyTasksPage";
+
+import CRMStaffLayout from "../../features/crm/components/CRMStaffLayout";
+import AccountantLayout from "../../features/accountant/layouts/AccountantLayout";
+import HRLayout from "../../features/hr/layouts/HRLayout";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
-    <SessionRestorer />
+      <SessionRestorer />
       <Routes>
         {/* Login Flow */}
         <Route path="/" element={<Navigate to="/login" />} />
@@ -215,16 +221,32 @@ const AppRoutes = () => {
           element={<ReportsPage />}
         />
 
-        {/* Staff */}
+        <Route
+          path="/admin/reminders"
+          element={<ReminderPage />}
+        />
+
+                {/* Staff */}
+
         <Route
           path="/staff/dashboard"
-          element={<Navigate to="/staff/inventory" replace />}
+          element={
+            <Navigate
+              to="/staff/inventory"
+              replace
+            />
+          }
         />
 
         <Route
           path="/staff/inventory"
           element={
-            <ProtectedRoute allowedRoles={["INVENTORY", "FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={[
+                "INVENTORY",
+                "FOUNDER",
+              ]}
+            >
               <StaffInventoryPage />
             </ProtectedRoute>
           }
@@ -233,7 +255,12 @@ const AppRoutes = () => {
         <Route
           path="/staff/stock-in/:id"
           element={
-            <ProtectedRoute allowedRoles={["INVENTORY", "FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={[
+                "INVENTORY",
+                "FOUNDER",
+              ]}
+            >
               <StockInPage />
             </ProtectedRoute>
           }
@@ -242,7 +269,12 @@ const AppRoutes = () => {
         <Route
           path="/staff/stock-out/:id"
           element={
-            <ProtectedRoute allowedRoles={["INVENTORY", "FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={[
+                "INVENTORY",
+                "FOUNDER",
+              ]}
+            >
               <StockOutPage />
             </ProtectedRoute>
           }
@@ -251,7 +283,12 @@ const AppRoutes = () => {
         <Route
           path="/staff/transactions"
           element={
-            <ProtectedRoute allowedRoles={["INVENTORY", "FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={[
+                "INVENTORY",
+                "FOUNDER",
+              ]}
+            >
               <TransactionsPage />
             </ProtectedRoute>
           }
@@ -275,51 +312,145 @@ const AppRoutes = () => {
           }
         />
 
+        {/* =====================================================
+            INVENTORY STAFF — MY TASKS
+        ===================================================== */}
+
+        <Route
+          path="/staff/my-tasks"
+          element={
+            <ProtectedRoute
+              allowedRoles={["INVENTORY"]}
+            >
+              <MyTasksPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* =====================================================
+            PRODUCTION STAFF
+        ===================================================== */}
 
         <Route
           path="/production-staff"
           element={
-            <ProtectedRoute allowedRoles={["PRODUCTION"]}>
+            <ProtectedRoute
+              allowedRoles={["PRODUCTION"]}
+            >
               <ProductionStaffLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<ProductionDashboardPage />} />
+          <Route
+            index
+            element={
+              <ProductionDashboardPage />
+            }
+          />
 
-          <Route path="bom" element={<ProductionStaffBOMPage />} />
+          <Route
+            path="bom"
+            element={
+              <ProductionStaffBOMPage />
+            }
+          />
 
           <Route
             path="production"
-            element={<ProductionStaffProductionPage />}
+            element={
+              <ProductionStaffProductionPage />
+            }
           />
 
-          <Route path="dispatch" element={<ProductionStaffDispatchPage />} />
+          <Route
+            path="dispatch"
+            element={
+              <ProductionStaffDispatchPage />
+            }
+          />
+
+          <Route
+            path="my-tasks"
+            element={
+              <MyTasksPage />
+            }
+          />
         </Route>
+
+        {/* =====================================================
+            CRM STAFF
+        ===================================================== */}
 
         <Route
           path="/crm-staff"
           element={
-            <ProtectedRoute allowedRoles={["CRM"]}>
+            <ProtectedRoute
+              allowedRoles={["CRM"]}
+            >
               <CRMStaffPage />
             </ProtectedRoute>
           }
         />
 
+        {/* CRM My Tasks will use CRMStaffLayout directly */}
+
+        <Route
+          path="/crm-staff/my-tasks"
+          element={
+            <ProtectedRoute
+              allowedRoles={["CRM"]}
+            >
+              <CRMStaffLayout>
+                <MyTasksPage />
+              </CRMStaffLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* =====================================================
+            ACCOUNTANT
+        ===================================================== */}
+
         <Route
           path="/accountant"
           element={
-            <ProtectedRoute allowedRoles={["ACCOUNTANT"]}>
+            <ProtectedRoute
+              allowedRoles={["ACCOUNTANT"]}
+            >
               <AccountantPage />
             </ProtectedRoute>
           }
         />
 
         <Route
-  path="/admin/reminders"
-  element={<ReminderPage />}
-/>
+          path="/accountant/my-tasks"
+          element={
+            <ProtectedRoute
+              allowedRoles={["ACCOUNTANT"]}
+            >
+              <AccountantLayout>
+                <MyTasksPage />
+              </AccountantLayout>
+            </ProtectedRoute>
+          }
+        />
 
+        {/* =====================================================
+            HR STAFF MY TASKS
+        ===================================================== */}
 
+        <Route
+          path="/attendance/my-tasks"
+          element={
+            <ProtectedRoute
+              allowedRoles={["ATTENDANCE/HR"]}
+            >
+              <HRLayout>
+                <MyTasksPage />
+              </HRLayout>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

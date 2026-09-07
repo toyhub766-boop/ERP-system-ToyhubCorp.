@@ -6,6 +6,7 @@ import {
   FiClipboard,
   FiTruck,
   FiLogOut,
+  FiCheckSquare,
 } from "react-icons/fi";
 import { FaIndustry } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -32,8 +33,12 @@ const links = [
     path: "/production-staff/dispatch",
     icon: <FiTruck />,
   },
+  {
+    name: "My Tasks",
+    path: "/production-staff/my-tasks",
+    icon: <FiCheckSquare />,
+  },
 ];
-
 const ProductionSidebar = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);

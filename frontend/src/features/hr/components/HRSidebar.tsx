@@ -6,6 +6,7 @@ import {
   FiLogOut,
   FiUsers,
   FiChevronRight,
+  FiCheckSquare,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -15,7 +16,12 @@ const menuItems = [
   {
     label: "Dashboard",
     icon: <FiHome size={18} />,
-    path: "",
+    path: "/attendance",
+  },
+  {
+    label: "My Tasks",
+    icon: <FiCheckSquare size={18} />,
+    path: "/attendance/my-tasks",
   },
 ];
 

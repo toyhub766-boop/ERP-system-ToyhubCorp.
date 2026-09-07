@@ -7,6 +7,7 @@ import {
   FiTruck,
   FiLogOut,
   FiCheckSquare,
+  FiClock,
 } from "react-icons/fi";
 import { FaIndustry } from "react-icons/fa";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -37,6 +38,11 @@ const links = [
     name: "My Tasks",
     path: "/production-staff/my-tasks",
     icon: <FiCheckSquare />,
+  },
+  {
+    name: "Punch",
+    path: "/attendance/punch",
+    icon: <FiClock />,
   },
 ];
 const ProductionSidebar = () => {

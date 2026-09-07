@@ -90,9 +90,7 @@ interface AttendanceRecord {
 
 interface Props {
   records: AttendanceRecord[];
-
   personName?: string;
-
   onDaySelect?: (
     record: AttendanceRecord | null,
     date: Date
@@ -118,9 +116,7 @@ const getDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getRecordDateKey = (
-  value: string
-) => {
+const getRecordDateKey = (value: string) => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -130,9 +126,7 @@ const getRecordDateKey = (
   return getDateKey(date);
 };
 
-const formatMinutes = (
-  minutes?: number
-) => {
+const formatMinutes = (minutes?: number) => {
   if (
     minutes === undefined ||
     minutes === null
@@ -149,8 +143,7 @@ const formatMinutes = (
     safeMinutes / 60
   );
 
-  const remaining =
-    safeMinutes % 60;
+  const remaining = safeMinutes % 60;
 
   if (hours === 0) {
     return `${remaining}m`;
@@ -163,9 +156,7 @@ const formatMinutes = (
   return `${hours}h ${remaining}m`;
 };
 
-const formatTime = (
-  value?: string
-) => {
+const formatTime = (value?: string) => {
   if (!value) return "-";
 
   const date = new Date(value);
@@ -174,55 +165,11 @@ const formatTime = (
     return "-";
   }
 
-  return date.toLocaleTimeString(
-    "en-IN",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  );
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
-
-// const getEvent = (
-//   record: AttendanceRecord,
-//   type: AttendanceEvent["type"]
-// ) => {
-//   return (
-//     record.events?.find(
-//       (event) => event.type === type
-//     ) || null
-//   );
-// };
-
-// const getStatusLabel = (
-//   status?: string
-// ) => {
-//   switch (status) {
-//     case "PRESENT":
-//       return "Present";
-
-//     case "LATE":
-//       return "Late";
-
-//     case "EARLY_LEAVE":
-//       return "Early";
-
-//     case "LATE_AND_EARLY":
-//       return "Late + Early";
-
-//     case "HALF_DAY":
-//       return "Half Day";
-
-//     case "ABSENT":
-//       return "Absent";
-
-//     case "LEAVE":
-//       return "Leave";
-
-//     default:
-//       return "";
-//   }
-// };
 
 const getCalendarStatus = (
   record?: AttendanceRecord
@@ -265,32 +212,32 @@ const getDayClasses = (
   isToday: boolean
 ) => {
   const base =
-    "relative min-h-[86px] rounded-xl border p-2.5 text-left transition-all duration-150";
+    "relative flex min-h-[54px] items-center justify-center rounded-xl border text-center transition-all duration-150 sm:min-h-[72px] sm:items-start sm:justify-start sm:p-2.5";
 
   let statusClasses = "";
 
   switch (status) {
     case "GREEN":
       statusClasses =
-        "border-emerald-200 bg-emerald-50/80 hover:border-emerald-300 hover:bg-emerald-50";
+        "border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100/70";
 
       break;
 
     case "YELLOW":
       statusClasses =
-        "border-amber-200 bg-amber-50/80 hover:border-amber-300 hover:bg-amber-50";
+        "border-amber-200 bg-amber-50 hover:border-amber-300 hover:bg-amber-100/70";
 
       break;
 
     case "ABSENT":
       statusClasses =
-        "border-red-200 bg-red-50/70 hover:border-red-300 hover:bg-red-50";
+        "border-red-200 bg-red-50 hover:border-red-300 hover:bg-red-100/70";
 
       break;
 
     case "LEAVE":
       statusClasses =
-        "border-slate-200 bg-slate-50 hover:border-slate-300";
+        "border-slate-200 bg-slate-100 hover:border-slate-300 hover:bg-slate-200/70";
 
       break;
 
@@ -300,7 +247,7 @@ const getDayClasses = (
   }
 
   const selectedClasses = isSelected
-    ? "ring-2 ring-[#17357A]/30 ring-offset-1"
+    ? "ring-2 ring-[#17357A]/35 ring-offset-1"
     : "";
 
   const todayClasses = isToday
@@ -331,72 +278,13 @@ const getStatusDot = (
   }
 };
 
-const getStatusLabelForDay = (
-  record?: AttendanceRecord
-) => {
-  if (!record) {
-    return "";
-  }
-
-  const status =
-    getCalendarStatus(record);
-
-  switch (status) {
-    case "GREEN":
-      return "Present";
-
-    case "YELLOW":
-      if (
-        record.status === "LATE"
-      ) {
-        return "Late";
-      }
-
-      if (
-        record.status ===
-        "EARLY_LEAVE"
-      ) {
-        return "Early";
-      }
-
-      if (
-        record.status ===
-        "LATE_AND_EARLY"
-      ) {
-        return "Late + Early";
-      }
-
-      if (
-        record.status === "HALF_DAY"
-      ) {
-        return "Half Day";
-      }
-
-      return "Attention";
-
-    case "ABSENT":
-      return "Absent";
-
-    case "LEAVE":
-      return "Leave";
-
-    default:
-      return "";
-  }
-};
-
-const getDateLabel = (
-  date: Date
-) => {
-  return date.toLocaleDateString(
-    "en-IN",
-    {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }
-  );
+const getDateLabel = (date: Date) => {
+  return date.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 const AttendanceStreakCalendar = ({
@@ -471,9 +359,7 @@ const AttendanceStreakCalendar = ({
     const totalDays =
       lastDay.getDate();
 
-    const days: Array<
-      Date | null
-    > = [];
+    const days: Array<Date | null> = [];
 
     for (
       let index = 0;
@@ -519,9 +405,7 @@ const AttendanceStreakCalendar = ({
         a.key.localeCompare(b.key)
       );
 
-    if (
-      datedRecords.length === 0
-    ) {
+    if (datedRecords.length === 0) {
       return 0;
     }
 
@@ -546,14 +430,14 @@ const AttendanceStreakCalendar = ({
       ).sort();
 
     let anchorKey =
-      sortedKeys[sortedKeys.length - 1];
+      sortedKeys[
+        sortedKeys.length - 1
+      ];
 
     const todayKey =
       getDateKey(today);
 
-    if (
-      anchorKey > todayKey
-    ) {
+    if (anchorKey > todayKey) {
       anchorKey = todayKey;
     }
 
@@ -662,8 +546,7 @@ const AttendanceStreakCalendar = ({
   const handleDayClick = (
     date: Date
   ) => {
-    const key =
-      getDateKey(date);
+    const key = getDateKey(date);
 
     const record =
       recordsByDate.get(key) ||
@@ -709,32 +592,38 @@ const AttendanceStreakCalendar = ({
         1
       )
     );
+
+    setSelectedDateKey(null);
   };
 
   return (
     <section className="mt-8">
       <div className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.04)]">
-        <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
+
+        {/* HEADER */}
+
+        <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
             <div>
               <div className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#FF8A1F]" />
 
-                <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                <h2 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
                   Attendance Calendar
                 </h2>
               </div>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                 {personName
                   ? `${personName}'s attendance history`
                   : "Attendance performance and streak history"}
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+            <div className="flex items-center justify-between gap-2 sm:justify-start sm:gap-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 sm:px-3.5 sm:py-2.5">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-[10px]">
                   Current Streak
                 </p>
 
@@ -743,7 +632,7 @@ const AttendanceStreakCalendar = ({
                     {currentStreak}
                   </span>
 
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-[10px] font-medium text-slate-500 sm:text-xs">
                     {currentStreak === 1
                       ? "day"
                       : "days"}
@@ -754,7 +643,7 @@ const AttendanceStreakCalendar = ({
               <button
                 type="button"
                 onClick={goToCurrentMonth}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 sm:px-4 sm:py-2.5 sm:text-sm"
               >
                 Today
               </button>
@@ -762,23 +651,27 @@ const AttendanceStreakCalendar = ({
           </div>
         </div>
 
-        <div className="px-4 py-5 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* CALENDAR AREA */}
+
+        <div className="px-3 py-4 sm:px-6 sm:py-5">
+
+          {/* MONTH CONTROLS */}
+
+          <div className="flex items-center justify-between gap-3">
+
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={
                   goToPreviousMonth
                 }
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                 aria-label="Previous month"
               >
-                <FiChevronLeft
-                  size={17}
-                />
+                <FiChevronLeft size={17} />
               </button>
 
-              <h3 className="min-w-[150px] text-center text-base font-bold text-slate-900">
+              <h3 className="min-w-0 text-center text-sm font-bold text-slate-900 sm:min-w-[150px] sm:text-base">
                 {monthLabel}
               </h3>
 
@@ -787,16 +680,16 @@ const AttendanceStreakCalendar = ({
                 onClick={
                   goToNextMonth
                 }
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                 aria-label="Next month"
               >
-                <FiChevronRight
-                  size={17}
-                />
+                <FiChevronRight size={17} />
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            {/* DESKTOP MONTH STATS */}
+
+            <div className="hidden flex-wrap items-center gap-2 sm:flex">
               <span className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700">
                 {monthStats.green} full
               </span>
@@ -815,83 +708,148 @@ const AttendanceStreakCalendar = ({
             </div>
           </div>
 
-          <div className="mt-5 overflow-x-auto">
-            <div className="min-w-[720px]">
-              <div className="mb-2 grid grid-cols-7 gap-2">
-                {[
-                  "Sun",
-                  "Mon",
-                  "Tue",
-                  "Wed",
-                  "Thu",
-                  "Fri",
-                  "Sat",
-                ].map((day) => (
-                  <div
-                    key={day}
-                    className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400"
-                  >
+          {/* MOBILE STATS */}
+
+          <div className="mt-3 grid grid-cols-4 gap-1.5 sm:hidden">
+            <div className="rounded-lg bg-emerald-50 px-1.5 py-2 text-center">
+              <p className="text-sm font-bold text-emerald-700">
+                {monthStats.green}
+              </p>
+              <p className="text-[8px] font-semibold uppercase tracking-wide text-emerald-600">
+                Full
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-amber-50 px-1.5 py-2 text-center">
+              <p className="text-sm font-bold text-amber-700">
+                {monthStats.yellow}
+              </p>
+              <p className="text-[8px] font-semibold uppercase tracking-wide text-amber-600">
+                Attention
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-red-50 px-1.5 py-2 text-center">
+              <p className="text-sm font-bold text-red-700">
+                {monthStats.absent}
+              </p>
+              <p className="text-[8px] font-semibold uppercase tracking-wide text-red-600">
+                Absent
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-slate-50 px-1.5 py-2 text-center">
+              <p className="text-sm font-bold text-slate-600">
+                {monthStats.leave}
+              </p>
+              <p className="text-[8px] font-semibold uppercase tracking-wide text-slate-500">
+                Leave
+              </p>
+            </div>
+          </div>
+
+          {/* CALENDAR */}
+
+          <div className="mt-5">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+
+              {/* WEEKDAYS */}
+
+              {[
+                "Sun",
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat",
+              ].map((day) => (
+                <div
+                  key={day}
+                  className="py-1.5 text-center text-[8px] font-bold uppercase tracking-wide text-slate-400 sm:py-2 sm:text-[10px]"
+                >
+                  <span className="sm:hidden">
+                    {day.charAt(0)}
+                  </span>
+
+                  <span className="hidden sm:inline">
                     {day}
-                  </div>
-                ))}
-              </div>
+                  </span>
+                </div>
+              ))}
 
-              <div className="grid grid-cols-7 gap-2">
-                {calendarDays.map(
-                  (date, index) => {
-                    if (!date) {
-                      return (
-                        <div
-                          key={`empty-${index}`}
-                          className="min-h-[86px]"
-                        />
-                      );
-                    }
+              {/* DAYS */}
 
-                    const key =
-                      getDateKey(date);
-
-                    const record =
-                      recordsByDate.get(
-                        key
-                      );
-
-                    const status =
-                      getCalendarStatus(
-                        record
-                      );
-
-                    const isToday =
-                      key ===
-                      getDateKey(today);
-
-                    const isSelected =
-                      key ===
-                      selectedDateKey;
-
-                    const statusLabel =
-                      getStatusLabelForDay(
-                        record
-                      );
-
+              {calendarDays.map(
+                (date, index) => {
+                  if (!date) {
                     return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() =>
-                          handleDayClick(
-                            date
-                          )
-                        }
-                        className={getDayClasses(
-                          status,
-                          isSelected,
-                          isToday
-                        )}
-                        title={getDateLabel(
+                      <div
+                        key={`empty-${index}`}
+                        className="min-h-[54px] sm:min-h-[72px]"
+                      />
+                    );
+                  }
+
+                  const key =
+                    getDateKey(date);
+
+                  const record =
+                    recordsByDate.get(
+                      key
+                    );
+
+                  const status =
+                    getCalendarStatus(
+                      record
+                    );
+
+                  const isToday =
+                    key ===
+                    getDateKey(today);
+
+                  const isSelected =
+                    key ===
+                    selectedDateKey;
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        handleDayClick(
                           date
-                        )}
+                        )
+                      }
+                      className={getDayClasses(
+                        status,
+                        isSelected,
+                        isToday
+                      )}
+                      title={getDateLabel(
+                        date
+                      )}
+                    >
+                      {/* MOBILE: ONLY DATE */}
+
+                      <span
+                        className={`
+                          text-xs
+                          font-bold
+                          sm:hidden
+                          ${
+                            isToday
+                              ? "text-[#17357A]"
+                              : "text-slate-700"
+                          }
+                        `}
                       >
+                        {date.getDate()}
+                      </span>
+
+                      {/* DESKTOP: DATE + DETAILS */}
+
+                      <div className="hidden w-full sm:block">
                         <div className="flex items-start justify-between">
                           <span
                             className={`text-sm font-bold ${
@@ -920,7 +878,19 @@ const AttendanceStreakCalendar = ({
                               />
 
                               <span className="truncate text-[10px] font-semibold text-slate-600">
-                                {statusLabel}
+                                {status ===
+                                "GREEN"
+                                  ? "Present"
+                                  : status ===
+                                    "YELLOW"
+                                  ? "Attention"
+                                  : status ===
+                                    "ABSENT"
+                                  ? "Absent"
+                                  : status ===
+                                    "LEAVE"
+                                  ? "Leave"
+                                  : ""}
                               </span>
                             </div>
 
@@ -938,48 +908,62 @@ const AttendanceStreakCalendar = ({
                             No record
                           </p>
                         )}
-                      </button>
-                    );
-                  }
-                )}
-              </div>
+                      </div>
+
+                      {/* TODAY INDICATOR — MOBILE */}
+
+                      {isToday && (
+                        <span
+                          className="
+                            absolute
+                            bottom-1
+                            h-1
+                            w-1
+                            rounded-full
+                            bg-[#17357A]
+                            sm:hidden
+                          "
+                        />
+                      )}
+                    </button>
+                  );
+                }
+              )}
             </div>
           </div>
 
+          {/* LEGEND */}
+
           <div className="mt-5 border-t border-slate-100 pt-4">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-start sm:gap-x-5">
+              <span className="w-full text-center text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400 sm:w-auto sm:text-left sm:text-[10px]">
                 Legend
               </span>
 
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-
-                <span className="text-xs font-medium text-slate-600">
-                  Full functional day
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-md border border-emerald-200 bg-emerald-100" />
+                <span className="text-[10px] font-medium text-slate-600 sm:text-xs">
+                  Full day
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-
-                <span className="text-xs font-medium text-slate-600">
-                  Late / early leave
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-md border border-amber-200 bg-amber-100" />
+                <span className="text-[10px] font-medium text-slate-600 sm:text-xs">
+                  Late / early
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-
-                <span className="text-xs font-medium text-slate-600">
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-md border border-red-200 bg-red-100" />
+                <span className="text-[10px] font-medium text-slate-600 sm:text-xs">
                   Absent
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-400" />
-
-                <span className="text-xs font-medium text-slate-600">
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-md border border-slate-200 bg-slate-100" />
+                <span className="text-[10px] font-medium text-slate-600 sm:text-xs">
                   Leave
                 </span>
               </div>
@@ -987,9 +971,12 @@ const AttendanceStreakCalendar = ({
           </div>
         </div>
 
+        {/* SELECTED DAY */}
+
         {selectedDate && (
-          <div className="border-t border-slate-200 bg-slate-50/60 px-5 py-5 sm:px-6">
+          <div className="border-t border-slate-200 bg-slate-50/60 px-4 py-5 sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                   Selected Day
@@ -1082,14 +1069,15 @@ const AttendanceStreakCalendar = ({
 
             {selectedRecord && (
               <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto]">
+
                 <div>
                   <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                     Event Timeline
                   </p>
 
                   <div className="flex flex-wrap gap-2">
-                    {selectedRecord.events
-                      ?.map((event) => {
+                    {selectedRecord.events?.map(
+                      (event) => {
                         const isCheckIn =
                           event.type ===
                           "CHECK_IN";
@@ -1108,17 +1096,11 @@ const AttendanceStreakCalendar = ({
                           >
                             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-500">
                               {isCheckIn ? (
-                                <FiLogIn
-                                  size={14}
-                                />
+                                <FiLogIn size={14} />
                               ) : isCheckOut ? (
-                                <FiLogOut
-                                  size={14}
-                                />
+                                <FiLogOut size={14} />
                               ) : (
-                                <FiCoffee
-                                  size={14}
-                                />
+                                <FiCoffee size={14} />
                               )}
                             </span>
 
@@ -1138,11 +1120,13 @@ const AttendanceStreakCalendar = ({
                             </div>
                           </div>
                         );
-                      })}
+                      }
+                    )}
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2">
+
                   <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                     <p className="text-[10px] font-medium text-slate-400">
                       Stage
@@ -1174,13 +1158,13 @@ const AttendanceStreakCalendar = ({
                         />
 
                         <span className="text-xs font-bold text-slate-700">
-                          {selectedRecord
-                            .shift.name ||
+                          {selectedRecord.shift.name ||
                             "Assigned"}
                         </span>
                       </div>
                     </div>
                   )}
+
                 </div>
               </div>
             )}

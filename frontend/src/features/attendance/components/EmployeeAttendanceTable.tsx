@@ -5,6 +5,7 @@ import {
   FiEdit2,
   FiTrash2,
   FiUser,
+  FiChevronRight,
 } from "react-icons/fi";
 
 interface AttendanceEvent {
@@ -38,13 +39,9 @@ interface AttendanceRecord {
   events?: AttendanceEvent[];
 
   totalElapsedMinutes?: number;
-
   breakMinutes?: number;
-
   actualWorkingMinutes?: number;
-
   requiredWorkingMinutes?: number;
-
   differenceMinutes?: number;
 
   status?:
@@ -63,7 +60,6 @@ interface AttendanceRecord {
     | "LEAVE";
 
   lateMinutes?: number;
-
   earlyLeaveMinutes?: number;
 
   stage?:
@@ -76,6 +72,15 @@ interface AttendanceRecord {
   score?: number;
 
   remarks?: string;
+
+  shift?: {
+    _id?: string;
+    name?: string;
+    startTime?: string;
+    endTime?: string;
+    durationMinutes?: number;
+    graceMinutes?: number;
+  };
 }
 
 interface Props {
@@ -93,6 +98,11 @@ interface Props {
     photo: string,
     employeeName: string,
     date?: string
+  ) => void;
+
+  onViewEmployee?: (
+    employeeId: string,
+    employeeName: string
   ) => void;
 }
 
@@ -327,41 +337,12 @@ const getDisplayScore = (
   return 0;
 };
 
-const getStatusLabel = (
-  status?: string
-) => {
-  switch (status) {
-    case "PRESENT":
-      return "Present";
-
-    case "LATE":
-      return "Late";
-
-    case "EARLY_LEAVE":
-      return "Early Leave";
-
-    case "LATE_AND_EARLY":
-      return "Late + Early";
-
-    case "HALF_DAY":
-      return "Half Day";
-
-    case "ABSENT":
-      return "Absent";
-
-    case "LEAVE":
-      return "Leave";
-
-    default:
-      return "Unknown";
-  }
-};
-
 const EmployeeAttendanceTable = ({
   records,
   onEdit,
   onDelete,
   onViewPhoto,
+  onViewEmployee,
 }: Props) => {
   return (
     <section className="mt-8">
@@ -497,11 +478,41 @@ const EmployeeAttendanceTable = ({
                       dayStatus
                     );
 
+                  const canOpenProfile =
+                    Boolean(
+                      employee?._id
+                    );
+
                   return (
                     <tr
                       key={record._id}
-                      className="border-b border-slate-100 transition-colors duration-150 last:border-0 hover:bg-slate-50/60"
+                      className={`
+                        group
+                        border-b
+                        border-slate-100
+                        transition-colors
+                        duration-150
+                        last:border-0
+                        ${
+                          canOpenProfile
+                            ? "cursor-pointer hover:bg-slate-50/70"
+                            : "hover:bg-slate-50/50"
+                        }
+                      `}
+                      onClick={() => {
+                        if (
+                          employee?._id &&
+                          onViewEmployee
+                        ) {
+                          onViewEmployee(
+                            employee._id,
+                            employeeName
+                          );
+                        }
+                      }}
                     >
+                      {/* EMPLOYEE */}
+
                       <td className="px-5 py-5">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#17357A]/8 text-sm font-bold text-[#17357A]">
@@ -511,9 +522,18 @@ const EmployeeAttendanceTable = ({
                           </div>
 
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900">
-                              {employeeName}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="truncate text-sm font-semibold text-slate-900">
+                                {employeeName}
+                              </p>
+
+                              {canOpenProfile && (
+                                <FiChevronRight
+                                  size={15}
+                                  className="shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-[#17357A]"
+                                />
+                              )}
+                            </div>
 
                             <p className="mt-0.5 text-xs text-slate-500">
                               {employee?.employeeId ||
@@ -529,7 +549,14 @@ const EmployeeAttendanceTable = ({
                         </div>
                       </td>
 
-                      <td className="px-4 py-5 text-center">
+                      {/* PHOTO */}
+
+                      <td
+                        className="px-4 py-5 text-center"
+                        onClick={(event) =>
+                          event.stopPropagation()
+                        }
+                      >
                         {photo ? (
                           <button
                             type="button"
@@ -542,7 +569,7 @@ const EmployeeAttendanceTable = ({
                                 record.date
                               )
                             }
-                            className="group relative mx-auto block h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#17357A]/30 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#17357A]/10"
+                            className="group/photo relative mx-auto block h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#17357A]/30 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#17357A]/10"
                             title="View attendance selfie"
                           >
                             <img
@@ -550,14 +577,14 @@ const EmployeeAttendanceTable = ({
                                 photo
                               )}
                               alt={`${employeeName} attendance`}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover/photo:scale-105"
                               onError={(event) => {
                                 event.currentTarget.style.display =
                                   "none";
                               }}
                             />
 
-                            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/40 opacity-0 transition-opacity duration-200 group-hover/photo:opacity-100">
                               <FiCamera
                                 size={16}
                                 className="text-white"
@@ -577,6 +604,8 @@ const EmployeeAttendanceTable = ({
                         )}
                       </td>
 
+                      {/* DATE */}
+
                       <td className="px-4 py-5">
                         <div className="flex items-center gap-2">
                           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100">
@@ -593,6 +622,8 @@ const EmployeeAttendanceTable = ({
                           </span>
                         </div>
                       </td>
+
+                      {/* EVENTS */}
 
                       <td className="px-4 py-5 text-center">
                         <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
@@ -611,6 +642,8 @@ const EmployeeAttendanceTable = ({
                           </span>
                         </div>
                       </td>
+
+                      {/* WORKING */}
 
                       <td className="px-4 py-5">
                         <div>
@@ -631,6 +664,8 @@ const EmployeeAttendanceTable = ({
                         </div>
                       </td>
 
+                      {/* BREAK */}
+
                       <td className="px-4 py-5">
                         <span className="text-sm font-medium text-slate-700">
                           {formatMinutes(
@@ -639,6 +674,8 @@ const EmployeeAttendanceTable = ({
                         </span>
                       </td>
 
+                      {/* REQUIRED */}
+
                       <td className="px-4 py-5">
                         <span className="text-sm font-medium text-slate-700">
                           {formatMinutes(
@@ -646,6 +683,8 @@ const EmployeeAttendanceTable = ({
                           )}
                         </span>
                       </td>
+
+                      {/* DIFFERENCE */}
 
                       <td className="px-4 py-5">
                         <div>
@@ -697,6 +736,8 @@ const EmployeeAttendanceTable = ({
                         </div>
                       </td>
 
+                      {/* SCORE */}
+
                       <td className="px-4 py-5 text-center">
                         <span
                           className={`inline-flex min-w-[58px] items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-bold ${
@@ -711,6 +752,8 @@ const EmployeeAttendanceTable = ({
                         </span>
                       </td>
 
+                      {/* STAGE */}
+
                       <td className="px-4 py-5 text-center">
                         <span
                           className={`inline-flex rounded-full px-3 py-1.5 text-[10px] font-bold uppercase ring-1 ring-inset ${getStageStyles(
@@ -722,6 +765,8 @@ const EmployeeAttendanceTable = ({
                         </span>
                       </td>
 
+                      {/* STATUS */}
+
                       <td className="px-4 py-5 text-center">
                         <span
                           className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset ${statusStyles.wrapper}`}
@@ -731,16 +776,17 @@ const EmployeeAttendanceTable = ({
                           />
 
                           {statusStyles.label}
-
-                          <span className="sr-only">
-                            {getStatusLabel(
-                              record.status
-                            )}
-                          </span>
                         </span>
                       </td>
 
-                      <td className="px-5 py-5">
+                      {/* ACTIONS */}
+
+                      <td
+                        className="px-5 py-5"
+                        onClick={(event) =>
+                          event.stopPropagation()
+                        }
+                      >
                         <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"

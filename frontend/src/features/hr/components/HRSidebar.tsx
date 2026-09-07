@@ -7,6 +7,7 @@ import {
   FiUsers,
   FiChevronRight,
   FiCheckSquare,
+  FiClock,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -23,8 +24,12 @@ const menuItems = [
     icon: <FiCheckSquare size={18} />,
     path: "/attendance/my-tasks",
   },
+  {
+    label: "Punch",
+    icon: <FiClock size={18} />,
+    path: "/attendance/punch",
+  },
 ];
-
 const HRSidebar = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);

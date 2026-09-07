@@ -76,9 +76,7 @@ const LedgerPanel = ({
   const exportRef =
     useRef<HTMLDivElement>(null);
 
-  /* ============================================================
-     PARTY DATA
-  ============================================================ */
+  /* Party data */
 
   const customer =
     selectedParty?.customerDetails;
@@ -94,9 +92,7 @@ const LedgerPanel = ({
   const effectiveDueDate =
     savedDueDate ?? existingDueDate;
 
-  /* ============================================================
-     DATE HELPERS
-  ============================================================ */
+  /* Date helpers */
 
   const formatInputDate = (
     value: string | Date | null
@@ -142,9 +138,7 @@ const LedgerPanel = ({
     );
   };
 
-  /* ============================================================
-     RESET WHEN PARTY CHANGES
-  ============================================================ */
+  /* Reset when party changes */
 
   useEffect(() => {
     setEditingDueDate(false);
@@ -156,9 +150,7 @@ const LedgerPanel = ({
     );
   }, [selectedParty?._id]);
 
-  /* ============================================================
-     CLOSE EXPORT MENU WHEN CLICKING OUTSIDE
-  ============================================================ */
+  /* Close export menu when clicking outside */
 
   useEffect(() => {
     const handleOutsideClick = (
@@ -187,9 +179,7 @@ const LedgerPanel = ({
     };
   }, []);
 
-  /* ============================================================
-     SAVE DUE DATE
-  ============================================================ */
+  /* Save due date */
 
   const handleSaveDueDate = async () => {
     if (!selectedParty) {
@@ -231,9 +221,7 @@ const LedgerPanel = ({
     }
   };
 
-  /* ============================================================
-     CANCEL DUE DATE
-  ============================================================ */
+  /* Cancel due date */
 
   const handleCancelDueDate = () => {
     setDueDateInput(
@@ -243,9 +231,7 @@ const LedgerPanel = ({
     setEditingDueDate(false);
   };
 
-  /* ============================================================
-     NO PARTY SELECTED
-  ============================================================ */
+  /* Empty state */
 
   if (!selectedParty) {
     return (
@@ -327,9 +313,7 @@ const LedgerPanel = ({
     );
   }
 
-  /* ============================================================
-     DERIVED DATA
-  ============================================================ */
+  /* Derived data */
 
   const balance =
     Number(
@@ -368,19 +352,7 @@ const LedgerPanel = ({
     ? "CUSTOMER"
     : "SUPPLIER";
 
-  const balanceLabel =
-    balance >= 0
-      ? "You'll Get"
-      : "You'll Give";
-
-  const balanceColor =
-    balance >= 0
-      ? "text-emerald-400"
-      : "text-red-400";
-
-  /* ============================================================
-     RENDER
-  ============================================================ */
+  /* Render */
 
   return (
     <div
@@ -394,9 +366,7 @@ const LedgerPanel = ({
         bg-[#F7F8FC]
       "
     >
-      {/* ========================================================
-          FIXED PARTY HEADER
-      ======================================================== */}
+      {/* Fixed party header */}
 
       <header
         className="
@@ -418,7 +388,7 @@ const LedgerPanel = ({
             shadow-[0_8px_25px_rgba(23,53,122,0.18)]
           "
         >
-          {/* PARTY SUMMARY */}
+          {/* Party summary */}
 
           <div
             className="
@@ -536,7 +506,7 @@ const LedgerPanel = ({
               </div>
             </div>
 
-            {/* BALANCE */}
+            {/* Balance */}
 
             <div className="shrink-0 text-right">
               <p
@@ -548,7 +518,7 @@ const LedgerPanel = ({
                   text-blue-200
                 "
               >
-                Outstanding
+                Balance
               </p>
 
               <p
@@ -566,21 +536,10 @@ const LedgerPanel = ({
                   balance
                 ).toLocaleString("en-IN")}
               </p>
-
-              <p
-                className={`
-                  mt-0.5
-                  text-[10px]
-                  font-semibold
-                  ${balanceColor}
-                `}
-              >
-                {balanceLabel}
-              </p>
             </div>
           </div>
 
-          {/* ACTION BAR */}
+          {/* Action bar */}
 
           <div
             className="
@@ -620,32 +579,37 @@ const LedgerPanel = ({
             </button>
 
             <button
-  type="button"
-  onClick={() => {
-  console.log("DELETE BUTTON CLICKED");
-  console.log("onDeleteParty:", onDeleteParty);
+              type="button"
+              onClick={() => {
+                console.log(
+                  "DELETE BUTTON CLICKED"
+                );
+                console.log(
+                  "onDeleteParty:",
+                  onDeleteParty
+                );
 
-  onDeleteParty?.();
-}}
-  title="Delete party"
-  aria-label="Delete party"
-  className="
-    inline-flex
-    h-8
-    w-8
-    items-center
-    justify-center
-    rounded-lg
-    bg-white
-    text-red-500
-    shadow-sm
-    transition
-    hover:bg-red-50
-    active:scale-[0.98]
-  "
->
-  <Trash2 size={14} />
-</button>
+                onDeleteParty?.();
+              }}
+              title="Delete party"
+              aria-label="Delete party"
+              className="
+                inline-flex
+                h-8
+                w-8
+                items-center
+                justify-center
+                rounded-lg
+                bg-white
+                text-red-500
+                shadow-sm
+                transition
+                hover:bg-red-50
+                active:scale-[0.98]
+              "
+            >
+              <Trash2 size={14} />
+            </button>
 
             <button
               type="button"
@@ -671,7 +635,7 @@ const LedgerPanel = ({
               View Report
             </button>
 
-            {/* CLICK-BASED EXPORT MENU */}
+            {/* Export menu */}
 
             <div
               ref={exportRef}
@@ -820,9 +784,7 @@ const LedgerPanel = ({
         </div>
       </header>
 
-      {/* ========================================================
-          ONLY SCROLL CONTAINER
-      ======================================================== */}
+      {/* Main scroll container */}
 
       <main
         className="
@@ -845,9 +807,7 @@ const LedgerPanel = ({
             pb-2
           "
         >
-          {/* ====================================================
-              RECORD TRANSACTION
-          ==================================================== */}
+          {/* Record transaction */}
 
           <InfoSection
             title="Record Transaction"
@@ -873,9 +833,7 @@ const LedgerPanel = ({
             </div>
           </InfoSection>
 
-          {/* ====================================================
-              ACCOUNT LEDGER
-          ==================================================== */}
+          {/* Account ledger */}
 
           <section
             className="
@@ -1043,9 +1001,7 @@ const LedgerPanel = ({
             </div>
           </section>
 
-          {/* ====================================================
-              COMMERCIAL INFORMATION
-          ==================================================== */}
+          {/* Commercial information */}
 
           <InfoSection
             title="Commercial Information"
@@ -1100,13 +1056,12 @@ const LedgerPanel = ({
               />
 
               <MetricCard
-                label="Outstanding"
+                label="Balance"
                 value={Math.abs(
                   balance
                 ).toLocaleString(
                   "en-IN"
                 )}
-                danger={balance < 0}
               />
             </div>
 
@@ -1300,9 +1255,7 @@ const LedgerPanel = ({
             )}
           </InfoSection>
 
-          {/* ====================================================
-              BUSINESS INFORMATION
-          ==================================================== */}
+          {/* Business information */}
 
           <InfoSection
             title="Business Information"
@@ -1415,9 +1368,7 @@ const LedgerPanel = ({
             )}
           </InfoSection>
 
-          {/* ====================================================
-              CONTACT INFORMATION
-          ==================================================== */}
+          {/* Contact information */}
 
           <InfoSection
             title="Contact Information"
@@ -1496,9 +1447,7 @@ const LedgerPanel = ({
         </div>
       </main>
 
-      {/* ========================================================
-          FIXED BALANCE FOOTER
-      ======================================================== */}
+      {/* Fixed balance footer */}
 
       <footer
         className="
@@ -1587,9 +1536,7 @@ const LedgerPanel = ({
   );
 };
 
-/* ================================================================
-   INFO SECTION
-================================================================ */
+/* Info section */
 
 interface InfoSectionProps {
   title: string;
@@ -1645,9 +1592,7 @@ const InfoSection = ({
   );
 };
 
-/* ================================================================
-   INFO ITEM
-================================================================ */
+/* Info item */
 
 interface InfoItemProps {
   label: string;
@@ -1689,9 +1634,7 @@ const InfoItem = ({
   );
 };
 
-/* ================================================================
-   METRIC CARD
-================================================================ */
+/* Metric card */
 
 interface MetricCardProps {
   label: string;
@@ -1754,9 +1697,7 @@ const MetricCard = ({
   );
 };
 
-/* ================================================================
-   TRANSACTION ACTION
-================================================================ */
+/* Transaction action */
 
 interface TransactionActionProps {
   type: "in" | "out";

@@ -6,6 +6,7 @@ import {
   LogOut,
   Menu,
   X,
+  Clock,
 } from "lucide-react";
 
 import {
@@ -30,17 +31,26 @@ const navigationItems = [
     description: "Stock movements",
     icon: ArrowLeftRight,
   },
+
   {
-    to: "/staff/profile",
-    label: "Profile",
-    description: "Your account",
-    icon: User,
+    to: "/attendance/punch",
+    label: "Punch",
+    description: "Attendance",
+    icon: Clock,
   },
+  
   {
     to: "/staff/my-tasks",
     label: "My Tasks",
     description: "Assigned work",
     icon: CheckSquare,
+  },
+  
+  {
+    to: "/staff/profile",
+    label: "Profile",
+    description: "Your account",
+    icon: User,
   },
 ];
 

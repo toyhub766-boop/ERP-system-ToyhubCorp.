@@ -7,6 +7,7 @@ import {
   LogOut,
   ChevronRight,
   CheckSquare,
+  Clock,
 } from "lucide-react";
 import {
   NavLink,
@@ -135,11 +136,10 @@ const AccountantLayout = ({
         onClick={() =>
           setOpen(false)
         }
-        className={`fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[2px] transition-opacity duration-300 ${
-          open
+        className={`fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[2px] transition-opacity duration-300 ${open
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0"
-        }`}
+          }`}
       />
 
       {/* =================================================
@@ -147,11 +147,10 @@ const AccountantLayout = ({
       ================================================= */}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.10)] transition-transform duration-300 ease-out ${
-          open
+        className={`fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col border-r border-slate-200 bg-white shadow-[12px_0_40px_rgba(15,23,42,0.10)] transition-transform duration-300 ease-out ${open
             ? "translate-x-0"
             : "-translate-x-full"
-        }`}
+          }`}
       >
 
         {/* Drawer Header */}
@@ -214,24 +213,22 @@ const AccountantLayout = ({
               setOpen(false)
             }
             className={({ isActive }) =>
-              `group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition ${
-                isActive
-                  ? "bg-[#17357A] text-white shadow-[0_5px_14px_rgba(23,53,122,0.16)]"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              `group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition ${isActive
+                ? "bg-[#17357A] text-white shadow-[0_5px_14px_rgba(23,53,122,0.16)]"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`
             }
           >
 
-          
+
 
             {({ isActive }) => (
               <>
                 <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                    isActive
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isActive
                       ? "bg-white/10 text-white"
                       : "bg-slate-100 text-slate-500 group-hover:bg-[#17357A]/10 group-hover:text-[#17357A]"
-                  }`}
+                    }`}
                 >
                   <WalletCards
                     size={17}
@@ -244,11 +241,10 @@ const AccountantLayout = ({
 
                 <ChevronRight
                   size={15}
-                  className={`transition-transform ${
-                    isActive
+                  className={`transition-transform ${isActive
                       ? "translate-x-0.5 opacity-100"
                       : "opacity-0 group-hover:translate-x-0.5 group-hover:opacity-70"
-                  }`}
+                    }`}
                 />
               </>
             )}
@@ -256,43 +252,76 @@ const AccountantLayout = ({
           </NavLink>
 
           <NavLink
-  to="/accountant/my-tasks"
-  onClick={() => setOpen(false)}
-  className={({ isActive }) =>
-    `group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition ${
-      isActive
-        ? "bg-[#17357A] text-white shadow-[0_5px_14px_rgba(23,53,122,0.16)]"
-        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-    }`
-  }
->
-  {({ isActive }) => (
-    <>
-      <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-          isActive
-            ? "bg-white/10 text-white"
-            : "bg-slate-100 text-slate-500 group-hover:bg-[#17357A]/10 group-hover:text-[#17357A]"
-        }`}
-      >
-        <CheckSquare size={17} />
-      </span>
+            to="/accountant/my-tasks"
+            onClick={() => setOpen(false)}
+            className={({ isActive }) =>
+              `group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition ${isActive
+                ? "bg-[#17357A] text-white shadow-[0_5px_14px_rgba(23,53,122,0.16)]"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isActive
+                      ? "bg-white/10 text-white"
+                      : "bg-slate-100 text-slate-500 group-hover:bg-[#17357A]/10 group-hover:text-[#17357A]"
+                    }`}
+                >
+                  <CheckSquare size={17} />
+                </span>
 
-      <span className="flex-1">
-        My Tasks
-      </span>
+                <span className="flex-1">
+                  My Tasks
+                </span>
 
-      <ChevronRight
-        size={15}
-        className={`transition-transform ${
-          isActive
-            ? "translate-x-0.5 opacity-100"
-            : "opacity-0 group-hover:translate-x-0.5 group-hover:opacity-70"
-        }`}
-      />
-    </>
-  )}
-</NavLink>
+                <ChevronRight
+                  size={15}
+                  className={`transition-transform ${isActive
+                      ? "translate-x-0.5 opacity-100"
+                      : "opacity-0 group-hover:translate-x-0.5 group-hover:opacity-70"
+                    }`}
+                />
+              </>
+            )}
+          </NavLink>
+
+          <NavLink
+            to="/attendance/punch"
+            onClick={() => setOpen(false)}
+            className={({ isActive }) =>
+              `group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition ${isActive
+                ? "bg-[#17357A] text-white shadow-[0_5px_14px_rgba(23,53,122,0.16)]"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isActive
+                      ? "bg-white/10 text-white"
+                      : "bg-slate-100 text-slate-500 group-hover:bg-[#17357A]/10 group-hover:text-[#17357A]"
+                    }`}
+                >
+                  <Clock size={17} />
+                </span>
+
+                <span className="flex-1">
+                  Punch
+                </span>
+
+                <ChevronRight
+                  size={15}
+                  className={`transition-transform ${isActive
+                      ? "translate-x-0.5 opacity-100"
+                      : "opacity-0 group-hover:translate-x-0.5 group-hover:opacity-70"
+                    }`}
+                />
+              </>
+            )}
+          </NavLink>
 
         </nav>
 

@@ -6,6 +6,7 @@ import {
   FiLogOut,
   FiUsers,
   FiCheckSquare,
+  FiClock,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -18,10 +19,15 @@ const links = [
     icon: <FiHome size={18} />,
   },
   {
-  name: "My Tasks",
-  path: "/crm-staff/my-tasks",
-  icon: <FiCheckSquare size={18} />,
-},
+    name: "My Tasks",
+    path: "/crm-staff/my-tasks",
+    icon: <FiCheckSquare size={18} />,
+  },
+  {
+    name: "Punch",
+    path: "/attendance/punch",
+    icon: <FiClock size={18} />,
+  },
 ];
 
 const CRMSidebar = () => {

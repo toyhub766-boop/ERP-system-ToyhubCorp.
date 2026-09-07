@@ -59,11 +59,7 @@ const PartyCard = ({
     setSavingDueDate,
   ] = useState(false);
 
-  /*
-   * =========================================================
-   * DATE HELPERS
-   * =========================================================
-   */
+  /* Date helpers */
 
   const formatInputDate = (
     value: string | Date | null
@@ -106,11 +102,7 @@ const PartyCard = ({
     );
   };
 
-  /*
-   * =========================================================
-   * INITIALISE DUE DATE
-   * =========================================================
-   */
+  /* Initialise due date */
 
   useEffect(() => {
     setDueDate(
@@ -120,11 +112,7 @@ const PartyCard = ({
     );
   }, [existingDueDate]);
 
-  /*
-   * =========================================================
-   * DUE DATE SAVE
-   * =========================================================
-   */
+  /* Save due date */
 
   const handleSaveDueDate = async (
     e: MouseEvent<HTMLButtonElement>
@@ -139,11 +127,6 @@ const PartyCard = ({
           party._id,
           dueDate || null
         );
-
-      /*
-       * Keep the existing parent data structure
-       * working exactly as before.
-       */
 
       if (
         party.partyType ===
@@ -162,7 +145,6 @@ const PartyCard = ({
       }
 
       setEditingDueDate(false);
-
     } catch (error) {
       console.error(
         "Failed to update due date:",
@@ -172,17 +154,12 @@ const PartyCard = ({
       alert(
         "Failed to update due date."
       );
-
     } finally {
       setSavingDueDate(false);
     }
   };
 
-  /*
-   * =========================================================
-   * CANCEL DUE DATE
-   * =========================================================
-   */
+  /* Cancel due date */
 
   const handleCancelDueDate = (
     e: MouseEvent<HTMLButtonElement>
@@ -198,11 +175,7 @@ const PartyCard = ({
     setEditingDueDate(false);
   };
 
-  /*
-   * =========================================================
-   * PARTY TYPE
-   * =========================================================
-   */
+  /* Party type */
 
   const partyTypeLabel =
     party.partyType ===
@@ -225,18 +198,7 @@ const PartyCard = ({
       ? "bg-violet-50 text-violet-700 border-violet-100"
       : "bg-amber-50 text-amber-700 border-amber-100";
 
-  /*
-   * =========================================================
-   * BALANCE STATE
-   * =========================================================
-   */
-
-  const balanceLabel =
-    balance > 0
-      ? "Receivable"
-      : balance < 0
-      ? "Payable"
-      : "Settled";
+  /* Balance display */
 
   const balanceClass =
     balance > 0
@@ -245,11 +207,7 @@ const PartyCard = ({
       ? "text-red-600"
       : "text-slate-600";
 
-  /*
-   * =========================================================
-   * INITIAL
-   * =========================================================
-   */
+  /* Initial */
 
   const initial =
     party.companyName
@@ -258,11 +216,7 @@ const PartyCard = ({
       ?.toUpperCase() ||
     "?";
 
-  /*
-   * =========================================================
-   * RENDER
-   * =========================================================
-   */
+  /* Render */
 
   return (
     <div
@@ -293,10 +247,7 @@ const PartyCard = ({
         }
       `}
     >
-
-      {/* =====================================================
-          SELECTION INDICATOR
-      ===================================================== */}
+      {/* Selection indicator */}
 
       {selected && (
         <div
@@ -312,12 +263,9 @@ const PartyCard = ({
         />
       )}
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      {/* Header */}
 
       <div className="flex items-start gap-3">
-
         {/* Avatar */}
 
         <div
@@ -345,11 +293,8 @@ const PartyCard = ({
         {/* Identity */}
 
         <div className="min-w-0 flex-1">
-
           <div className="flex items-start gap-2">
-
             <div className="min-w-0 flex-1">
-
               <h3
                 className="
                   truncate
@@ -374,7 +319,6 @@ const PartyCard = ({
                 {party.contactPerson ||
                   "No contact person"}
               </p>
-
             </div>
 
             {/* Active indicator */}
@@ -407,7 +351,6 @@ const PartyCard = ({
                 Active
               </span>
             )}
-
           </div>
 
           {/* Phone */}
@@ -423,16 +366,13 @@ const PartyCard = ({
                 text-slate-500
               "
             >
-              <FiPhone
-                size={11}
-              />
+              <FiPhone size={11} />
 
               <span>
                 {customer.transportPhone}
               </span>
             </div>
           )}
-
         </div>
 
         {/* Chevron */}
@@ -450,12 +390,9 @@ const PartyCard = ({
             }
           `}
         />
-
       </div>
 
-      {/* =====================================================
-          PARTY META
-      ===================================================== */}
+      {/* Party meta */}
 
       <div
         className="
@@ -466,7 +403,6 @@ const PartyCard = ({
           gap-2
         "
       >
-
         <div
           className="
             flex
@@ -475,7 +411,6 @@ const PartyCard = ({
             gap-2
           "
         >
-
           <span
             className="
               truncate
@@ -516,14 +451,10 @@ const PartyCard = ({
           >
             {partyTypeLabel}
           </span>
-
         </div>
-
       </div>
 
-      {/* =====================================================
-          FINANCIAL SUMMARY
-      ===================================================== */}
+      {/* Financial summary */}
 
       <div
         className="
@@ -537,11 +468,9 @@ const PartyCard = ({
           bg-slate-50/70
         "
       >
-
-        {/* Outstanding */}
+        {/* Balance */}
 
         <div className="p-3">
-
           <p
             className="
               text-[9px]
@@ -551,7 +480,7 @@ const PartyCard = ({
               text-slate-400
             "
           >
-            Outstanding
+            Balance
           </p>
 
           <div
@@ -562,7 +491,6 @@ const PartyCard = ({
               gap-1
             "
           >
-
             <span
               className={`
                 text-base
@@ -577,20 +505,7 @@ const PartyCard = ({
                 "en-IN"
               )}
             </span>
-
           </div>
-
-          <p
-            className={`
-              mt-0.5
-              text-[10px]
-              font-medium
-              ${balanceClass}
-            `}
-          >
-            {balanceLabel}
-          </p>
-
         </div>
 
         {/* Due Date */}
@@ -605,7 +520,6 @@ const PartyCard = ({
             e.stopPropagation()
           }
         >
-
           <p
             className="
               text-[9px]
@@ -619,11 +533,11 @@ const PartyCard = ({
           </p>
 
           {!editingDueDate ? (
-
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+
                 setEditingDueDate(
                   true
                 );
@@ -641,7 +555,6 @@ const PartyCard = ({
                 hover:text-[#17357A]
               "
             >
-
               <FiCalendar
                 size={12}
                 className="
@@ -656,13 +569,9 @@ const PartyCard = ({
                     )
                   : "Set date"}
               </span>
-
             </button>
-
           ) : (
-
             <div className="mt-1">
-
               <div
                 className="
                   flex
@@ -670,7 +579,6 @@ const PartyCard = ({
                   gap-1
                 "
               >
-
                 <FiCalendar
                   size={13}
                   className="
@@ -708,7 +616,6 @@ const PartyCard = ({
                     focus:ring-blue-50
                   "
                 />
-
               </div>
 
               <div
@@ -718,7 +625,6 @@ const PartyCard = ({
                   gap-1.5
                 "
               >
-
                 <button
                   type="button"
                   disabled={
@@ -744,9 +650,7 @@ const PartyCard = ({
                     disabled:opacity-50
                   "
                 >
-                  <FiCheck
-                    size={11}
-                  />
+                  <FiCheck size={11} />
 
                   {savingDueDate
                     ? "Saving..."
@@ -779,25 +683,17 @@ const PartyCard = ({
                     disabled:opacity-50
                   "
                 >
-                  <FiX
-                    size={11}
-                  />
+                  <FiX size={11} />
 
                   Cancel
                 </button>
-
               </div>
-
             </div>
           )}
-
         </div>
-
       </div>
 
-      {/* =====================================================
-          FOOTER STATUS
-      ===================================================== */}
+      {/* Footer status */}
 
       <div
         className="
@@ -808,7 +704,6 @@ const PartyCard = ({
           text-[10px]
         "
       >
-
         <div
           className="
             flex
@@ -817,17 +712,13 @@ const PartyCard = ({
             text-slate-400
           "
         >
-
-          <FiClock
-            size={11}
-          />
+          <FiClock size={11} />
 
           <span>
             {existingDueDate
               ? "Payment schedule set"
               : "No payment schedule"}
           </span>
-
         </div>
 
         {selected && (
@@ -840,9 +731,7 @@ const PartyCard = ({
             Selected
           </span>
         )}
-
       </div>
-
     </div>
   );
 };

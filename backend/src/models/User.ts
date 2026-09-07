@@ -31,11 +31,32 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Attendance / wage configuration
+    wageType: {
+      type: String,
+      enum: ["DAILY", "MONTHLY"],
+      default: "MONTHLY",
+    },
+
+    wageAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Individual attendance shift
+    attendanceShift: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AttendanceShift",
+      default: null,
+    },
+
     status: {
       type: String,
       default: "ACTIVE",
     },
   },
+
   {
     timestamps: true,
   }

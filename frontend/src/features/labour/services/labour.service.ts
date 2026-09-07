@@ -5,8 +5,14 @@ export const getLabours = async () => {
   return data;
 };
 
-export const createLabour = async (payload: any) => {
-  const { data } = await api.post("/labour", payload);
+export const createLabour = async (
+  payload: any
+) => {
+  const { data } = await api.post(
+    "/labour",
+    payload
+  );
+
   return data;
 };
 
@@ -14,11 +20,20 @@ export const updateLabour = async (
   id: string,
   payload: any
 ) => {
-  const { data } = await api.put(`/labour/${id}`, payload);
+  const { data } = await api.put(
+    `/labour/${id}`,
+    payload
+  );
+
   return data;
 };
 
-export const deleteLabour = async (id: string) => {
-  const { data } = await api.delete(`/labour/${id}`);
+export const deleteLabour = async (
+  id: string
+) => {
+  const { data } = await api.delete(
+    `/labour/${id}`
+  );
+
   return data;
 };

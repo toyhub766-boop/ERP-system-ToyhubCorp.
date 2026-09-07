@@ -1,94 +1,129 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
+import SessionRestorer from "../../features/auth/components/SessionRestorer";
+import ProtectedRoute from "../../components/ProtectedRoute";
+
+/* Auth */
 import LoginSelectorPage from "../../features/auth/pages/LoginSelectorPage";
 import AdminLoginPage from "../../features/auth/pages/AdminLoginPage";
 import StaffLoginPage from "../../features/auth/pages/StaffLoginPage";
 
-import SessionRestorer from "../../features/auth/components/SessionRestorer";
-
+/* Dashboard */
 import DashboardPage from "../../features/dashboard/pages/DashboardPage";
 
+/* Users */
 import UsersPage from "../../features/users/pages/UsersPage";
 
-import ProtectedRoute from "../../components/ProtectedRoute";
-
+/* Master Data */
 import CategoryPage from "../../features/categories/pages/CategoryPage";
-
 import WarehousePage from "../../features/warehouses/pages/WarehousePage";
 
+/* Inventory */
 import InventoryPage from "../../features/inventory/pages/InventoryPage";
-
-import StaffInventoryPage from "../../features/staff/pages/StaffInventoryPage";
-
-import StockInPage from "../../features/staff/pages/StockInPage";
-
-import StockOutPage from "../../features/staff/pages/StockOutPage";
-
-import TransactionsPage from "../../features/staff/pages/TransactionsPage";
-
-import ProfilePage from "../../features/staff/pages/ProfilePage";
-
 import InventoryDetailsPage from "../../features/inventory/pages/InventoryDetailsPage";
 
+/* Production */
 import BOMPage from "../../features/bom/pages/BOMPage";
-
 import ProductionPage from "../../features/production/pages/ProductionPage";
-
 import DispatchPage from "../../features/dispatch/pages/DispatchPage";
 
+/* Inventory Staff */
+import StaffInventoryPage from "../../features/staff/pages/StaffInventoryPage";
+import StockInPage from "../../features/staff/pages/StockInPage";
+import StockOutPage from "../../features/staff/pages/StockOutPage";
+import TransactionsPage from "../../features/staff/pages/TransactionsPage";
+import ProfilePage from "../../features/staff/pages/ProfilePage";
+
+/* Production Staff */
 import ProductionStaffLayout from "../../features/productionStaff/layouts/ProductionStaffLayout";
-
+import ProductionDashboardPage from "../../features/productionStaff/pages/DashboardPage";
 import ProductionStaffBOMPage from "../../features/productionStaff/pages/BOMPage";
-
 import ProductionStaffProductionPage from "../../features/productionStaff/pages/ProductionPage";
-
 import ProductionStaffDispatchPage from "../../features/productionStaff/pages/DispatchPage";
 
-import ProductionDashboardPage from "../../features/productionStaff/pages/DashboardPage";
-
+/* CRM */
 import CRMPage from "../../features/crm/pages/CRMPage";
-
 import CRMStaffPage from "../../features/crm/pages/CRMStaffPage";
+import CRMStaffLayout from "../../features/crm/components/CRMStaffLayout";
 
+/* Accounts */
 import AccountsPage from "../../features/accounts/pages/AccountsPage";
 
+/* Accountant */
 import AccountantPage from "../../features/accountant/pages/AccountantPage";
+import AccountantLayout from "../../features/accountant/layouts/AccountantLayout";
 
+/* Attendance */
 import AttendancePage from "../../features/attendance/pages/attendancePage";
+import AttendanceShiftPage from "../../features/attendance/pages/AttendanceShiftPage";
+import AttendancePunchPage from "../../features/attendance/pages/AttendancePunchPage";
 
+/* Tasks */
 import TaskPage from "../../features/tasks/pages/TaskPage";
-
-import AttendanceHRPage from "../../features/hr/pages/HRPage";
-
-import ReportsPage from "../../features/reports/pages/ReportsPage";
-
-import ReminderPage from "../../features/reminders/pages/ReminderPage";
-
 import MyTasksPage from "../../features/tasks/pages/MyTasksPage";
 
-import CRMStaffLayout from "../../features/crm/components/CRMStaffLayout";
-import AccountantLayout from "../../features/accountant/layouts/AccountantLayout";
+/* Reports */
+import ReportsPage from "../../features/reports/pages/ReportsPage";
+
+/* Reminders */
+import ReminderPage from "../../features/reminders/pages/ReminderPage";
+
+/* HR Layout */
+import HRPage from "../../features/hr/pages/HRPage";
 import HRLayout from "../../features/hr/layouts/HRLayout";
+
 
 const AppRoutes = () => {
   return (
     <BrowserRouter>
       <SessionRestorer />
+
       <Routes>
-        {/* Login Flow */}
-        <Route path="/" element={<Navigate to="/login" />} />
 
-        <Route path="/login" element={<LoginSelectorPage />} />
+        {/* =========================
+            AUTHENTICATION
+        ========================= */}
 
-        <Route path="/login/admin" element={<AdminLoginPage />} />
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
 
-        <Route path="/login/staff" element={<StaffLoginPage />} />
+        <Route
+          path="/login"
+          element={<LoginSelectorPage />}
+        />
 
-        {/* Admin */}
+        <Route
+          path="/login/admin"
+          element={<AdminLoginPage />}
+        />
+
+        <Route
+          path="/login/staff"
+          element={<StaffLoginPage />}
+        />
+
+        {/* =========================
+            FOUNDER / ADMIN
+        ========================= */}
+
         <Route
           path="/admin/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <DashboardPage />
             </ProtectedRoute>
           }
@@ -97,7 +132,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/users"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <UsersPage />
             </ProtectedRoute>
           }
@@ -106,7 +143,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/categories"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <CategoryPage />
             </ProtectedRoute>
           }
@@ -115,7 +154,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/warehouses"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <WarehousePage />
             </ProtectedRoute>
           }
@@ -124,7 +165,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/inventory"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <InventoryPage />
             </ProtectedRoute>
           }
@@ -133,7 +176,9 @@ const AppRoutes = () => {
         <Route
           path="/inventory/:id"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <InventoryDetailsPage />
             </ProtectedRoute>
           }
@@ -142,7 +187,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/bom"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <BOMPage />
             </ProtectedRoute>
           }
@@ -151,7 +198,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/production"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <ProductionPage />
             </ProtectedRoute>
           }
@@ -160,7 +209,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/dispatch"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <DispatchPage />
             </ProtectedRoute>
           }
@@ -169,7 +220,9 @@ const AppRoutes = () => {
         <Route
           path="/admin/crm"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <CRMPage />
             </ProtectedRoute>
           }
@@ -178,16 +231,60 @@ const AppRoutes = () => {
         <Route
           path="/admin/accounts"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
               <AccountsPage />
             </ProtectedRoute>
           }
         />
 
         <Route
+          path="/admin/tasks"
+          element={
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
+              <TaskPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/reminders"
+          element={
+            <ProtectedRoute
+              allowedRoles={["FOUNDER"]}
+            >
+              <ReminderPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* =========================
+            ATTENDANCE MANAGEMENT
+        ========================= */}
+
+        <Route
           path="/admin/attendance"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
+            <ProtectedRoute
+              allowedRoles={[
+                "FOUNDER",
+                "ATTENDANCE/HR",
+              ]}
+            >
               <AttendancePage />
             </ProtectedRoute>
           }
@@ -198,35 +295,70 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute
               allowedRoles={[
-                "ATTENDANCE/HR",
                 "FOUNDER",
+                "ATTENDANCE/HR",
               ]}
             >
-              <AttendanceHRPage />
+              <HRPage />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/admin/tasks"
+          path="/admin/hr/shifts"
           element={
-            <ProtectedRoute allowedRoles={["FOUNDER"]}>
-              <TaskPage />
+            <ProtectedRoute
+              allowedRoles={[
+                "FOUNDER",
+                "ATTENDANCE/HR",
+              ]}
+            >
+              <HRLayout>
+                <AttendanceShiftPage />
+              </HRLayout>
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/admin/reports"
-          element={<ReportsPage />}
+          path="/attendance/punch"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "FOUNDER",
+                "INVENTORY",
+                "PRODUCTION",
+                "CRM",
+                "ACCOUNTANT",
+                "ATTENDANCE/HR",
+              ]}
+            >
+              <AttendancePunchPage />
+            </ProtectedRoute>
+          }
         />
+        {/* =========================
+            HR MY TASKS
+        ========================= */}
 
         <Route
-          path="/admin/reminders"
-          element={<ReminderPage />}
+          path="/attendance/my-tasks"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ATTENDANCE/HR",
+              ]}
+            >
+              <HRLayout>
+                <MyTasksPage />
+              </HRLayout>
+            </ProtectedRoute>
+          }
         />
 
-                {/* Staff */}
+        {/* =========================
+            INVENTORY STAFF
+        ========================= */}
 
         <Route
           path="/staff/dashboard"
@@ -299,22 +431,18 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute
               allowedRoles={[
+                "FOUNDER",
                 "INVENTORY",
                 "PRODUCTION",
                 "CRM",
                 "ACCOUNTANT",
                 "ATTENDANCE/HR",
-                "FOUNDER",
               ]}
             >
               <ProfilePage />
             </ProtectedRoute>
           }
         />
-
-        {/* =====================================================
-            INVENTORY STAFF — MY TASKS
-        ===================================================== */}
 
         <Route
           path="/staff/my-tasks"
@@ -327,9 +455,9 @@ const AppRoutes = () => {
           }
         />
 
-        {/* =====================================================
+        {/* =========================
             PRODUCTION STAFF
-        ===================================================== */}
+        ========================= */}
 
         <Route
           path="/production-staff"
@@ -377,9 +505,9 @@ const AppRoutes = () => {
           />
         </Route>
 
-        {/* =====================================================
+        {/* =========================
             CRM STAFF
-        ===================================================== */}
+        ========================= */}
 
         <Route
           path="/crm-staff"
@@ -391,8 +519,6 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
-        {/* CRM My Tasks will use CRMStaffLayout directly */}
 
         <Route
           path="/crm-staff/my-tasks"
@@ -407,9 +533,9 @@ const AppRoutes = () => {
           }
         />
 
-        {/* =====================================================
+        {/* =========================
             ACCOUNTANT
-        ===================================================== */}
+        ========================= */}
 
         <Route
           path="/accountant"
@@ -435,22 +561,20 @@ const AppRoutes = () => {
           }
         />
 
-        {/* =====================================================
-            HR STAFF MY TASKS
-        ===================================================== */}
+        {/* =========================
+            FALLBACK
+        ========================= */}
 
         <Route
-          path="/attendance/my-tasks"
+          path="*"
           element={
-            <ProtectedRoute
-              allowedRoles={["ATTENDANCE/HR"]}
-            >
-              <HRLayout>
-                <MyTasksPage />
-              </HRLayout>
-            </ProtectedRoute>
+            <Navigate
+              to="/login"
+              replace
+            />
           }
         />
+
       </Routes>
     </BrowserRouter>
   );

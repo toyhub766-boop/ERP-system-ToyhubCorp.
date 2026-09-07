@@ -18,9 +18,12 @@ interface Props {
   selectedParty: any;
   setSelectedParty: (party: any) => void;
   onAddParty: () => void;
-
   onFilteredPartiesChange?: (
     parties: any[]
+  ) => void;
+  activeAccountType?: AccountType;
+  onAccountTypeChange?: (
+    type: AccountType
   ) => void;
 }
 
@@ -36,22 +39,22 @@ const PartyList = ({
   setSelectedParty,
   onAddParty,
   onFilteredPartiesChange,
+  activeAccountType: controlledAccountType,
+  onAccountTypeChange,
 }: Props) => {
-  /* ============================================================
-     ACCOUNT TYPE
-  ============================================================ */
-
   const [
-    activeAccountType,
-    setActiveAccountType,
+    internalAccountType,
+    setInternalAccountType,
   ] = useState<AccountType>("ALL");
 
-  /* ============================================================
-     FILTER STATE
-  ============================================================ */
+  const activeAccountType =
+    controlledAccountType ??
+    internalAccountType;
 
-  const [search, setSearch] =
-    useState("");
+  const [
+    search,
+    setSearch,
+  ] = useState("");
 
   const [
     firmNameFilter,
@@ -73,12 +76,10 @@ const PartyList = ({
     setDueDateFilter,
   ] = useState("ALL");
 
-  const [sortBy, setSortBy] =
-    useState("LATEST");
-
-  /* ============================================================
-     FIRM NAMES
-  ============================================================ */
+  const [
+    sortBy,
+    setSortBy,
+  ] = useState("LATEST");
 
   const firmNames = useMemo(() => {
     const names = parties
@@ -90,14 +91,9 @@ const PartyList = ({
       );
 
     return [...new Set(names)].sort(
-      (a, b) =>
-        a.localeCompare(b)
+      (a, b) => a.localeCompare(b)
     );
   }, [parties]);
-
-  /* ============================================================
-     FILTER + SORT
-  ============================================================ */
 
   const filteredParties = useMemo(() => {
     const today = new Date();
@@ -106,14 +102,10 @@ const PartyList = ({
 
     const filtered = parties.filter(
       (party) => {
-        /* ACCOUNT TYPE */
-
         const matchesAccountType =
           activeAccountType === "ALL" ||
           party.partyType ===
             activeAccountType;
-
-        /* SEARCH */
 
         const query =
           search.trim().toLowerCase();
@@ -139,21 +131,15 @@ const PartyList = ({
             ?.toLowerCase()
             .includes(query);
 
-        /* FIRM */
-
         const matchesFirm =
           firmNameFilter === "ALL" ||
           party.firmName ===
             firmNameFilter;
 
-        /* STATUS */
-
         const matchesStatus =
           statusFilter === "ALL" ||
           party.status ===
             statusFilter;
-
-        /* BALANCE */
 
         const balance = Number(
           party.currentBalance || 0
@@ -167,8 +153,6 @@ const PartyList = ({
             balance < 0) ||
           (balanceFilter === "ZERO" &&
             balance === 0);
-
-        /* DUE DATE */
 
         const dueDate =
           party.customerDetails
@@ -253,8 +237,6 @@ const PartyList = ({
       }
     );
 
-    /* SORT */
-
     return [...filtered].sort(
       (a, b) => {
         if (sortBy === "A_Z") {
@@ -329,10 +311,6 @@ const PartyList = ({
     sortBy,
   ]);
 
-  /* ============================================================
-     SEND FILTERED PARTIES TO ACCOUNTS PAGE
-  ============================================================ */
-
   useEffect(() => {
     onFilteredPartiesChange?.(
       filteredParties
@@ -341,10 +319,6 @@ const PartyList = ({
     filteredParties,
     onFilteredPartiesChange,
   ]);
-
-  /* ============================================================
-     CLEAR FILTERS
-  ============================================================ */
 
   const clearFilters = () => {
     setSearch("");
@@ -362,10 +336,6 @@ const PartyList = ({
     balanceFilter !== "ALL" ||
     dueDateFilter !== "ALL" ||
     sortBy !== "LATEST";
-
-  /* ============================================================
-     COUNTS
-  ============================================================ */
 
   const activeCount =
     parties.filter(
@@ -394,9 +364,12 @@ const PartyList = ({
         "COMPANY_EXPENSE"
     ).length;
 
-  /* ============================================================
-     ACTIVE STATUS SHORTCUT
-  ============================================================ */
+  const handleAccountTypeChange = (
+    type: AccountType
+  ) => {
+    setInternalAccountType(type);
+    onAccountTypeChange?.(type);
+  };
 
   const handleActiveFilter = () => {
     setStatusFilter(
@@ -405,10 +378,6 @@ const PartyList = ({
         : "Active"
     );
   };
-
-  /* ============================================================
-     UI
-  ============================================================ */
 
   return (
     <div
@@ -420,11 +389,6 @@ const PartyList = ({
         bg-white
       "
     >
-
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-
       <div
         className="
           shrink-0
@@ -443,7 +407,6 @@ const PartyList = ({
             sm:px-5
           "
         >
-
           <div
             className="
               flex
@@ -522,19 +485,13 @@ const PartyList = ({
             <Plus size={15} />
             <span>Add Party</span>
           </button>
-
         </div>
       </div>
-
-      {/* ======================================================
-          FILTERS
-      ====================================================== */}
 
       <div className="shrink-0">
         <PartyFilters
           search={search}
           setSearch={setSearch}
-
           firmNameFilter={
             firmNameFilter
           }
@@ -542,34 +499,26 @@ const PartyList = ({
             setFirmNameFilter
           }
           firmNames={firmNames}
-
           statusFilter={statusFilter}
           setStatusFilter={
             setStatusFilter
           }
-
           balanceFilter={
             balanceFilter
           }
           setBalanceFilter={
             setBalanceFilter
           }
-
           dueDateFilter={
             dueDateFilter
           }
           setDueDateFilter={
             setDueDateFilter
           }
-
           sortBy={sortBy}
           setSortBy={setSortBy}
         />
       </div>
-
-      {/* ======================================================
-          QUICK SUMMARY / SEGREGATION
-      ====================================================== */}
 
       <div
         className="
@@ -590,11 +539,10 @@ const PartyList = ({
             scrollbar-none
           "
         >
-
           <button
             type="button"
             onClick={() =>
-              setActiveAccountType(
+              handleAccountTypeChange(
                 "ALL"
               )
             }
@@ -612,7 +560,7 @@ const PartyList = ({
           <button
             type="button"
             onClick={() =>
-              setActiveAccountType(
+              handleAccountTypeChange(
                 "CUSTOMER"
               )
             }
@@ -631,7 +579,7 @@ const PartyList = ({
           <button
             type="button"
             onClick={() =>
-              setActiveAccountType(
+              handleAccountTypeChange(
                 "SUPPLIER"
               )
             }
@@ -650,7 +598,7 @@ const PartyList = ({
           <button
             type="button"
             onClick={() =>
-              setActiveAccountType(
+              handleAccountTypeChange(
                 "COMPANY_EXPENSE"
               )
             }
@@ -682,13 +630,8 @@ const PartyList = ({
               }
             />
           </button>
-
         </div>
       </div>
-
-      {/* ======================================================
-          PARTY CARDS — ONLY THIS AREA SCROLLS
-      ====================================================== */}
 
       <div
         className="
@@ -702,7 +645,6 @@ const PartyList = ({
           [scrollbar-width:thin]
         "
       >
-
         {filteredParties.length ===
         0 ? (
           <div
@@ -725,7 +667,6 @@ const PartyList = ({
                 text-center
               "
             >
-
               <div
                 className="
                   mx-auto
@@ -787,16 +728,10 @@ const PartyList = ({
                   Clear filters
                 </button>
               )}
-
             </div>
           </div>
         ) : (
-          <div
-            className="
-              space-y-2.5
-              pb-2
-            "
-          >
+          <div className="space-y-2.5 pb-2">
             {filteredParties.map(
               (party) => (
                 <PartyCard
@@ -816,16 +751,10 @@ const PartyList = ({
             )}
           </div>
         )}
-
       </div>
-
     </div>
   );
 };
-
-/* ================================================================
-   SUMMARY PILL
-================================================================ */
 
 interface SummaryPillProps {
   label: string;

@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -21,6 +22,7 @@ import {
   Wallet,
   ArrowDownLeft,
   ArrowUpRight,
+  X,
 } from "lucide-react";
 
 interface Props {
@@ -37,46 +39,60 @@ interface Props {
   onEditParty: () => void;
   onViewReport: () => void;
 
-  onExportPdf: () => void;
-  onExportExcel: () => void;
+  onExportPdf: (ledger?: any[]) => void;
+  onExportExcel: (ledger?: any[]) => void;
 }
 
 const LedgerPanel = ({
   selectedParty,
   ledger,
   loading,
-
   onMoneyIn,
   onMoneyOut,
-
   onDelete,
   onDeleteParty,
-
   onEditParty,
   onViewReport,
-
   onExportPdf,
   onExportExcel,
 }: Props) => {
-  const [editingDueDate, setEditingDueDate] =
-    useState(false);
+  const [
+    editingDueDate,
+    setEditingDueDate,
+  ] = useState(false);
 
-  const [dueDateInput, setDueDateInput] =
-    useState("");
+  const [
+    dueDateInput,
+    setDueDateInput,
+  ] = useState("");
 
-  const [savedDueDate, setSavedDueDate] =
-    useState<string | null>(null);
+  const [
+    savedDueDate,
+    setSavedDueDate,
+  ] = useState<string | null>(null);
 
-  const [savingDueDate, setSavingDueDate] =
-    useState(false);
+  const [
+    savingDueDate,
+    setSavingDueDate,
+  ] = useState(false);
 
-  const [exportOpen, setExportOpen] =
-    useState(false);
+  const [
+    exportOpen,
+    setExportOpen,
+  ] = useState(false);
+
+  const [
+    transactionStartDate,
+    setTransactionStartDate,
+  ] = useState("");
+
+  const [
+    transactionEndDate,
+    setTransactionEndDate,
+  ] = useState("");
 
   const exportRef =
     useRef<HTMLDivElement>(null);
-
-  /* Party data */
 
   const customer =
     selectedParty?.customerDetails;
@@ -91,8 +107,6 @@ const LedgerPanel = ({
 
   const effectiveDueDate =
     savedDueDate ?? existingDueDate;
-
-  /* Date helpers */
 
   const formatInputDate = (
     value: string | Date | null
@@ -138,19 +152,106 @@ const LedgerPanel = ({
     );
   };
 
-  /* Reset when party changes */
+  const getTransactionDateKey = (
+    transaction: any
+  ) => {
+    /*
+     * IMPORTANT:
+     * Transaction reports use `date`.
+     *
+     * We deliberately DO NOT use createdAt.
+     */
+    if (!transaction?.date) {
+      return "";
+    }
+
+    const date = new Date(
+      transaction.date
+    );
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return new Date(
+      date.getTime() -
+        date.getTimezoneOffset() * 60000
+    )
+      .toISOString()
+      .split("T")[0];
+  };
+
+  const filteredLedger = useMemo(() => {
+    if (
+      !transactionStartDate &&
+      !transactionEndDate
+    ) {
+      return ledger;
+    }
+
+    return ledger.filter(
+      (transaction: any) => {
+        const transactionDate =
+          getTransactionDateKey(
+            transaction
+          );
+
+        if (!transactionDate) {
+          return false;
+        }
+
+        if (
+          transactionStartDate &&
+          transactionDate <
+            transactionStartDate
+        ) {
+          return false;
+        }
+
+        if (
+          transactionEndDate &&
+          transactionDate >
+            transactionEndDate
+        ) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+  }, [
+    ledger,
+    transactionStartDate,
+    transactionEndDate,
+  ]);
+
+  const invalidTransactionRange =
+    Boolean(
+      transactionStartDate &&
+        transactionEndDate &&
+        transactionStartDate >
+          transactionEndDate
+    );
+
+  const clearTransactionDates = () => {
+    setTransactionStartDate("");
+    setTransactionEndDate("");
+  };
 
   useEffect(() => {
     setEditingDueDate(false);
     setExportOpen(false);
     setSavedDueDate(null);
 
+    setTransactionStartDate("");
+    setTransactionEndDate("");
+
     setDueDateInput(
-      formatInputDate(existingDueDate)
+      formatInputDate(
+        existingDueDate
+      )
     );
   }, [selectedParty?._id]);
-
-  /* Close export menu when clicking outside */
 
   useEffect(() => {
     const handleOutsideClick = (
@@ -179,59 +280,92 @@ const LedgerPanel = ({
     };
   }, []);
 
-  /* Save due date */
+  const handleSaveDueDate =
+    async () => {
+      if (!selectedParty) {
+        return;
+      }
 
-  const handleSaveDueDate = async () => {
-    if (!selectedParty) {
-      return;
-    }
+      try {
+        setSavingDueDate(true);
 
-    try {
-      setSavingDueDate(true);
+        const updatedParty =
+          await updatePartyDueDate(
+            selectedParty._id,
+            dueDateInput || null
+          );
 
-      const updatedParty =
-        await updatePartyDueDate(
-          selectedParty._id,
-          dueDateInput || null
+        const updatedDate =
+          updatedParty
+            ?.customerDetails?.dueDate ||
+          updatedParty
+            ?.supplierDetails?.dueDate ||
+          null;
+
+        setSavedDueDate(
+          updatedDate
         );
 
-      const updatedDate =
-        updatedParty?.customerDetails?.dueDate ||
-        updatedParty?.supplierDetails?.dueDate ||
-        null;
+        setDueDateInput(
+          formatInputDate(
+            updatedDate
+          )
+        );
 
-      setSavedDueDate(updatedDate);
+        setEditingDueDate(false);
+      } catch (error) {
+        console.error(
+          "Failed to update due date:",
+          error
+        );
 
-      setDueDateInput(
-        formatInputDate(updatedDate)
-      );
-
-      setEditingDueDate(false);
-    } catch (error) {
-      console.error(
-        "Failed to update due date:",
-        error
-      );
-
-      alert(
-        "Failed to update due date."
-      );
-    } finally {
-      setSavingDueDate(false);
-    }
-  };
-
-  /* Cancel due date */
+        alert(
+          "Failed to update due date."
+        );
+      } finally {
+        setSavingDueDate(false);
+      }
+    };
 
   const handleCancelDueDate = () => {
     setDueDateInput(
-      formatInputDate(effectiveDueDate)
+      formatInputDate(
+        effectiveDueDate
+      )
     );
 
     setEditingDueDate(false);
   };
 
-  /* Empty state */
+  const handleExportPdf = () => {
+    if (
+      invalidTransactionRange ||
+      filteredLedger.length === 0
+    ) {
+      return;
+    }
+
+    setExportOpen(false);
+
+    onExportPdf(
+      filteredLedger
+    );
+  };
+
+  const handleExportExcel = () => {
+    if (
+      invalidTransactionRange ||
+      filteredLedger.length === 0
+    ) {
+      return;
+    }
+
+    setExportOpen(false);
+
+    onExportExcel(
+      filteredLedger
+    );
+  };
 
   if (!selectedParty) {
     return (
@@ -313,18 +447,19 @@ const LedgerPanel = ({
     );
   }
 
-  /* Derived data */
-
   const balance =
     Number(
-      selectedParty.currentBalance || 0
+      selectedParty.currentBalance ||
+        0
     );
 
   const isCustomer =
-    selectedParty.partyType === "CUSTOMER";
+    selectedParty.partyType ===
+    "CUSTOMER";
 
   const isSupplier =
-    selectedParty.partyType === "SUPPLIER";
+    selectedParty.partyType ===
+    "SUPPLIER";
 
   const isExpense =
     selectedParty.partyType ===
@@ -346,13 +481,12 @@ const LedgerPanel = ({
       ?.charAt(0)
       ?.toUpperCase() || "?";
 
-  const partyTypeLabel = isExpense
-    ? "COMPANY EXPENSE"
-    : isCustomer
-    ? "CUSTOMER"
-    : "SUPPLIER";
-
-  /* Render */
+  const partyTypeLabel =
+    isExpense
+      ? "COMPANY EXPENSE"
+      : isCustomer
+      ? "CUSTOMER"
+      : "SUPPLIER";
 
   return (
     <div
@@ -366,8 +500,6 @@ const LedgerPanel = ({
         bg-[#F7F8FC]
       "
     >
-      {/* Fixed party header */}
-
       <header
         className="
           relative
@@ -388,8 +520,6 @@ const LedgerPanel = ({
             shadow-[0_8px_25px_rgba(23,53,122,0.18)]
           "
         >
-          {/* Party summary */}
-
           <div
             className="
               flex
@@ -449,7 +579,9 @@ const LedgerPanel = ({
                       sm:text-lg
                     "
                   >
-                    {selectedParty.companyName}
+                    {
+                      selectedParty.companyName
+                    }
                   </h1>
 
                   <span
@@ -469,8 +601,10 @@ const LedgerPanel = ({
                 </div>
 
                 <p className="mt-0.5 truncate text-xs text-blue-100">
-                  {selectedParty.contactPerson ||
-                    "--"}
+                  {
+                    selectedParty.contactPerson ||
+                    "--"
+                  }
                 </p>
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -485,8 +619,10 @@ const LedgerPanel = ({
                       text-white
                     "
                   >
-                    {selectedParty.partyCode ||
-                      "--"}
+                    {
+                      selectedParty.partyCode ||
+                      "--"
+                    }
                   </span>
 
                   <span
@@ -505,8 +641,6 @@ const LedgerPanel = ({
                 </div>
               </div>
             </div>
-
-            {/* Balance */}
 
             <div className="shrink-0 text-right">
               <p
@@ -534,39 +668,40 @@ const LedgerPanel = ({
                 ₹
                 {Math.abs(
                   balance
-                ).toLocaleString("en-IN")}
+                ).toLocaleString(
+                  "en-IN"
+                )}
               </p>
             </div>
           </div>
 
-          {/* Action bar */}
-
           <div
             className="
               flex
-              flex-wrap
               items-center
               gap-2
+              overflow-visible
               border-t
               border-white/10
               px-4
-              py-3
+              py-2.5
               sm:px-5
             "
           >
             <button
               type="button"
               onClick={onEditParty}
+              title="Edit party"
+              aria-label="Edit party"
               className="
                 inline-flex
+                h-9
+                w-9
+                shrink-0
                 items-center
-                gap-1.5
+                justify-center
                 rounded-lg
                 bg-white
-                px-3
-                py-2
-                text-xs
-                font-semibold
                 text-[#17357A]
                 shadow-sm
                 transition
@@ -574,29 +709,45 @@ const LedgerPanel = ({
                 active:scale-[0.98]
               "
             >
-              <Pencil size={13} />
-              Edit Party
+              <Pencil size={15} />
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                console.log(
-                  "DELETE BUTTON CLICKED"
-                );
-                console.log(
-                  "onDeleteParty:",
-                  onDeleteParty
-                );
+              onClick={onViewReport}
+              title="View report"
+              aria-label="View report"
+              className="
+                inline-flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
+                rounded-lg
+                bg-white
+                text-[#17357A]
+                shadow-sm
+                transition
+                hover:bg-blue-50
+                active:scale-[0.98]
+              "
+            >
+              <FileText size={15} />
+            </button>
 
-                onDeleteParty?.();
-              }}
+            <button
+              type="button"
+              onClick={() =>
+                onDeleteParty?.()
+              }
               title="Delete party"
               aria-label="Delete party"
               className="
                 inline-flex
-                h-8
-                w-8
+                h-9
+                w-9
+                shrink-0
                 items-center
                 justify-center
                 rounded-lg
@@ -608,41 +759,12 @@ const LedgerPanel = ({
                 active:scale-[0.98]
               "
             >
-              <Trash2 size={14} />
+              <Trash2 size={15} />
             </button>
-
-            <button
-              type="button"
-              onClick={onViewReport}
-              className="
-                inline-flex
-                items-center
-                gap-1.5
-                rounded-lg
-                bg-white
-                px-3
-                py-2
-                text-xs
-                font-semibold
-                text-[#17357A]
-                shadow-sm
-                transition
-                hover:bg-blue-50
-                active:scale-[0.98]
-              "
-            >
-              <FileText size={13} />
-              View Report
-            </button>
-
-            {/* Export menu */}
 
             <div
               ref={exportRef}
-              className="
-                relative
-                ml-auto
-              "
+              className="relative ml-auto"
             >
               <button
                 type="button"
@@ -651,15 +773,17 @@ const LedgerPanel = ({
                     (open) => !open
                   )
                 }
-                aria-expanded={exportOpen}
+                aria-expanded={
+                  exportOpen
+                }
                 className="
                   inline-flex
+                  h-9
                   items-center
                   gap-1.5
                   rounded-lg
                   bg-white
                   px-3
-                  py-2
                   text-xs
                   font-semibold
                   text-[#17357A]
@@ -669,10 +793,12 @@ const LedgerPanel = ({
                   active:scale-[0.98]
                 "
               >
-                <Download size={13} />
-                Export
+                <Download size={14} />
+
+                <span>Export</span>
+
                 <ChevronDown
-                  size={13}
+                  size={12}
                   className={
                     exportOpen
                       ? "rotate-180 transition-transform"
@@ -688,7 +814,7 @@ const LedgerPanel = ({
                     right-0
                     top-[calc(100%+8px)]
                     z-[100]
-                    w-48
+                    w-52
                     overflow-hidden
                     rounded-xl
                     border
@@ -700,10 +826,14 @@ const LedgerPanel = ({
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      setExportOpen(false);
-                      onExportPdf();
-                    }}
+                    disabled={
+                      invalidTransactionRange ||
+                      filteredLedger.length ===
+                        0
+                    }
+                    onClick={
+                      handleExportPdf
+                    }
                     className="
                       flex
                       w-full
@@ -718,6 +848,8 @@ const LedgerPanel = ({
                       text-slate-700
                       transition
                       hover:bg-slate-50
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
                     "
                   >
                     <span
@@ -735,15 +867,28 @@ const LedgerPanel = ({
                       <FileText size={13} />
                     </span>
 
-                    Export PDF
+                    <span className="min-w-0">
+                      <span className="block">
+                        Export PDF
+                      </span>
+
+                      <span className="block text-[10px] font-medium text-slate-400">
+                        {filteredLedger.length}{" "}
+                        transactions
+                      </span>
+                    </span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setExportOpen(false);
-                      onExportExcel();
-                    }}
+                    disabled={
+                      invalidTransactionRange ||
+                      filteredLedger.length ===
+                        0
+                    }
+                    onClick={
+                      handleExportExcel
+                    }
                     className="
                       flex
                       w-full
@@ -758,6 +903,8 @@ const LedgerPanel = ({
                       text-slate-700
                       transition
                       hover:bg-slate-50
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
                     "
                   >
                     <span
@@ -775,7 +922,16 @@ const LedgerPanel = ({
                       <Download size={13} />
                     </span>
 
-                    Export Excel
+                    <span className="min-w-0">
+                      <span className="block">
+                        Export Excel
+                      </span>
+
+                      <span className="block text-[10px] font-medium text-slate-400">
+                        {filteredLedger.length}{" "}
+                        transactions
+                      </span>
+                    </span>
                   </button>
                 </div>
               )}
@@ -784,7 +940,71 @@ const LedgerPanel = ({
         </div>
       </header>
 
-      {/* Main scroll container */}
+      <div
+        className="
+          shrink-0
+          border-b
+          border-slate-200
+          bg-white
+          px-3
+          py-2
+          sm:px-4
+        "
+      >
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onMoneyIn}
+            title="Money In"
+            aria-label="Money In"
+            className="
+              inline-flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              bg-emerald-50
+              text-emerald-600
+              transition
+              hover:bg-emerald-100
+              active:scale-[0.96]
+            "
+          >
+            <ArrowDownLeft
+              size={15}
+              strokeWidth={2}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={onMoneyOut}
+            title="Money Out"
+            aria-label="Money Out"
+            className="
+              inline-flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              bg-red-50
+              text-red-600
+              transition
+              hover:bg-red-100
+              active:scale-[0.96]
+            "
+          >
+            <ArrowUpRight
+              size={15}
+              strokeWidth={2}
+            />
+          </button>
+        </div>
+      </div>
 
       <main
         className="
@@ -807,36 +1027,11 @@ const LedgerPanel = ({
             pb-2
           "
         >
-          {/* Record transaction */}
-
-          <InfoSection
-            title="Record Transaction"
-            description="Record money given to or received from this party."
-          >
-            <div
-              className="
-                grid
-                grid-cols-1
-                gap-3
-                sm:grid-cols-2
-              "
-            >
-              <TransactionAction
-                type="out"
-                onClick={onMoneyOut}
-              />
-
-              <TransactionAction
-                type="in"
-                onClick={onMoneyIn}
-              />
-            </div>
-          </InfoSection>
-
-          {/* Account ledger */}
-
           <section
             className="
+              flex
+              min-h-0
+              flex-col
               overflow-hidden
               rounded-2xl
               border
@@ -847,76 +1042,221 @@ const LedgerPanel = ({
           >
             <div
               className="
-                flex
-                flex-col
-                gap-3
+                shrink-0
                 border-b
                 border-slate-200
                 px-4
-                py-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
+                py-3
                 sm:px-5
               "
             >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
+              <div
+                className="
+                  flex
+                  flex-col
+                  gap-3
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
+                "
+              >
+                <div className="flex min-w-0 items-center gap-2">
                   <Wallet
                     size={16}
                     className="shrink-0 text-[#17357A]"
                   />
 
-                  <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                    Account Ledger
-                  </h2>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-sm font-bold text-slate-900 sm:text-base">
+                      Transactions
+                    </h2>
+
+                    <p className="text-[10px] text-slate-400">
+                      {filteredLedger.length}
+                      {" "}
+                      {filteredLedger.length ===
+                      1
+                        ? "transaction"
+                        : "transactions"}
+                    </p>
+                  </div>
                 </div>
 
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Complete transaction history for this party.
-                </p>
-              </div>
-
-              <div
-                className="
-                  w-fit
-                  rounded-lg
-                  bg-slate-50
-                  px-3
-                  py-2
-                  sm:text-right
-                "
-              >
-                <p
-                  className="
-                    text-[9px]
-                    font-semibold
-                    uppercase
-                    tracking-[0.08em]
-                    text-slate-400
-                  "
-                >
-                  Transactions
-                </p>
-
-                <p className="mt-0.5 text-sm font-bold text-slate-900">
-                  {ledger.length}
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 sm:p-4">
-              {loading ? (
                 <div
                   className="
                     flex
-                    min-h-[180px]
+                    flex-wrap
                     items-center
-                    justify-center
-                    rounded-xl
-                    bg-slate-50
+                    gap-2
                   "
                 >
+                  <div className="flex items-center gap-1.5">
+                    <label
+                      htmlFor="transaction-start-date"
+                      className="
+                        text-[9px]
+                        font-semibold
+                        uppercase
+                        tracking-[0.06em]
+                        text-slate-400
+                      "
+                    >
+                      From
+                    </label>
+
+                    <input
+                      id="transaction-start-date"
+                      type="date"
+                      value={
+                        transactionStartDate
+                      }
+                      max={
+                        transactionEndDate ||
+                        undefined
+                      }
+                      onChange={(event) =>
+                        setTransactionStartDate(
+                          event.target.value
+                        )
+                      }
+                      className="
+                        h-8
+                        rounded-lg
+                        border
+                        border-slate-200
+                        bg-white
+                        px-2
+                        text-[11px]
+                        font-medium
+                        text-slate-700
+                        outline-none
+                        transition
+                        focus:border-[#17357A]
+                        focus:ring-2
+                        focus:ring-[#17357A]/15
+                      "
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <label
+                      htmlFor="transaction-end-date"
+                      className="
+                        text-[9px]
+                        font-semibold
+                        uppercase
+                        tracking-[0.06em]
+                        text-slate-400
+                      "
+                    >
+                      To
+                    </label>
+
+                    <input
+                      id="transaction-end-date"
+                      type="date"
+                      min={
+                        transactionStartDate ||
+                        undefined
+                      }
+                      value={
+                        transactionEndDate
+                      }
+                      onChange={(event) =>
+                        setTransactionEndDate(
+                          event.target.value
+                        )
+                      }
+                      className="
+                        h-8
+                        rounded-lg
+                        border
+                        border-slate-200
+                        bg-white
+                        px-2
+                        text-[11px]
+                        font-medium
+                        text-slate-700
+                        outline-none
+                        transition
+                        focus:border-[#17357A]
+                        focus:ring-2
+                        focus:ring-[#17357A]/15
+                      "
+                    />
+                  </div>
+
+                  {(transactionStartDate ||
+                    transactionEndDate) && (
+                    <button
+                      type="button"
+                      onClick={
+                        clearTransactionDates
+                      }
+                      title="Clear transaction date filters"
+                      aria-label="Clear transaction date filters"
+                      className="
+                        inline-flex
+                        h-8
+                        w-8
+                        items-center
+                        justify-center
+                        rounded-lg
+                        border
+                        border-slate-200
+                        bg-white
+                        text-slate-400
+                        transition
+                        hover:bg-slate-50
+                        hover:text-slate-700
+                      "
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {invalidTransactionRange && (
+                <p className="mt-2 text-[10px] font-medium text-red-500">
+                  End date must be on or after the
+                  start date.
+                </p>
+              )}
+
+              {!invalidTransactionRange &&
+                (transactionStartDate ||
+                  transactionEndDate) && (
+                  <p className="mt-2 text-[10px] text-slate-400">
+                    Showing transactions from{" "}
+                    {transactionStartDate
+                      ? formatDisplayDate(
+                          transactionStartDate
+                        )
+                      : "the beginning"}{" "}
+                    to{" "}
+                    {transactionEndDate
+                      ? formatDisplayDate(
+                          transactionEndDate
+                        )
+                      : "the latest date"}
+                    .
+                  </p>
+                )}
+            </div>
+
+            <div
+              className="
+                h-[300px]
+                min-h-0
+                overflow-y-auto
+                overscroll-contain
+                [scrollbar-width:thin]
+                sm:h-[340px]
+              "
+            >
+              {loading ? (
+                <div className="flex h-full items-center justify-center p-6">
                   <div className="text-center">
                     <p className="text-sm font-semibold text-slate-600">
                       Loading transactions...
@@ -927,21 +1267,40 @@ const LedgerPanel = ({
                     </p>
                   </div>
                 </div>
-              ) : ledger.length === 0 ? (
-                <div
-                  className="
-                    flex
-                    min-h-[180px]
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-dashed
-                    border-slate-200
-                    bg-slate-50/70
-                    p-6
-                  "
-                >
+              ) : invalidTransactionRange ? (
+                <div className="flex h-full items-center justify-center p-6">
+                  <div className="text-center">
+                    <div
+                      className="
+                        mx-auto
+                        flex
+                        h-11
+                        w-11
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-red-50
+                        text-red-500
+                      "
+                    >
+                      <CalendarDays
+                        size={17}
+                      />
+                    </div>
+
+                    <h3 className="mt-3 text-sm font-bold text-slate-900">
+                      Invalid Date Range
+                    </h3>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Choose an end date on or after
+                      the start date.
+                    </p>
+                  </div>
+                </div>
+              ) : filteredLedger.length ===
+                0 ? (
+                <div className="flex h-full items-center justify-center p-6">
                   <div className="max-w-sm text-center">
                     <div
                       className="
@@ -952,9 +1311,8 @@ const LedgerPanel = ({
                         items-center
                         justify-center
                         rounded-xl
-                        bg-white
+                        bg-slate-50
                         text-slate-400
-                        shadow-sm
                         ring-1
                         ring-slate-200
                       "
@@ -963,25 +1321,20 @@ const LedgerPanel = ({
                     </div>
 
                     <h3 className="mt-3 text-sm font-bold text-slate-900">
-                      No Transactions Yet
+                      No Transactions Found
                     </h3>
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Record the first transaction
-                      using the buttons above.
+                      {transactionStartDate ||
+                      transactionEndDate
+                        ? "No transactions match the selected dates."
+                        : "Use the Money In or Money Out button above to record a transaction."}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div
-                  className="
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-slate-100
-                  "
-                >
-                  {ledger.map(
+                <div className="divide-y divide-slate-100">
+                  {filteredLedger.map(
                     (transaction: any) => (
                       <LedgerEntryCard
                         key={
@@ -1001,11 +1354,9 @@ const LedgerPanel = ({
             </div>
           </section>
 
-          {/* Commercial information */}
-
           <InfoSection
             title="Commercial Information"
-            description="Account terms, balances and payment details."
+            description="Account terms and payment details."
           >
             <div
               className="
@@ -1132,9 +1483,12 @@ const LedgerPanel = ({
                             value={
                               dueDateInput
                             }
-                            onChange={(event) =>
+                            onChange={(
+                              event
+                            ) =>
                               setDueDateInput(
-                                event.target.value
+                                event.target
+                                  .value
                               )
                             }
                             className="
@@ -1148,9 +1502,9 @@ const LedgerPanel = ({
                               font-medium
                               text-slate-700
                               outline-none
-                              ring-[#17357A]/20
                               focus:border-[#17357A]
                               focus:ring-2
+                              focus:ring-[#17357A]/20
                             "
                           />
 
@@ -1254,8 +1608,6 @@ const LedgerPanel = ({
               </div>
             )}
           </InfoSection>
-
-          {/* Business information */}
 
           <InfoSection
             title="Business Information"
@@ -1368,8 +1720,6 @@ const LedgerPanel = ({
             )}
           </InfoSection>
 
-          {/* Contact information */}
-
           <InfoSection
             title="Contact Information"
             description="Party contact and address details."
@@ -1446,97 +1796,9 @@ const LedgerPanel = ({
           </InfoSection>
         </div>
       </main>
-
-      {/* Fixed balance footer */}
-
-      <footer
-        className="
-          shrink-0
-          border-t
-          border-slate-200
-          bg-white
-          px-4
-          py-3
-          sm:px-5
-        "
-      >
-        <div
-          className="
-            flex
-            items-center
-            justify-between
-            gap-4
-          "
-        >
-          <div>
-            <p
-              className="
-                text-[9px]
-                font-semibold
-                uppercase
-                tracking-[0.08em]
-                text-slate-400
-              "
-            >
-              Current Balance
-            </p>
-
-            <p
-              className={`
-                mt-0.5
-                text-sm
-                font-bold
-                ${
-                  balance >= 0
-                    ? "text-emerald-600"
-                    : "text-red-600"
-                }
-              `}
-            >
-              ₹
-              {Math.abs(
-                balance
-              ).toLocaleString("en-IN")}
-            </p>
-          </div>
-
-          <div className="text-right">
-            <p
-              className="
-                text-[9px]
-                font-semibold
-                uppercase
-                tracking-[0.08em]
-                text-slate-400
-              "
-            >
-              Account Status
-            </p>
-
-            <p
-              className={`
-                mt-0.5
-                text-xs
-                font-semibold
-                ${
-                  selectedParty.status ===
-                  "Active"
-                    ? "text-emerald-600"
-                    : "text-red-600"
-                }
-              `}
-            >
-              {selectedParty.status ||
-                "Active"}
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
-
-/* Info section */
 
 interface InfoSectionProps {
   title: string;
@@ -1592,8 +1854,6 @@ const InfoSection = ({
   );
 };
 
-/* Info item */
-
 interface InfoItemProps {
   label: string;
   value: string;
@@ -1633,8 +1893,6 @@ const InfoItem = ({
     </div>
   );
 };
-
-/* Metric card */
 
 interface MetricCardProps {
   label: string;
@@ -1694,126 +1952,6 @@ const MetricCard = ({
         {value}
       </p>
     </div>
-  );
-};
-
-/* Transaction action */
-
-interface TransactionActionProps {
-  type: "in" | "out";
-  onClick: () => void;
-}
-
-const TransactionAction = ({
-  type,
-  onClick,
-}: TransactionActionProps) => {
-  const isIn = type === "in";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`
-        group
-        rounded-xl
-        border
-        p-4
-        text-left
-        transition-all
-        duration-200
-        hover:-translate-y-0.5
-        hover:shadow-sm
-        active:scale-[0.99]
-        ${
-          isIn
-            ? "border-emerald-100 bg-emerald-50/60 hover:border-emerald-200 hover:bg-emerald-50"
-            : "border-red-100 bg-red-50/60 hover:border-red-200 hover:bg-red-50"
-        }
-      `}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p
-            className={`
-              text-[9px]
-              font-bold
-              uppercase
-              tracking-[0.08em]
-              ${
-                isIn
-                  ? "text-emerald-500"
-                  : "text-red-500"
-              }
-            `}
-          >
-            {isIn
-              ? "Money In"
-              : "Money Out"}
-          </p>
-
-          <p
-            className={`
-              mt-0.5
-              text-sm
-              font-bold
-              ${
-                isIn
-                  ? "text-emerald-700"
-                  : "text-red-700"
-              }
-            `}
-          >
-            {isIn
-              ? "You Got"
-              : "You Gave"}
-          </p>
-        </div>
-
-        <div
-          className="
-            flex
-            h-8
-            w-8
-            shrink-0
-            items-center
-            justify-center
-            rounded-lg
-            bg-white
-            shadow-sm
-          "
-        >
-          {isIn ? (
-            <ArrowDownLeft
-              size={15}
-              className="text-emerald-500"
-            />
-          ) : (
-            <ArrowUpRight
-              size={15}
-              className="text-red-500"
-            />
-          )}
-        </div>
-      </div>
-
-      <p
-        className={`
-          mt-2
-          text-[11px]
-          leading-4
-          ${
-            isIn
-              ? "text-emerald-600/80"
-              : "text-red-600/80"
-          }
-        `}
-      >
-        {isIn
-          ? "Record a payment received from this party."
-          : "Record a payment made to this party."}
-      </p>
-    </button>
   );
 };
 

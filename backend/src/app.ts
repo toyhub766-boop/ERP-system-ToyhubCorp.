@@ -21,6 +21,7 @@ import taskRoutes from "./routes/task.routes";
 import accountPartyRoutes from "./routes/accountParty.routes";
 import reminderRoutes from "./routes/reminder.routes";
 import productionClientRoutes from "./routes/productionClient.routes";
+import catalogueRoutes from "./routes/catalogue.routes";
 
 const app = express();
 
@@ -86,6 +87,7 @@ app.use("/api/orders", orderRoutes);
 
 app.use("/api/reminders", reminderRoutes);
 
+app.use("/api/catalogue", catalogueRoutes);
 /* =========================================================
    ACCOUNTS
 ========================================================= */

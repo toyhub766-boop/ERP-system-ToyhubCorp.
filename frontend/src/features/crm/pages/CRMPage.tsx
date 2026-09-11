@@ -33,6 +33,7 @@ import CRMTabs from "../components/CRMTabs";
 import CustomerList from "../components/CustomerList";
 import CustomerProfile from "../components/CustomerProfile";
 import OrdersTable from "../components/OrdersTable";
+import Catalogue from "../components/Catalogue";
 
 import CustomerModal from "../components/CustomerModal";
 import AddNoteModal from "../components/AddNoteModal";
@@ -56,6 +57,7 @@ import type { Customer } from "../types/customer.types";
 
 type CRMTab =
   | "customers"
+  | "catalogue"
   | "pipeline"
   | "dues"
   | "orders";
@@ -173,13 +175,10 @@ const CRMPage = () => {
 
   const loadCustomers = async () => {
     try {
-      const data =
-        await getCustomers();
+      const data = await getCustomers();
 
       const safeData =
-        Array.isArray(data)
-          ? data
-          : [];
+        Array.isArray(data) ? data : [];
 
       setCustomers(safeData);
 
@@ -617,31 +616,30 @@ const CRMPage = () => {
   */
 
   const handleCreateOrder =
-  () => {
-    if (!selectedCustomer?._id) {
-      window.alert(
-        "Open a customer profile before creating an order."
-      );
+    () => {
+      if (!selectedCustomer?._id) {
+        window.alert(
+          "Open a customer profile before creating an order."
+        );
 
-      return;
-    }
+        return;
+      }
 
-    if (
-      selectedCustomer.source !==
-      "ACCOUNTS"
-    ) {
-      window.alert(
-        "Convert this CRM lead into an Account customer before creating a production order."
-      );
+      if (
+        selectedCustomer.source !==
+        "ACCOUNTS"
+      ) {
+        window.alert(
+          "Convert this CRM lead into an Account customer before creating a production order."
+        );
 
-      return;
-    }
+        return;
+      }
 
-    setEditingOrder(null);
+      setEditingOrder(null);
+      setShowOrderModal(true);
+    };
 
-    setShowOrderModal(true);
-  };
-  
   /*
   |--------------------------------------------------------------------------
   | CREATE PRODUCTION ORDER
@@ -649,66 +647,65 @@ const CRMPage = () => {
   */
 
   const handleCreateProductionOrder =
-  async (
-    data: any
-  ) => {
-    if (!selectedCustomer?._id) {
-      throw new Error(
-        "Customer context is missing."
-      );
-    }
+    async (
+      data: any
+    ) => {
+      if (!selectedCustomer?._id) {
+        throw new Error(
+          "Customer context is missing."
+        );
+      }
 
-    /*
-     * Production orders can only belong to
-     * real AccountParty customers.
-     *
-     * CRM leads/customers must first be
-     * converted into an Account Party.
-     */
+      /*
+       * Production orders can only belong to
+       * real AccountParty customers.
+       *
+       * CRM leads/customers must first be
+       * converted into an Account Party.
+       */
 
-    if (
-      selectedCustomer.source !==
-      "ACCOUNTS"
-    ) {
-      window.alert(
-        "This CRM record must be converted to an Account customer before a production order can be created."
-      );
+      if (
+        selectedCustomer.source !==
+        "ACCOUNTS"
+      ) {
+        window.alert(
+          "This CRM record must be converted to an Account customer before a production order can be created."
+        );
 
-      throw new Error(
-        "Production order requires an AccountParty customer."
-      );
-    }
+        throw new Error(
+          "Production order requires an AccountParty customer."
+        );
+      }
 
-    try {
-      await createProduction({
-        ...data,
+      try {
+        await createProduction({
+          ...data,
 
-        client:
-          selectedCustomer._id,
+          client:
+            selectedCustomer._id,
 
-        clientModel:
-          "AccountParty",
-      });
+          clientModel:
+            "AccountParty",
+        });
 
-      await loadProductionOrders();
+        await loadProductionOrders();
 
-      setShowOrderModal(false);
+        setShowOrderModal(false);
+        setEditingOrder(null);
+      } catch (error: any) {
+        console.error(
+          "Failed to create production order:",
+          error
+        );
 
-      setEditingOrder(null);
-    } catch (error: any) {
-      console.error(
-        "Failed to create production order:",
-        error
-      );
+        window.alert(
+          error?.response?.data?.message ||
+            "Failed to create production order."
+        );
 
-      window.alert(
-        error?.response?.data?.message ||
-          "Failed to create production order."
-      );
-
-      throw error;
-    }
-  };
+        throw error;
+      }
+    };
 
   /*
   |--------------------------------------------------------------------------
@@ -1350,6 +1347,13 @@ const CRMPage = () => {
                   )}
                 </div>
               </>
+            )}
+
+            {/* Catalogue */}
+
+            {activeTab ===
+              "catalogue" && (
+              <Catalogue />
             )}
 
             {/* Sales Pipeline */}

@@ -4,10 +4,7 @@ import {
   useState,
 } from "react";
 
-import {
-  getOrdersByCustomer,
-  deleteOrder,
-} from "../services/order.service";
+import CRMStaffLayout from "../components/CRMStaffLayout";
 
 import {
   getCustomers,
@@ -18,36 +15,49 @@ import {
   getParties,
 } from "../../accounts/services/accountParty.service";
 
+import {
+  getProductions,
+  createProduction,
+  updateProduction,
+  deleteProduction,
+} from "../../production/services/production.services";
+
+import {
+  getBOMs,
+} from "../../bom/services/bom.service";
+
 import CRMHeader from "../components/CRMHeader";
 import CRMStats from "../components/CRMStats";
 import CRMTabs from "../components/CRMTabs";
 
 import CustomerList from "../components/CustomerList";
 import CustomerProfile from "../components/CustomerProfile";
-
 import OrdersTable from "../components/OrdersTable";
+import Catalogue from "../components/Catalogue";
 
 import CustomerModal from "../components/CustomerModal";
-import OrderModal from "../components/OrderModal";
 import AddNoteModal from "../components/AddNoteModal";
 
 import SalesPipeline from "../components/SalesPipeline";
 import CRMDueDates from "../components/CRMDueDates";
 
+import ProductionCreateModal from "../../production/components/ProductionCreateModal";
+import ProductionEditModal from "../../production/components/ProductionEditModal";
+
 import {
   FiAlertCircle,
   FiArrowUpRight,
   FiCalendar,
-  FiCheckCircle,
-  FiChevronDown,
   FiClock,
+  FiActivity,
+  FiBarChart2,
 } from "react-icons/fi";
 
 import type { Customer } from "../types/customer.types";
-import CRMStaffLayout from "../components/CRMStaffLayout";
 
 type CRMTab =
   | "customers"
+  | "catalogue"
   | "pipeline"
   | "dues"
   | "orders";
@@ -55,86 +65,50 @@ type CRMTab =
 type CRMRecord = any;
 
 const CRMStaffPage = () => {
-  // =========================================================
-  // TAB
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | TAB
+  |--------------------------------------------------------------------------
+  */
 
   const [activeTab, setActiveTab] =
     useState<CRMTab>("customers");
 
-  // =========================================================
-  // CRM OVERVIEW COLLAPSE
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | COMPACT CRM CONTROLS
+  |--------------------------------------------------------------------------
+  */
 
   const [showCRMOverview, setShowCRMOverview] =
-    useState(() => {
-      try {
-        return (
-          localStorage.getItem(
-            "toyhub-crm-overview-expanded"
-          ) === "true"
-        );
-      } catch {
-        return false;
-      }
-    });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "toyhub-crm-overview-expanded",
-        String(showCRMOverview)
-      );
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [showCRMOverview]);
-
-  // =========================================================
-  // FOLLOW-UP COMMAND CENTER COLLAPSE
-  // =========================================================
+    useState(false);
 
   const [showFollowUpCenter, setShowFollowUpCenter] =
-    useState(() => {
-      try {
-        return (
-          localStorage.getItem(
-            "toyhub-crm-followup-expanded"
-          ) === "true"
-        );
-      } catch {
-        return false;
-      }
-    });
+    useState(false);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "toyhub-crm-followup-expanded",
-        String(showFollowUpCenter)
-      );
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [showFollowUpCenter]);
-
-  // =========================================================
-  // CRM LEADS / CUSTOMERS
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | CRM CUSTOMERS / LEADS
+  |--------------------------------------------------------------------------
+  */
 
   const [customers, setCustomers] =
     useState<Customer[]>([]);
 
-  // =========================================================
-  // ACCOUNTS PARTIES
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | ACCOUNTS PARTIES
+  |--------------------------------------------------------------------------
+  */
 
   const [accountParties, setAccountParties] =
     useState<any[]>([]);
 
-  // =========================================================
-  // SELECTED CRM RECORD
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | SELECTED CRM RECORD
+  |--------------------------------------------------------------------------
+  */
 
   const [selectedCustomer, setSelectedCustomer] =
     useState<CRMRecord>(null);
@@ -142,16 +116,29 @@ const CRMStaffPage = () => {
   const [search, setSearch] =
     useState("");
 
-  // =========================================================
-  // ORDERS
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | PRODUCTION ORDERS
+  |--------------------------------------------------------------------------
+  */
 
   const [orders, setOrders] =
     useState<any[]>([]);
 
-  // =========================================================
-  // CUSTOMER MODAL
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | PRODUCTION FORM DATA
+  |--------------------------------------------------------------------------
+  */
+
+  const [productionBOMs, setProductionBOMs] =
+    useState<any[]>([]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | CUSTOMER MODAL
+  |--------------------------------------------------------------------------
+  */
 
   const [showAddCustomer, setShowAddCustomer] =
     useState(false);
@@ -159,9 +146,11 @@ const CRMStaffPage = () => {
   const [editingCustomer, setEditingCustomer] =
     useState<any>(null);
 
-  // =========================================================
-  // ORDER MODAL
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | PRODUCTION ORDER MODALS
+  |--------------------------------------------------------------------------
+  */
 
   const [showOrderModal, setShowOrderModal] =
     useState(false);
@@ -169,46 +158,33 @@ const CRMStaffPage = () => {
   const [editingOrder, setEditingOrder] =
     useState<any>(null);
 
-  // =========================================================
-  // NOTES
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | NOTES
+  |--------------------------------------------------------------------------
+  */
 
   const [showNoteModal, setShowNoteModal] =
     useState(false);
 
-  // =========================================================
-  // LOAD CRM RECORDS
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD CRM CUSTOMERS
+  |--------------------------------------------------------------------------
+  */
 
   const loadCustomers = async () => {
     try {
-      const data =
-        await getCustomers();
+      const data = await getCustomers();
 
       const safeData =
-        Array.isArray(data)
-          ? data
-          : [];
+        Array.isArray(data) ? data : [];
 
-      setCustomers(
-        safeData
-      );
-
-      /*
-       * Keep the currently selected CRM record
-       * synchronized after reload.
-       *
-       * Accounts Party records are handled separately
-       * by loadAccountParties().
-       */
+      setCustomers(safeData);
 
       setSelectedCustomer(
         (current: any) => {
           if (!safeData.length) {
-            /*
-             * Do not clear an Accounts Party selection
-             * when only CRM records are being refreshed.
-             */
             if (
               current?.source ===
               "ACCOUNTS"
@@ -219,21 +195,10 @@ const CRMStaffPage = () => {
             return null;
           }
 
-          /*
-           * Nothing selected yet.
-           *
-           * We intentionally do not automatically select
-           * the first CRM record because Accounts Parties
-           * are also part of the workspace.
-           */
           if (!current?._id) {
-            return null;
+            return current;
           }
 
-          /*
-           * If current selection is a CRM record,
-           * update it from the fresh CRM response.
-           */
           if (
             current.source ===
             "CRM"
@@ -245,15 +210,13 @@ const CRMStaffPage = () => {
                   current._id
               );
 
-            return (
-              stillExists
-                ? {
-                    ...stillExists,
-                    source: "CRM",
-                    crmType: "LEAD",
-                  }
-                : current
-            );
+            return stillExists
+              ? {
+                  ...stillExists,
+                  source: "CRM",
+                  crmType: "LEAD",
+                }
+              : current;
           }
 
           return current;
@@ -267,9 +230,11 @@ const CRMStaffPage = () => {
     }
   };
 
-  // =========================================================
-  // LOAD ACCOUNTS PARTIES
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD ACCOUNTS PARTIES
+  |--------------------------------------------------------------------------
+  */
 
   const loadAccountParties =
     async () => {
@@ -286,21 +251,12 @@ const CRMStaffPage = () => {
           safeData
         );
 
-        /*
-         * Keep selected Accounts Party synchronized
-         * with the latest Accounts response.
-         */
         setSelectedCustomer(
           (current: any) => {
             if (
-              !current?._id
-            ) {
-              return current;
-            }
-
-            if (
+              !current?._id ||
               current.source !==
-              "ACCOUNTS"
+                "ACCOUNTS"
             ) {
               return current;
             }
@@ -331,65 +287,98 @@ const CRMStaffPage = () => {
       }
     };
 
-  // =========================================================
-  // INITIAL LOAD
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD PRODUCTION ORDERS
+  |--------------------------------------------------------------------------
+  */
+
+  const loadProductionOrders =
+    async () => {
+      try {
+        const data =
+          await getProductions();
+
+        setOrders(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load production orders:",
+          error
+        );
+
+        setOrders([]);
+      }
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD PRODUCTION FORM DATA
+  |--------------------------------------------------------------------------
+  |
+  | Only BOM data is required by the CRM
+  | production-order modal.
+  |
+  */
+
+  const loadProductionFormData =
+    async () => {
+      try {
+        const bomData =
+          await getBOMs();
+
+        setProductionBOMs(
+          Array.isArray(bomData)
+            ? bomData
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load production form data:",
+          error
+        );
+
+        setProductionBOMs([]);
+      }
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | INITIAL LOAD
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
     loadCustomers();
     loadAccountParties();
+    loadProductionOrders();
+    loadProductionFormData();
   }, []);
 
-  // =========================================================
-  // COMBINED CRM WORKSPACE DATA
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | COMBINED CRM WORKSPACE DATA
+  |--------------------------------------------------------------------------
+  */
 
   const crmRecords =
     useMemo(() => {
-      /*
-       * =====================================================
-       * CRM RECORDS
-       * =====================================================
-       *
-       * These are records created through CRM.
-       *
-       * They remain CRM-owned records.
-       */
-
       const crmRecords =
         customers.map(
           (customer: any) => ({
             ...customer,
-
             source: "CRM",
             crmType: "LEAD",
           })
         );
 
-      /*
-       * =====================================================
-       * ACCOUNTS PARTIES
-       * =====================================================
-       *
-       * Accounts is the source of truth for Party records.
-       *
-       * CRM reads those records.
-       *
-       * We DO NOT create duplicate CRM customers.
-       *
-       * CUSTOMER + SUPPLIER parties are included.
-       * COMPANY_EXPENSE records are not CRM records.
-       */
-
       const partyRecords =
         accountParties
           .filter(
             (party: any) => {
-              /*
-               * Inactive parties should not appear
-               * in the active CRM workspace.
-               */
-
               if (
                 party.status ===
                 "Inactive"
@@ -397,22 +386,12 @@ const CRMStaffPage = () => {
                 return false;
               }
 
-              /*
-               * Company expenses are accounting records,
-               * not CRM relationships.
-               */
-
               if (
                 party.partyType ===
                 "COMPANY_EXPENSE"
               ) {
                 return false;
               }
-
-              /*
-               * Only actual Account Parties belong
-               * in the CRM Party view.
-               */
 
               return (
                 party.partyType ===
@@ -429,20 +408,6 @@ const CRMStaffPage = () => {
               )
           );
 
-      /*
-       * =====================================================
-       * COMBINED WORKSPACE
-       * =====================================================
-       *
-       * CRM Leads first.
-       * Accounts Parties second.
-       *
-       * CustomerList will classify these using:
-       *
-       * CRM       -> Leads
-       * ACCOUNTS  -> Parties
-       */
-
       return [
         ...crmRecords,
         ...partyRecords,
@@ -452,9 +417,11 @@ const CRMStaffPage = () => {
       accountParties,
     ]);
 
-  // =========================================================
-  // KEEP SELECTED RECORD IN SYNC
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | KEEP SELECTED RECORD IN SYNC
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
     if (
@@ -483,78 +450,49 @@ const CRMStaffPage = () => {
     selectedCustomer?.source,
   ]);
 
-  // =========================================================
-  // LOAD ORDERS
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | CUSTOMER ORDER HISTORY
+  |--------------------------------------------------------------------------
+  */
 
-  const loadCustomerData =
-    async (
-      customerId?: string
-    ) => {
-      const customer =
-        selectedCustomer;
-
+  const customerOrders =
+    useMemo(() => {
       if (
-        customer?.source ===
-        "ACCOUNTS"
+        !selectedCustomer?._id
       ) {
-        setOrders([]);
-        return;
+        return [];
       }
 
-      const id =
-        customerId ||
-        selectedCustomer?._id;
-
-      if (!id) {
-        setOrders([]);
-        return;
-      }
-
-      try {
-        const ordersData =
-          await getOrdersByCustomer(id);
-
-        setOrders(
-          Array.isArray(
-            ordersData
-          )
-            ? ordersData
-            : []
-        );
-      } catch (error) {
-        console.error(
-          "Failed to load customer orders:",
-          error
+      const selectedId =
+        String(
+          selectedCustomer._id
         );
 
-        setOrders([]);
-      }
-    };
+      return orders.filter(
+        (order: any) => {
+          const clientId =
+            order?.client?._id ||
+            order?.client;
 
-  // =========================================================
-  // LOAD SELECTED CUSTOMER DATA
-  // =========================================================
+          return (
+            clientId &&
+            String(
+              clientId
+            ) === selectedId
+          );
+        }
+      );
+    }, [
+      orders,
+      selectedCustomer?._id,
+    ]);
 
-  useEffect(() => {
-    if (
-      !selectedCustomer?._id
-    ) {
-      setOrders([]);
-      return;
-    }
-
-    loadCustomerData(
-      selectedCustomer._id
-    );
-  }, [
-    selectedCustomer?._id,
-    selectedCustomer?.source,
-  ]);
-
-  // =========================================================
-  // REMINDER DATA
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | REMINDER DATA
+  |--------------------------------------------------------------------------
+  */
 
   const reminderStats =
     useMemo(() => {
@@ -571,15 +509,6 @@ const CRMStaffPage = () => {
       let overdue = 0;
       let todayCount = 0;
       let upcoming = 0;
-
-      /*
-       * Reminder activities currently live
-       * on CRM Customer records.
-       *
-       * Accounts Parties are intentionally not
-       * included here until their activity layer
-       * is connected.
-       */
 
       customers.forEach(
         (customer: any) => {
@@ -628,20 +557,16 @@ const CRMStaffPage = () => {
       };
     }, [customers]);
 
-  // =========================================================
-  // DELETE CUSTOMER
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | DELETE CUSTOMER
+  |--------------------------------------------------------------------------
+  */
 
   const handleDeleteCustomer =
     async (
       customer: any
     ) => {
-      /*
-       * Accounts owns Party records.
-       *
-       * They must never be deleted from CRM.
-       */
-
       if (
         customer.source ===
         "ACCOUNTS"
@@ -670,8 +595,6 @@ const CRMStaffPage = () => {
           null
         );
 
-        setOrders([]);
-
         await loadCustomers();
       } catch (error) {
         console.error(
@@ -681,70 +604,222 @@ const CRMStaffPage = () => {
       }
     };
 
-  // =========================================================
-  // DELETE ORDER
-  // =========================================================
-
-  const handleDeleteOrder =
-    async (
-      order: any
-    ) => {
-      if (
-        !window.confirm(
-          "Delete order?"
-        )
-      ) {
-        return;
-      }
-
-      try {
-        await deleteOrder(
-          order._id
-        );
-
-        await loadCustomerData();
-      } catch (error) {
-        console.error(
-          "Failed to delete order:",
-          error
-        );
-      }
-    };
-
-  // =========================================================
-  // CREATE ORDER
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | CREATE PRODUCTION ORDER
+  |--------------------------------------------------------------------------
+  |
+  | IMPORTANT:
+  | This can ONLY be opened from the
+  | currently selected customer.
+  |
+  */
 
   const handleCreateOrder =
     () => {
-      /*
-       * AccountParty order integration will use
-       * the existing Party relationship.
-       *
-       * Do not create a duplicate CRM customer.
-       */
+      if (!selectedCustomer?._id) {
+        window.alert(
+          "Open a customer profile before creating an order."
+        );
+
+        return;
+      }
 
       if (
-        selectedCustomer?.source ===
+        selectedCustomer.source !==
         "ACCOUNTS"
       ) {
         window.alert(
-          "This customer comes from Accounts. Order integration will use the existing party relationship without creating a duplicate customer."
+          "Convert this CRM lead into an Account customer before creating a production order."
         );
 
         return;
       }
 
       setEditingOrder(null);
+      setShowOrderModal(true);
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | CREATE PRODUCTION ORDER
+  |--------------------------------------------------------------------------
+  */
+
+  const handleCreateProductionOrder =
+    async (
+      data: any
+    ) => {
+      if (!selectedCustomer?._id) {
+        throw new Error(
+          "Customer context is missing."
+        );
+      }
+
+      /*
+       * Production orders can only belong to
+       * real AccountParty customers.
+       *
+       * CRM leads/customers must first be
+       * converted into an Account Party.
+       */
+
+      if (
+        selectedCustomer.source !==
+        "ACCOUNTS"
+      ) {
+        window.alert(
+          "This CRM record must be converted to an Account customer before a production order can be created."
+        );
+
+        throw new Error(
+          "Production order requires an AccountParty customer."
+        );
+      }
+
+      try {
+        await createProduction({
+          ...data,
+
+          client:
+            selectedCustomer._id,
+
+          clientModel:
+            "AccountParty",
+        });
+
+        await loadProductionOrders();
+
+        setShowOrderModal(false);
+        setEditingOrder(null);
+      } catch (error: any) {
+        console.error(
+          "Failed to create production order:",
+          error
+        );
+
+        window.alert(
+          error?.response?.data?.message ||
+            "Failed to create production order."
+        );
+
+        throw error;
+      }
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | EDIT PRODUCTION ORDER
+  |--------------------------------------------------------------------------
+  */
+
+  const handleEditOrder =
+    (order: any) => {
+      setEditingOrder(
+        order
+      );
 
       setShowOrderModal(
         true
       );
     };
 
-  // =========================================================
-  // RENDER
-  // =========================================================
+  /*
+  |--------------------------------------------------------------------------
+  | DELETE PRODUCTION ORDER
+  |--------------------------------------------------------------------------
+  */
+
+  const handleDeleteOrder =
+    async (
+      order: any
+    ) => {
+      if (!order?._id) {
+        return;
+      }
+
+      const orderNumber =
+        order.orderNumber ||
+        "this production order";
+
+      if (
+        !window.confirm(
+          `Delete ${orderNumber}?`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await deleteProduction(
+          order._id
+        );
+
+        await loadProductionOrders();
+      } catch (error) {
+        console.error(
+          "Failed to delete production order:",
+          error
+        );
+
+        window.alert(
+          "Failed to delete production order."
+        );
+      }
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | RAW PRODUCTS
+  |--------------------------------------------------------------------------
+  */
+
+  const rawProducts =
+    useMemo(() => {
+      const products =
+        productionBOMs.flatMap(
+          (bom: any) =>
+            (
+              bom.materials ||
+              []
+            )
+              .map(
+                (material: any) =>
+                  material.product
+              )
+              .filter(Boolean)
+        );
+
+      const unique =
+        new Map();
+
+      products.forEach(
+        (product: any) => {
+          if (
+            product?._id
+          ) {
+            unique.set(
+              String(
+                product._id
+              ),
+              product
+            );
+          }
+        }
+      );
+
+      return Array.from(
+        unique.values()
+      );
+    }, [
+      productionBOMs,
+    ]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | RENDER
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <CRMStaffLayout>
@@ -756,9 +831,7 @@ const CRMStaffPage = () => {
           space-y-6
         "
       >
-        {/* =====================================================
-            CRM HEADER
-        ===================================================== */}
+        {/* Header */}
 
         <CRMHeader
           onAddCustomer={() => {
@@ -772,21 +845,90 @@ const CRMStaffPage = () => {
           }}
         />
 
-        {/* =====================================================
-            FOLLOW-UP COMMAND CENTER + CRM STATUS
-        ===================================================== */}
+        {/* Compact controls */}
 
-        <section
+        <div
           className="
-            grid
-            gap-4
-            lg:grid-cols-[minmax(0,1fr)_auto]
+            flex
+            items-center
+            justify-end
+            gap-2
           "
         >
-          {/* ===================================================
-              FOLLOW-UP COMMAND CENTER
-          =================================================== */}
+          <button
+            type="button"
+            onClick={() =>
+              setShowFollowUpCenter(
+                (current) =>
+                  !current
+              )
+            }
+            aria-label="Toggle Follow-up Command Center"
+            aria-expanded={
+              showFollowUpCenter
+            }
+            title="Follow-up Command Center"
+            className={`
+              flex
+              h-10
+              w-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              border
+              bg-white
+              shadow-sm
+              transition
+              ${
+                showFollowUpCenter
+                  ? "border-[#172B6B] bg-[#172B6B] text-white"
+                  : "border-slate-200 text-[#172B6B] hover:bg-slate-50"
+              }
+            `}
+          >
+            <FiActivity size={17} />
+          </button>
 
+          <button
+            type="button"
+            onClick={() =>
+              setShowCRMOverview(
+                (current) =>
+                  !current
+              )
+            }
+            aria-label="Toggle CRM Overview"
+            aria-expanded={
+              showCRMOverview
+            }
+            title="CRM Overview"
+            className={`
+              flex
+              h-10
+              w-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              border
+              bg-white
+              shadow-sm
+              transition
+              ${
+                showCRMOverview
+                  ? "border-[#172B6B] bg-[#172B6B] text-white"
+                  : "border-slate-200 text-[#172B6B] hover:bg-slate-50"
+              }
+            `}
+          >
+            <FiBarChart2 size={17} />
+          </button>
+        </div>
+
+        {/* Follow-up Center */}
+
+        {showFollowUpCenter && (
           <section
             className="
               overflow-hidden
@@ -797,616 +939,192 @@ const CRMStaffPage = () => {
               shadow-sm
             "
           >
-            {/* COLLAPSED HEADER */}
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowFollowUpCenter(
-                  (previous) =>
-                    !previous
-                )
-              }
-              className="
-                flex
-                w-full
-                items-center
-                justify-between
-                gap-4
-                px-5
-                py-4
-                text-left
-                transition-colors
-                hover:bg-slate-50
-                sm:px-6
-              "
-              aria-expanded={
-                showFollowUpCenter
-              }
-            >
-              <div
-                className="
-                  flex
-                  min-w-0
-                  items-center
-                  gap-3
-                "
-              >
-                <div
-                  className="
-                    flex
-                    h-9
-                    w-9
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-blue-50
-                    text-[#172B6B]
-                  "
-                >
-                  <FiCheckCircle
-                    size={16}
-                  />
-                </div>
-
-                <div className="min-w-0">
-                  <div
-                    className="
-                      flex
-                      items-center
-                      gap-2
-                    "
-                  >
-                    <span
-                      className="
-                        h-2
-                        w-2
-                        shrink-0
-                        rounded-full
-                        bg-[#172B6B]
-                      "
-                    />
-
-                    <span
-                      className="
-                        text-[11px]
-                        font-bold
-                        uppercase
-                        tracking-[0.16em]
-                        text-[#172B6B]
-                      "
-                    >
-                      Follow-up Command Center
-                    </span>
-                  </div>
-
-                  <p
-                    className="
-                      mt-1
-                      truncate
-                      text-xs
-                      text-slate-400
-                    "
-                  >
-                    {showFollowUpCenter
-                      ? "Track overdue, today's and upcoming customer activities."
-                      : "Click to view follow-up activity"}
-                  </p>
-                </div>
-              </div>
-
-              <span
-                className="
-                  flex
-                  h-8
-                  w-8
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-lg
-                  border
-                  border-slate-200
-                  bg-white
-                  text-slate-400
-                "
-              >
-                <FiChevronDown
-                  size={16}
-                  className={
-                    showFollowUpCenter
-                      ? "rotate-180 transition-transform duration-200"
-                      : "transition-transform duration-200"
-                  }
-                />
-              </span>
-            </button>
-
-            {/* EXPANDED CONTENT */}
-
-            {showFollowUpCenter && (
-              <div
-                className="
-                  border-t
-                  border-slate-100
-                  p-4
-                  sm:p-5
-                "
-              >
-                <div
-                  className="
-                    flex
-                    flex-col
-                    gap-5
-                    lg:flex-row
-                    lg:items-center
-                    lg:justify-between
-                  "
-                >
-                  {/* DESCRIPTION */}
-
-                  <div className="min-w-0">
-                    <h2
-                      className="
-                        text-xl
-                        font-bold
-                        tracking-tight
-                        text-slate-900
-                      "
-                    >
-                      Stay ahead of customer conversations
-                    </h2>
-
-                    <p
-                      className="
-                        mt-1
-                        text-sm
-                        text-slate-500
-                      "
-                    >
-                      Track overdue, today's and upcoming
-                      customer activities.
-                    </p>
-                  </div>
-
-                  {/* REMINDER CARDS */}
-
-                  <div
-                    className="
-                      grid
-                      grid-cols-3
-                      gap-2
-                      sm:gap-3
-                      lg:min-w-[300px]
-                    "
-                  >
-                    {/* OVERDUE */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveTab(
-                          "dues"
-                        )
-                      }
-                      className="
-                        group
-                        min-w-0
-                        rounded-2xl
-                        border
-                        border-red-100
-                        bg-red-50/60
-                        p-3
-                        text-left
-                        transition
-                        hover:border-red-200
-                        hover:bg-red-50
-                      "
-                    >
-                      <div
-                        className="
-                          flex
-                          items-center
-                          justify-between
-                        "
-                      >
-                        <FiAlertCircle
-                          size={15}
-                          className="text-red-500"
-                        />
-
-                        <FiArrowUpRight
-                          size={13}
-                          className="
-                            text-red-300
-                            transition
-                            group-hover:text-red-500
-                          "
-                        />
-                      </div>
-
-                      <p
-                        className="
-                          mt-3
-                          text-2xl
-                          font-bold
-                          text-red-600
-                        "
-                      >
-                        {
-                          reminderStats.overdue
-                        }
-                      </p>
-
-                      <p
-                        className="
-                          mt-0.5
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-red-500
-                        "
-                      >
-                        Overdue
-                      </p>
-                    </button>
-
-                    {/* TODAY */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveTab(
-                          "dues"
-                        )
-                      }
-                      className="
-                        group
-                        min-w-0
-                        rounded-2xl
-                        border
-                        border-amber-100
-                        bg-amber-50/60
-                        p-3
-                        text-left
-                        transition
-                        hover:border-amber-200
-                        hover:bg-amber-50
-                      "
-                    >
-                      <div
-                        className="
-                          flex
-                          items-center
-                          justify-between
-                        "
-                      >
-                        <FiClock
-                          size={15}
-                          className="text-amber-600"
-                        />
-
-                        <FiArrowUpRight
-                          size={13}
-                          className="
-                            text-amber-300
-                            transition
-                            group-hover:text-amber-600
-                          "
-                        />
-                      </div>
-
-                      <p
-                        className="
-                          mt-3
-                          text-2xl
-                          font-bold
-                          text-amber-700
-                        "
-                      >
-                        {
-                          reminderStats.today
-                        }
-                      </p>
-
-                      <p
-                        className="
-                          mt-0.5
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-amber-600
-                        "
-                      >
-                        Today
-                      </p>
-                    </button>
-
-                    {/* UPCOMING */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveTab(
-                          "dues"
-                        )
-                      }
-                      className="
-                        group
-                        min-w-0
-                        rounded-2xl
-                        border
-                        border-green-100
-                        bg-green-50/60
-                        p-3
-                        text-left
-                        transition
-                        hover:border-green-200
-                        hover:bg-green-50
-                      "
-                    >
-                      <div
-                        className="
-                          flex
-                          items-center
-                          justify-between
-                        "
-                      >
-                        <FiCalendar
-                          size={15}
-                          className="text-green-600"
-                        />
-
-                        <FiArrowUpRight
-                          size={13}
-                          className="
-                            text-green-300
-                            transition
-                            group-hover:text-green-600
-                          "
-                        />
-                      </div>
-
-                      <p
-                        className="
-                          mt-3
-                          text-2xl
-                          font-bold
-                          text-green-700
-                        "
-                      >
-                        {
-                          reminderStats.upcoming
-                        }
-                      </p>
-
-                      <p
-                        className="
-                          mt-0.5
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-green-600
-                        "
-                      >
-                        Upcoming
-                      </p>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* ===================================================
-              CRM STATUS
-          =================================================== */}
-
-          <div
-            className="
-              flex
-              items-center
-              gap-4
-              rounded-[28px]
-              border
-              border-slate-200
-              bg-white
-              px-5
-              py-5
-              shadow-sm
-              lg:min-w-[250px]
-            "
-          >
             <div
               className="
                 flex
-                h-11
-                w-11
-                shrink-0
-                items-center
-                justify-center
-                rounded-2xl
-                bg-green-50
-                text-green-600
+                flex-col
+                gap-5
+                p-4
+                sm:p-5
+                lg:flex-row
+                lg:items-center
+                lg:justify-between
               "
             >
-              <FiCheckCircle
-                size={19}
-              />
-            </div>
-
-            <div>
-              <p
-                className="
-                  text-xs
-                  font-semibold
-                  uppercase
-                  tracking-wide
-                  text-slate-400
-                "
-              >
-                CRM Status
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  font-bold
-                  text-slate-900
-                "
-              >
-                Workspace Active
-              </p>
-
-              <p
-                className="
-                  mt-0.5
-                  text-xs
-                  text-slate-400
-                "
-              >
-                {
-                  crmRecords.length
-                } records managed
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* =====================================================
-            CRM OVERVIEW
-        ===================================================== */}
-
-        <section
-          className="
-            overflow-hidden
-            rounded-[24px]
-            border
-            border-slate-200
-            bg-white
-            shadow-sm
-          "
-        >
-          {/* OVERVIEW TOGGLE */}
-
-          <button
-            type="button"
-            onClick={() =>
-              setShowCRMOverview(
-                (previous) =>
-                  !previous
-              )
-            }
-            className="
-              flex
-              w-full
-              items-center
-              justify-between
-              gap-4
-              px-5
-              py-4
-              text-left
-              transition-colors
-              hover:bg-slate-50
-              sm:px-6
-            "
-            aria-expanded={
-              showCRMOverview
-            }
-          >
-            <div
-              className="
-                flex
-                min-w-0
-                items-center
-                gap-3
-              "
-            >
-              <div
-                className="
-                  flex
-                  h-9
-                  w-9
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-xl
-                  bg-blue-50
-                  text-[#172B6B]
-                "
-              >
-                <FiCheckCircle
-                  size={16}
-                />
-              </div>
-
               <div className="min-w-0">
-                <p
+                <h2
                   className="
-                    text-sm
+                    text-xl
                     font-bold
+                    tracking-tight
                     text-slate-900
                   "
                 >
-                  CRM Overview
-                </p>
+                  Stay ahead of customer conversations
+                </h2>
 
                 <p
                   className="
-                    mt-0.5
-                    truncate
-                    text-[11px]
-                    text-slate-400
+                    mt-1
+                    text-sm
+                    text-slate-500
                   "
                 >
-                  {showCRMOverview
-                    ? "Performance summary and activity"
-                    : "Click to view CRM statistics"}
+                  Track overdue, today's and upcoming
+                  customer activities.
                 </p>
               </div>
+
+              <div
+                className="
+                  grid
+                  grid-cols-3
+                  gap-2
+                  sm:gap-3
+                  lg:min-w-[300px]
+                "
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(
+                      "dues"
+                    )
+                  }
+                  className="
+                    rounded-2xl
+                    border
+                    border-red-100
+                    bg-red-50/60
+                    p-3
+                    text-left
+                    transition
+                    hover:bg-red-50
+                  "
+                >
+                  <div className="flex items-center justify-between">
+                    <FiAlertCircle
+                      size={15}
+                      className="text-red-500"
+                    />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="text-red-300"
+                    />
+                  </div>
+
+                  <p className="mt-3 text-2xl font-bold text-red-600">
+                    {
+                      reminderStats.overdue
+                    }
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-500">
+                    Overdue
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(
+                      "dues"
+                    )
+                  }
+                  className="
+                    rounded-2xl
+                    border
+                    border-amber-100
+                    bg-amber-50/60
+                    p-3
+                    text-left
+                    transition
+                    hover:bg-amber-50
+                  "
+                >
+                  <div className="flex items-center justify-between">
+                    <FiClock
+                      size={15}
+                      className="text-amber-600"
+                    />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="text-amber-300"
+                    />
+                  </div>
+
+                  <p className="mt-3 text-2xl font-bold text-amber-700">
+                    {
+                      reminderStats.today
+                    }
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+                    Today
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(
+                      "dues"
+                    )
+                  }
+                  className="
+                    rounded-2xl
+                    border
+                    border-green-100
+                    bg-green-50/60
+                    p-3
+                    text-left
+                    transition
+                    hover:bg-green-50
+                  "
+                >
+                  <div className="flex items-center justify-between">
+                    <FiCalendar
+                      size={15}
+                      className="text-green-600"
+                    />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="text-green-300"
+                    />
+                  </div>
+
+                  <p className="mt-3 text-2xl font-bold text-green-700">
+                    {
+                      reminderStats.upcoming
+                    }
+                  </p>
+
+                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-600">
+                    Upcoming
+                  </p>
+                </button>
+              </div>
             </div>
+          </section>
+        )}
 
-            <span
-              className="
-                flex
-                h-8
-                w-8
-                shrink-0
-                items-center
-                justify-center
-                rounded-lg
-                border
-                border-slate-200
-                bg-white
-                text-slate-400
-              "
-            >
-              <FiChevronDown
-                size={16}
-                className={
-                  showCRMOverview
-                    ? "rotate-180 transition-transform duration-200"
-                    : "transition-transform duration-200"
-                }
-              />
-            </span>
-          </button>
+        {/* CRM Overview */}
 
-          {/* STATS */}
-
-          {showCRMOverview && (
-            <div
-              className="
-                border-t
-                border-slate-100
-                p-3
-                sm:p-4
-              "
-            >
+        {showCRMOverview && (
+          <section
+            className="
+              overflow-hidden
+              rounded-[24px]
+              border
+              border-slate-200
+              bg-white
+              shadow-sm
+            "
+          >
+            <div className="p-3 sm:p-4">
               <CRMStats
                 customers={
                   customers
@@ -1416,12 +1134,10 @@ const CRMStaffPage = () => {
                 }
               />
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
-        {/* =====================================================
-            MAIN CRM WORKSPACE
-        ===================================================== */}
+        {/* Main Workspace */}
 
         <section
           className="
@@ -1433,8 +1149,6 @@ const CRMStaffPage = () => {
             shadow-sm
           "
         >
-          {/* TAB BAR */}
-
           <div
             className="
               border-b
@@ -1455,8 +1169,6 @@ const CRMStaffPage = () => {
             />
           </div>
 
-          {/* CONTENT */}
-
           <div
             className="
               p-4
@@ -1464,17 +1176,11 @@ const CRMStaffPage = () => {
               lg:p-6
             "
           >
-            {/* =================================================
-                CUSTOMERS
-            ================================================= */}
+            {/* Customers */}
 
             {activeTab ===
               "customers" && (
               <>
-                {/* =================================================
-                    DESKTOP
-                ================================================= */}
-
                 <div
                   className="
                     hidden
@@ -1483,8 +1189,6 @@ const CRMStaffPage = () => {
                     xl:grid-cols-[360px_minmax(0,1fr)]
                   "
                 >
-                  {/* CUSTOMER LIST */}
-
                   <div className="min-w-0">
                     <CustomerList
                       search={
@@ -1505,25 +1209,17 @@ const CRMStaffPage = () => {
                     />
                   </div>
 
-                  {/* CUSTOMER PROFILE */}
-
                   <div className="min-w-0">
                     <CustomerProfile
                       customer={
                         selectedCustomer
                       }
                       orders={
-                        orders
+                        customerOrders
                       }
-
                       onEdit={(
                         customer
                       ) => {
-                        /*
-                         * Accounts Parties remain owned
-                         * by Accounts.
-                         */
-
                         if (
                           customer?.source ===
                           "ACCOUNTS"
@@ -1543,27 +1239,19 @@ const CRMStaffPage = () => {
                           true
                         );
                       }}
-
                       onDelete={
                         handleDeleteCustomer
                       }
-
                       onCreateOrder={
                         handleCreateOrder
                       }
-
                       onAddNote={() => {
-                        /*
-                         * CRM notes remain attached
-                         * to CRM records for now.
-                         */
-
                         if (
                           selectedCustomer?.source ===
                           "ACCOUNTS"
                         ) {
                           window.alert(
-                            "Conversation notes for Account Parties will be connected to the CRM activity layer."
+                            "Conversation notes for Account Parties are managed from the Accounts relationship."
                           );
 
                           return;
@@ -1573,150 +1261,116 @@ const CRMStaffPage = () => {
                           true
                         );
                       }}
-
                     />
                   </div>
                 </div>
 
-                {/* =================================================
-                    MOBILE / TABLET
-
-                    List and profile are mutually exclusive.
-                ================================================= */}
-
                 <div className="xl:hidden">
-                  {/* CUSTOMER LIST */}
-
                   {!selectedCustomer && (
-                    <div className="min-w-0">
-                      <CustomerList
-                        search={
-                          search
-                        }
-                        setSearch={
-                          setSearch
-                        }
-                        customers={
-                          crmRecords
-                        }
-                        selectedCustomer={
-                          selectedCustomer
-                        }
-                        setSelectedCustomer={
-                          setSelectedCustomer
-                        }
-                      />
-                    </div>
+                    <CustomerList
+                      search={
+                        search
+                      }
+                      setSearch={
+                        setSearch
+                      }
+                      customers={
+                        crmRecords
+                      }
+                      selectedCustomer={
+                        selectedCustomer
+                      }
+                      setSelectedCustomer={
+                        setSelectedCustomer
+                      }
+                    />
                   )}
 
-                  {/* CUSTOMER PROFILE */}
-
                   {selectedCustomer && (
-                    <div className="min-w-0">
-                      <CustomerProfile
-                        customer={
-                          selectedCustomer
-                        }
-                        orders={
-                          orders
-                        }
-
-                        onBackToList={() => {
-                          setSelectedCustomer(
-                            null
+                    <CustomerProfile
+                      customer={
+                        selectedCustomer
+                      }
+                      orders={
+                        customerOrders
+                      }
+                      onBackToList={() =>
+                        setSelectedCustomer(
+                          null
+                        )
+                      }
+                      onEdit={(
+                        customer
+                      ) => {
+                        if (
+                          customer?.source ===
+                          "ACCOUNTS"
+                        ) {
+                          window.alert(
+                            "This customer is managed from Accounts."
                           );
 
-                          setOrders(
-                            []
-                          );
-                        }}
+                          return;
+                        }
 
-                        onEdit={(
+                        setEditingCustomer(
                           customer
-                        ) => {
-                          /*
-                           * Accounts Parties remain owned
-                           * by Accounts.
-                           */
+                        );
 
-                          if (
-                            customer?.source ===
-                            "ACCOUNTS"
-                          ) {
-                            window.alert(
-                              "This customer is managed from Accounts."
-                            );
-
-                            return;
-                          }
-
-                          setEditingCustomer(
-                            customer
+                        setShowAddCustomer(
+                          true
+                        );
+                      }}
+                      onDelete={
+                        handleDeleteCustomer
+                      }
+                      onCreateOrder={
+                        handleCreateOrder
+                      }
+                      onAddNote={() => {
+                        if (
+                          selectedCustomer?.source ===
+                          "ACCOUNTS"
+                        ) {
+                          window.alert(
+                            "Conversation notes for Account Parties are managed from the Accounts relationship."
                           );
 
-                          setShowAddCustomer(
-                            true
-                          );
-                        }}
-
-                        onDelete={
-                          handleDeleteCustomer
+                          return;
                         }
 
-                        onCreateOrder={
-                          handleCreateOrder
-                        }
-
-                        onAddNote={() => {
-                          /*
-                           * CRM notes remain attached
-                           * to CRM records for now.
-                           */
-
-                          if (
-                            selectedCustomer?.source ===
-                            "ACCOUNTS"
-                          ) {
-                            window.alert(
-                              "Conversation notes for Account Parties will be connected to the CRM activity layer."
-                            );
-
-                            return;
-                          }
-
-                          setShowNoteModal(
-                            true
-                          );
-                        }}
-
-                      />
-                    </div>
+                        setShowNoteModal(
+                          true
+                        );
+                      }}
+                    />
                   )}
                 </div>
               </>
             )}
 
-            {/* =================================================
-                PIPELINE
-            ================================================= */}
+            {/* Catalogue */}
+
+            {activeTab ===
+              "catalogue" && (
+              <Catalogue />
+            )}
+
+            {/* Sales Pipeline */}
 
             {activeTab ===
               "pipeline" && (
               <SalesPipeline />
             )}
 
-            {/* =================================================
-                DUE DATES
-            ================================================= */}
+            {/* Due Dates */}
 
             {activeTab ===
               "dues" && (
               <CRMDueDates />
             )}
 
-            {/* =================================================
-                ORDERS
-            ================================================= */}
+            {/* Orders */}
 
             {activeTab ===
               "orders" && (
@@ -1724,30 +1378,18 @@ const CRMStaffPage = () => {
                 orders={
                   orders
                 }
-                onEdit={(
-                  order
-                ) => {
-                  setEditingOrder(
-                    order
-                  );
-
-                  setShowOrderModal(
-                    true
-                  );
-                }}
+                onEdit={
+                  handleEditOrder
+                }
                 onDelete={
                   handleDeleteOrder
                 }
-
               />
             )}
-
           </div>
         </section>
 
-        {/* =====================================================
-            CUSTOMER MODAL
-        ===================================================== */}
+        {/* Customer Modal */}
 
         <CustomerModal
           open={
@@ -1778,19 +1420,21 @@ const CRMStaffPage = () => {
           }}
         />
 
-        {/* =====================================================
-            ORDER MODAL
-        ===================================================== */}
+        {/* CREATE ORDER */}
 
-        <OrderModal
+        <ProductionCreateModal
           open={
-            showOrderModal
+            showOrderModal &&
+            !editingOrder
           }
           customer={
             selectedCustomer
           }
-          order={
-            editingOrder
+          boms={
+            productionBOMs
+          }
+          rawProducts={
+            rawProducts
           }
           onClose={() => {
             setShowOrderModal(
@@ -1801,8 +1445,61 @@ const CRMStaffPage = () => {
               null
             );
           }}
-          onSuccess={async () => {
-            await loadCustomerData();
+          onCreate={
+            handleCreateProductionOrder
+          }
+        />
+
+        {/* EDIT ORDER */}
+
+        <ProductionEditModal
+          open={
+            showOrderModal &&
+            !!editingOrder
+          }
+          production={
+            editingOrder
+          }
+          customer={
+            editingOrder?.client
+          }
+          boms={
+            productionBOMs
+          }
+          rawProducts={
+            rawProducts
+          }
+          onClose={() => {
+            setShowOrderModal(
+              false
+            );
+
+            setEditingOrder(
+              null
+            );
+          }}
+          onSave={async (
+            data
+          ) => {
+            if (
+              !editingOrder?._id
+            ) {
+              return;
+            }
+
+            /*
+             * IMPORTANT:
+             * Do not send a new customer.
+             * Editing does not transfer
+             * ownership of the order.
+             */
+
+            await updateProduction(
+              editingOrder._id,
+              data
+            );
+
+            await loadProductionOrders();
 
             setShowOrderModal(
               false
@@ -1814,9 +1511,7 @@ const CRMStaffPage = () => {
           }}
         />
 
-        {/* =====================================================
-            NOTE MODAL
-        ===================================================== */}
+        {/* Note Modal */}
 
         <AddNoteModal
           open={
@@ -1836,8 +1531,6 @@ const CRMStaffPage = () => {
           onSuccess={async () => {
             await loadCustomers();
 
-            await loadCustomerData();
-
             setShowNoteModal(
               false
             );
@@ -1848,9 +1541,11 @@ const CRMStaffPage = () => {
   );
 };
 
-/* =========================================================
-   ACCOUNT PARTY NORMALIZER
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| ACCOUNT PARTY NORMALIZER
+|--------------------------------------------------------------------------
+*/
 
 const normalizeAccountParty = (
   party: any
@@ -1858,23 +1553,9 @@ const normalizeAccountParty = (
   return {
     ...party,
 
-    /*
-     * =======================================================
-     * SOURCE / CRM TYPE
-     * =======================================================
-     *
-     * AccountParty is a PARTY in CRM,
-     * not a CRM Customer.
-     */
-
     source: "ACCOUNTS",
-    crmType: "PARTY",
 
-    /*
-     * =======================================================
-     * COMMON CRM FIELDS
-     * =======================================================
-     */
+    crmType: "PARTY",
 
     customerCode:
       party.partyCode ||
@@ -1928,17 +1609,6 @@ const normalizeAccountParty = (
     partyType:
       party.partyType ||
       "",
-
-    /*
-     * =======================================================
-     * SALESPERSON RELATIONSHIP
-     * =======================================================
-     *
-     * This comes directly from Accounts.
-     *
-     * Database stores IDs.
-     * CRM UI resolves/displays names.
-     */
 
     assignedSalespeople:
       Array.isArray(

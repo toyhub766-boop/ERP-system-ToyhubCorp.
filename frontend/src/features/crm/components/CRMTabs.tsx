@@ -3,11 +3,13 @@ import {
   FiTrendingUp,
   FiCalendar,
   FiPackage,
+  FiBookOpen,
 } from "react-icons/fi";
 
 interface Props {
   activeTab:
     | "customers"
+    | "catalogue"
     | "pipeline"
     | "dues"
     | "orders";
@@ -15,6 +17,7 @@ interface Props {
   setActiveTab: (
     tab:
       | "customers"
+      | "catalogue"
       | "pipeline"
       | "dues"
       | "orders"
@@ -26,6 +29,11 @@ const tabs = [
     id: "customers",
     label: "Customers",
     icon: <FiUsers size={16} />,
+  },
+  {
+    id: "catalogue",
+    label: "Catalogue",
+    icon: <FiBookOpen size={16} />,
   },
   {
     id: "pipeline",
@@ -95,7 +103,6 @@ const CRMTabs = ({
                 transition-all
                 duration-200
                 sm:px-5
-
                 ${
                   active
                     ? `
@@ -117,7 +124,6 @@ const CRMTabs = ({
                 className={`
                   transition-colors
                   duration-200
-
                   ${
                     active
                       ? "text-[#172B6B]"

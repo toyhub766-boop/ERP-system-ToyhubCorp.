@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import authMiddleware from "../middlewares/auth.middleware";
 import roleMiddleware from "../middlewares/role.middleware";
+import upload from "../middlewares/upload.middleware";
 
 import {
   createProduction,
@@ -12,6 +13,7 @@ import {
   getMaterialConsumption,
   deleteProduction,
   calculateProduction,
+  uploadProductionImage,
 } from "../controllers/production.controller";
 
 const router = Router();
@@ -23,11 +25,22 @@ router.get(
 );
 
 router.post(
+  "/upload-image",
+  authMiddleware,
+  roleMiddleware([
+    "FOUNDER",
+    "CRM",
+  ]),
+  upload.single("image"),
+  uploadProductionImage
+);
+
+router.post(
   "/",
   authMiddleware,
   roleMiddleware([
     "FOUNDER",
-    "PRODUCTION",
+    "CRM",
   ]),
   createProduction
 );
@@ -49,7 +62,7 @@ router.put(
   authMiddleware,
   roleMiddleware([
     "FOUNDER",
-    "PRODUCTION",
+    "CRM",
   ]),
   updateProduction
 );
@@ -75,7 +88,7 @@ router.delete(
   authMiddleware,
   roleMiddleware([
     "FOUNDER",
-    "PRODUCTION",
+    "CRM",
   ]),
   deleteProduction
 );

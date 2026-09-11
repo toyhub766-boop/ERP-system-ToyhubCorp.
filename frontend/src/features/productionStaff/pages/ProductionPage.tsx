@@ -4,32 +4,17 @@ import { getBOMs } from "../../bom/services/bom.service";
 
 import {
   getProductions,
-  createProduction,
-  updateProduction,
   calculateProduction,
   getMaterialConsumption,
 } from "../../production/services/production.services";
 
-import {
-  getProductionClients,
-  createProductionClient,
-} from "../../production/services/productionClient.service";
-
 import api from "../../../services/api/axios";
 
-import ProductionCreateModal from "../../production/components/ProductionCreateModal";
 import ProductionProgressModal from "../../production/components/ProductionProgressModal";
 import ProductionCompletionModal from "../../production/components/ProductionCompletionModal";
-import ProductionEditModal from "../../production/components/ProductionEditModal";
 
 const ProductionStaffProductionPage = () => {
   const [productions, setProductions] =
-    useState<any[]>([]);
-
-  const [clients, setClients] =
-    useState<any[]>([]);
-
-  const [accountCustomers, setAccountCustomers] =
     useState<any[]>([]);
 
   const [boms, setBoms] =
@@ -49,16 +34,10 @@ const ProductionStaffProductionPage = () => {
       "orders"
     );
 
-  const [showCreateModal, setShowCreateModal] =
-    useState(false);
-
   const [showProgressModal, setShowProgressModal] =
     useState(false);
 
   const [showCompletionModal, setShowCompletionModal] =
-    useState(false);
-
-  const [showEditModal, setShowEditModal] =
     useState(false);
 
   const [selectedAvailability, setSelectedAvailability] =
@@ -89,12 +68,10 @@ const ProductionStaffProductionPage = () => {
       const [
         productionData,
         bomData,
-        clientData,
         accountCustomerResponse,
       ] = await Promise.all([
         getProductions(),
         getBOMs(),
-        getProductionClients(),
         api.get("/accounts/party"),
       ]);
 
@@ -106,20 +83,16 @@ const ProductionStaffProductionPage = () => {
         bomData || []
       );
 
-      setClients(
-        clientData || []
-      );
+      /*
+       * Account customers are loaded only
+       * because existing production records
+       * may reference AccountParty customers.
+       *
+       * They are not used to create or edit
+       * production orders from this page.
+       */
 
-      setAccountCustomers(
-        (
-          accountCustomerResponse.data ||
-          []
-        ).filter(
-          (party: any) =>
-            party.partyType === "CUSTOMER" &&
-            party.status === "Active"
-        )
-      );
+      void accountCustomerResponse;
 
       if (
         productionData?.length > 0
@@ -274,52 +247,6 @@ const ProductionStaffProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | CREATE PRODUCTION
-  |--------------------------------------------------------------------------
-  */
-
-  const handleCreate = async (
-    data: any
-  ) => {
-    await createProduction(
-      data
-    );
-
-    await loadData();
-  };
-
-  /*
-  |--------------------------------------------------------------------------
-  | CREATE NEW PRODUCTION CLIENT
-  |--------------------------------------------------------------------------
-  |
-  | Existing ProductionClient creation
-  | remains available.
-  |
-  | Account customers are selected
-  | separately from Accounts.
-  */
-
-  const handleCreateClient = async (
-    data: any
-  ) => {
-    const created =
-      await createProductionClient(
-        data
-      );
-
-    setClients(
-      (current) => [
-        created,
-        ...current,
-      ]
-    );
-
-    return created;
-  };
-
-  /*
-  |--------------------------------------------------------------------------
   | REFRESH
   |--------------------------------------------------------------------------
   */
@@ -447,86 +374,13 @@ const ProductionStaffProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | UPDATE STATUS
+  | RAW PRODUCTS ARE NOT REQUIRED HERE
   |--------------------------------------------------------------------------
+  |
+  | Production staff cannot create or edit
+  | production orders, so the create/edit
+  | product preparation is intentionally removed.
   */
-
-  const handleStatusUpdate = async (
-    status: string
-  ) => {
-    if (
-      !selectedProduction
-    ) {
-      return;
-    }
-
-    try {
-      await updateProduction(
-        selectedProduction._id,
-        {
-          client:
-            selectedProduction
-              .client?._id ||
-            selectedProduction.client,
-
-          clientModel:
-            selectedProduction
-              .clientModel ||
-            "ProductionClient",
-
-          items:
-            selectedProduction.items,
-
-          team:
-            selectedProduction.team,
-
-          status,
-
-          targetDate:
-            selectedProduction.targetDate,
-
-          transport:
-            selectedProduction.transport,
-
-          notes:
-            selectedProduction.notes,
-        }
-      );
-
-      await refreshSelectedProduction();
-    } catch (error) {
-      console.error(
-        "Failed to update production status:",
-        error
-      );
-
-      alert(
-        "Failed to update production status."
-      );
-    }
-  };
-
-  /*
-  |--------------------------------------------------------------------------
-  | RAW PRODUCTS
-  |--------------------------------------------------------------------------
-  */
-
-  const rawProducts =
-    useMemo(() => {
-      return boms.flatMap(
-        (bom: any) =>
-          (
-            bom.materials ||
-            []
-          )
-            .map(
-              (material: any) =>
-                material.product
-            )
-            .filter(Boolean)
-      );
-    }, [boms]);
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -537,6 +391,7 @@ const ProductionStaffProductionPage = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
           <div>
+
             <p className="text-sm font-semibold uppercase tracking-wide text-[#17357A]">
               Production Staff
             </p>
@@ -546,21 +401,11 @@ const ProductionStaffProductionPage = () => {
             </h1>
 
             <p className="mt-1 text-slate-500">
-              Orders, production planning,
-              capacity and completion tracking
+              View production orders,
+              update progress and track completion
             </p>
-          </div>
 
-          <button
-            onClick={() =>
-              setShowCreateModal(
-                true
-              )
-            }
-            className="rounded-xl bg-[#17357A] px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-[#102b68]"
-          >
-            + New Production Order
-          </button>
+          </div>
 
         </div>
 
@@ -607,6 +452,7 @@ const ProductionStaffProductionPage = () => {
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
             <p className="text-sm text-slate-500">
               Total Orders
             </p>
@@ -614,9 +460,11 @@ const ProductionStaffProductionPage = () => {
             <p className="mt-2 text-3xl font-bold">
               {stats.total}
             </p>
+
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
             <p className="text-sm text-slate-500">
               Active
             </p>
@@ -624,9 +472,11 @@ const ProductionStaffProductionPage = () => {
             <p className="mt-2 text-3xl font-bold text-blue-700">
               {stats.active}
             </p>
+
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
             <p className="text-sm text-slate-500">
               Completed
             </p>
@@ -634,9 +484,11 @@ const ProductionStaffProductionPage = () => {
             <p className="mt-2 text-3xl font-bold text-green-600">
               {stats.completed}
             </p>
+
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
             <p className="text-sm text-slate-500">
               Draft Orders
             </p>
@@ -644,16 +496,15 @@ const ProductionStaffProductionPage = () => {
             <p className="mt-2 text-3xl font-bold text-orange-600">
               {stats.drafts}
             </p>
+
           </div>
 
         </div>
 
-        {/* ================================================================= */}
         {/* ORDERS */}
-        {/* ================================================================= */}
 
         {activeTab ===
-        "orders" && (
+          "orders" && (
 
           <div className="grid gap-5 xl:grid-cols-[280px_1fr_360px]">
 
@@ -857,7 +708,7 @@ const ProductionStaffProductionPage = () => {
 
                   </div>
 
-                  {/* BASIC INFO */}
+                  {/* BASIC INFORMATION */}
 
                   <div className="grid gap-4 border-b border-slate-200 p-5 md:grid-cols-2">
 
@@ -1040,18 +891,13 @@ const ProductionStaffProductionPage = () => {
 
                   </div>
 
-                  {/* ACTIONS */}
+                  {/* PRODUCTION ACTIONS */}
 
                   <div className="flex flex-wrap gap-2 border-t border-slate-200 bg-slate-50 p-4">
 
-                    {selectedProduction
-                      .status !==
-                      "In Progress" &&
-                      selectedProduction
-                        .status !==
-                        "Completed" &&
-                      selectedProduction
-                        .status !==
+                    {selectedProduction.status !==
+                      "Completed" &&
+                      selectedProduction.status !==
                         "Cancelled" && (
 
                       <button
@@ -1067,8 +913,7 @@ const ProductionStaffProductionPage = () => {
 
                     )}
 
-                    {selectedProduction
-                      .status ===
+                    {selectedProduction.status ===
                       "In Progress" && (
 
                       <button
@@ -1083,51 +928,6 @@ const ProductionStaffProductionPage = () => {
                       </button>
 
                     )}
-
-                    {selectedProduction
-                      .status ===
-                      "Draft" && (
-
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(
-                            "Approved"
-                          )
-                        }
-                        className="rounded-lg bg-[#17357A] px-4 py-2 text-sm font-semibold text-white"
-                      >
-                        Approve
-                      </button>
-
-                    )}
-
-                    {selectedProduction
-                      .status ===
-                      "Approved" && (
-
-                      <button
-                        onClick={() =>
-                          handleStatusUpdate(
-                            "Started"
-                          )
-                        }
-                        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
-                      >
-                        Start Production
-                      </button>
-
-                    )}
-
-                    <button
-                      onClick={() =>
-                        setShowEditModal(
-                          true
-                        )
-                      }
-                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold"
-                    >
-                      Edit
-                    </button>
 
                   </div>
 
@@ -1237,7 +1037,7 @@ const ProductionStaffProductionPage = () => {
 
                     </div>
 
-                    {/* MATERIALS */}
+                    {/* MATERIAL AVAILABILITY */}
 
                     <div>
 
@@ -1420,7 +1220,7 @@ const ProductionStaffProductionPage = () => {
 
                     </div>
 
-                    {/* CONSUMPTION */}
+                    {/* MATERIAL CONSUMPTION */}
 
                     {materialConsumption.length >
                       0 && (
@@ -1435,12 +1235,14 @@ const ProductionStaffProductionPage = () => {
 
                           {materialConsumption.map(
                             (
-                              material: any
+                              material: any,
+                              index: number
                             ) => (
 
                               <div
                                 key={
-                                  material._id
+                                  material._id ||
+                                  index
                                 }
                                 className="flex items-center justify-between rounded-lg border border-slate-200 p-3"
                               >
@@ -1449,13 +1251,18 @@ const ProductionStaffProductionPage = () => {
                                   {
                                     material
                                       .material
-                                      ?.name
+                                      ?.name ||
+                                    material.product
+                                      ?.name ||
+                                    "Material"
                                   }
                                 </span>
 
                                 <span className="font-semibold">
                                   {
-                                    material.requiredQuantity
+                                    material.requiredQuantity ??
+                                    material.quantity ??
+                                    "-"
                                   }
                                 </span>
 
@@ -1479,10 +1286,11 @@ const ProductionStaffProductionPage = () => {
             </div>
 
           </div>
+
         )}
 
         {/* ================================================================= */}
-        {/* CALCULATOR */}
+        {/* CAPACITY CALCULATOR */}
         {/* ================================================================= */}
 
         {activeTab ===
@@ -1712,37 +1520,8 @@ const ProductionStaffProductionPage = () => {
         )}
 
         {/* ================================================================= */}
-        {/* MODALS */}
+        {/* PRODUCTION MODALS */}
         {/* ================================================================= */}
-
-        <ProductionCreateModal
-          open={
-            showCreateModal
-          }
-          clients={
-            clients
-          }
-          accountCustomers={
-            accountCustomers
-          }
-          boms={
-            boms
-          }
-          rawProducts={
-            rawProducts
-          }
-          onClose={() =>
-            setShowCreateModal(
-              false
-            )
-          }
-          onCreate={
-            handleCreate
-          }
-          onCreateClient={
-            handleCreateClient
-          }
-        />
 
         <ProductionProgressModal
           open={
@@ -1776,43 +1555,6 @@ const ProductionStaffProductionPage = () => {
           onSaved={
             refreshSelectedProduction
           }
-        />
-
-        <ProductionEditModal
-          open={
-            showEditModal
-          }
-          production={
-            selectedProduction
-          }
-          clients={
-            clients
-          }
-          boms={
-            boms
-          }
-          rawProducts={
-            rawProducts
-          }
-          onClose={() =>
-            setShowEditModal(
-              false
-            )
-          }
-          onSave={async (
-            data
-          ) => {
-            await updateProduction(
-              selectedProduction._id,
-              data
-            );
-
-            setShowEditModal(
-              false
-            );
-
-            await loadData();
-          }}
         />
 
       </div>

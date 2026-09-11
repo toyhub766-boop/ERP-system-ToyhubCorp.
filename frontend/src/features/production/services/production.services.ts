@@ -1,5 +1,28 @@
 import api from "../../../services/api/axios";
 
+export const uploadProductionImage = async (
+  file: File
+) => {
+  const formData = new FormData();
+
+  formData.append(
+    "image",
+    file
+  );
+
+  const response = await api.post(
+    "/production/upload-image",
+    formData,
+    {
+      headers: {
+        "Content-Type":
+          "multipart/form-data",
+      },
+    }
+  );
+
+  return response.data;
+};
 export const getProductions =
   async () => {
     const response =

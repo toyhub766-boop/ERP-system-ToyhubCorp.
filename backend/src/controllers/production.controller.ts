@@ -3,44 +3,52 @@ import { Response } from "express";
 import { AuthRequest } from "../middlewares/auth.middleware";
 
 import Production from "../models/Production";
-
 import BOM from "../models/BOM";
-
 import MaterialConsumption from "../models/MaterialConsumption";
-
 import AccountParty from "../models/AccountParty";
-
 import ProductionClient from "../models/ProductionClient";
 
 import {
   calculateMaterialAvailability,
 } from "../utils/production.utils";
 
+/*
+ * Populate production orders consistently.
+ *
+ * Product information is included so CRM and Production
+ * can see the relevant product details.
+ */
 const populateProduction = (query: any) => {
   return query
     .populate("client")
     .populate("createdBy", "name")
-    .populate(
-      "items.product",
-      "name sku unit currentStock"
-    )
+    .populate({
+      path: "items.product",
+      select:
+        "name sku unit currentStock image marka category",
+      populate: {
+        path: "category",
+        select: "name",
+      },
+    })
     .populate("items.bom")
     .populate(
       "items.materialSelections.requiredMaterial",
-      "name sku unit currentStock"
+      "name sku unit currentStock image"
     )
     .populate(
       "items.materialSelections.selectedMaterial",
-      "name sku unit currentStock"
+      "name sku unit currentStock image"
     );
 };
 
 /*
-|--------------------------------------------------------------------------
-| CREATE PRODUCTION
-|--------------------------------------------------------------------------
-*/
-
+ * CREATE PRODUCTION ORDER
+ *
+ * CRM / FOUNDER responsibility.
+ *
+ * Production staff do not create orders.
+ */
 export const createProduction = async (
   req: AuthRequest,
   res: Response
@@ -77,12 +85,9 @@ export const createProduction = async (
     }
 
     /*
-     * Existing Production Clients can still be used.
-     *
-     * AccountParty is only allowed when it is
-     * an active CUSTOMER.
+     * AccountParty clients must be actual
+     * CUSTOMER parties.
      */
-
     const clientExists =
       resolvedClientModel === "AccountParty"
         ? await AccountParty.findOne({
@@ -110,10 +115,8 @@ export const createProduction = async (
     }
 
     /*
-     * Validate every production item
-     * and its BOM.
+     * Validate every production item.
      */
-
     for (const item of items) {
       if (!item.product || !item.bom) {
         return res.status(400).json({
@@ -145,7 +148,6 @@ export const createProduction = async (
     /*
      * Generate production order number.
      */
-
     const count =
       (await Production.countDocuments()) + 1;
 
@@ -154,6 +156,13 @@ export const createProduction = async (
         count
       ).padStart(3, "0")}`;
 
+    /*
+     * Create production order.
+     *
+     * Image, marka, category, price and
+     * importantNotes are stored on the
+     * production item as order-level data.
+     */
     const production =
       await Production.create({
         orderNumber,
@@ -171,13 +180,40 @@ export const createProduction = async (
             bom:
               item.bom,
 
+            /*
+             * Product/order information
+             */
+            image:
+              item.image || "",
+
+            marka:
+              item.marka || "",
+
+            category:
+              item.category || "",
+
+            price:
+              Number(item.price || 0),
+
+            importantNotes:
+              item.importantNotes || "",
+
+            /*
+             * Production quantity
+             */
             quantity:
               Number(item.quantity),
 
+            /*
+             * Material selection
+             */
             materialSelections:
               item.materialSelections ||
               [],
 
+            /*
+             * Production checklist
+             */
             checklist: {
               preparing:
                 item.checklist?.preparing ||
@@ -192,6 +228,9 @@ export const createProduction = async (
                 "",
             },
 
+            /*
+             * Execution fields start empty.
+             */
             actualQuantity:
               item.actualQuantity ??
               null,
@@ -236,22 +275,26 @@ export const createProduction = async (
       .status(201)
       .json(populated);
   } catch (error: any) {
-    console.error(error);
+    console.error(
+      "CREATE PRODUCTION ERROR:",
+      error
+    );
 
     return res.status(500).json({
       message:
-        error.message ||
+        error?.message ||
         "Failed to create production order",
     });
   }
 };
 
 /*
-|--------------------------------------------------------------------------
-| GET ALL PRODUCTIONS
-|--------------------------------------------------------------------------
-*/
-
+ * GET ALL PRODUCTION ORDERS
+ *
+ * Both CRM and Production can read
+ * production orders according to their
+ * frontend permissions.
+ */
 export const getProductions = async (
   _req: AuthRequest,
   res: Response
@@ -268,7 +311,10 @@ export const getProductions = async (
       productions
     );
   } catch (error) {
-    console.error(error);
+    console.error(
+      "GET PRODUCTIONS ERROR:",
+      error
+    );
 
     return res.status(500).json({
       message:
@@ -278,11 +324,8 @@ export const getProductions = async (
 };
 
 /*
-|--------------------------------------------------------------------------
-| GET SINGLE PRODUCTION
-|--------------------------------------------------------------------------
-*/
-
+ * GET SINGLE PRODUCTION ORDER
+ */
 export const getProductionById =
   async (
     req: AuthRequest,
@@ -307,7 +350,10 @@ export const getProductionById =
         production
       );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "GET PRODUCTION ERROR:",
+        error
+      );
 
       return res.status(500).json({
         message:
@@ -317,11 +363,13 @@ export const getProductionById =
   };
 
 /*
-|--------------------------------------------------------------------------
-| UPDATE WHOLE PRODUCTION ORDER
-|--------------------------------------------------------------------------
-*/
-
+ * UPDATE WHOLE PRODUCTION ORDER
+ *
+ * CRM / FOUNDER responsibility.
+ *
+ * Production staff must use the item-update
+ * endpoint for execution/progress changes.
+ */
 export const updateProduction =
   async (
     req: AuthRequest,
@@ -352,12 +400,8 @@ export const updateProduction =
       } = req.body;
 
       /*
-       * Client can be either:
-       *
-       * 1. Existing ProductionClient
-       * 2. AccountParty CUSTOMER
+       * Update client.
        */
-
       if (
         client !== undefined
       ) {
@@ -406,6 +450,9 @@ export const updateProduction =
           resolvedClientModel;
       }
 
+      /*
+       * Update general order fields.
+       */
       if (
         team !== undefined
       ) {
@@ -445,7 +492,6 @@ export const updateProduction =
        * Replace production items
        * only when items are supplied.
        */
-
       if (Array.isArray(items)) {
         for (
           const item of items
@@ -457,6 +503,16 @@ export const updateProduction =
             return res.status(400).json({
               message:
                 "Product and BOM are required for every item",
+            });
+          }
+
+          if (
+            !item.quantity ||
+            Number(item.quantity) <= 0
+          ) {
+            return res.status(400).json({
+              message:
+                "Valid quantity is required for every item",
             });
           }
 
@@ -486,15 +542,46 @@ export const updateProduction =
               bom:
                 item.bom,
 
+              /*
+               * CRM order information
+               */
+              image:
+                item.image || "",
+
+              marka:
+                item.marka || "",
+
+              category:
+                item.category || "",
+
+              price:
+                Number(
+                  item.price || 0
+                ),
+
+              importantNotes:
+                item.importantNotes ||
+                "",
+
+              /*
+               * Quantity
+               */
               quantity:
                 Number(
                   item.quantity
                 ),
 
+              /*
+               * Material selection
+               */
               materialSelections:
                 item.materialSelections ||
                 [],
 
+              /*
+               * Existing production
+               * progress information.
+               */
               checklist: {
                 preparing:
                   item.checklist
@@ -540,7 +627,6 @@ export const updateProduction =
       /*
        * Record completion time.
        */
-
       if (
         production.status ===
           "Completed" &&
@@ -554,10 +640,8 @@ export const updateProduction =
        * If whole order is completed,
        * create material consumption records.
        *
-       * IMPORTANT:
        * This does NOT change inventory.
        */
-
       if (
         status ===
           "Completed" &&
@@ -636,22 +720,37 @@ export const updateProduction =
         populated
       );
     } catch (error: any) {
-      console.error(error);
+      console.error(
+        "UPDATE PRODUCTION ERROR:",
+        error
+      );
 
       return res.status(500).json({
         message:
-          error.message ||
+          error?.message ||
           "Failed to update production order",
       });
     }
   };
 
 /*
-|--------------------------------------------------------------------------
-| UPDATE SINGLE PRODUCTION ITEM
-|--------------------------------------------------------------------------
-*/
-
+ * UPDATE SINGLE PRODUCTION ITEM
+ *
+ * Production staff use this endpoint.
+ *
+ * Allowed:
+ * - material selections
+ * - preparing / leaving checklist
+ * - reason
+ * - actual quantity
+ * - completed
+ * - ready for dispatch
+ * - production remarks
+ *
+ * CRM order information such as image,
+ * marka, price and product is NOT modified
+ * here.
+ */
 export const updateProductionItem =
   async (
     req: AuthRequest,
@@ -697,6 +796,9 @@ export const updateProductionItem =
         remarks,
       } = req.body;
 
+      /*
+       * Material selections
+       */
       if (
         materialSelections !==
         undefined
@@ -705,6 +807,9 @@ export const updateProductionItem =
           materialSelections;
       }
 
+      /*
+       * Production checklist
+       */
       if (
         checklist !== undefined
       ) {
@@ -726,6 +831,9 @@ export const updateProductionItem =
         };
       }
 
+      /*
+       * Actual quantity
+       */
       if (
         actualQuantity !==
         undefined
@@ -736,6 +844,9 @@ export const updateProductionItem =
           );
       }
 
+      /*
+       * Completion
+       */
       if (
         completed !==
         undefined
@@ -746,6 +857,9 @@ export const updateProductionItem =
           );
       }
 
+      /*
+       * Ready for dispatch
+       */
       if (
         readyForDispatch !==
         undefined
@@ -756,6 +870,9 @@ export const updateProductionItem =
           );
       }
 
+      /*
+       * Production remarks
+       */
       if (
         remarks !==
         undefined
@@ -765,10 +882,9 @@ export const updateProductionItem =
       }
 
       /*
-       * Determine order status
+       * Determine overall order status
        * from item states.
        */
-
       const allCompleted =
         (
           production.items as any[]
@@ -810,15 +926,11 @@ export const updateProductionItem =
       await production.save();
 
       /*
-       * IMPORTANT:
+       * Create material-consumption records
+       * when an item is completed.
        *
-       * This creates production
-       * records only.
-       *
-       * It does NOT reduce
-       * Product.currentStock.
+       * Inventory itself is not changed here.
        */
-
       if (
         completed === true
       ) {
@@ -890,22 +1002,22 @@ export const updateProductionItem =
         populated
       );
     } catch (error: any) {
-      console.error(error);
+      console.error(
+        "UPDATE PRODUCTION ITEM ERROR:",
+        error
+      );
 
       return res.status(500).json({
         message:
-          error.message ||
+          error?.message ||
           "Failed to update production item",
       });
     }
   };
 
 /*
-|--------------------------------------------------------------------------
-| MATERIAL CONSUMPTION
-|--------------------------------------------------------------------------
-*/
-
+ * GET MATERIAL CONSUMPTION
+ */
 export const getMaterialConsumption =
   async (
     req: AuthRequest,
@@ -919,7 +1031,7 @@ export const getMaterialConsumption =
         })
           .populate(
             "material",
-            "name sku unit"
+            "name sku unit image"
           )
           .sort({
             createdAt: 1,
@@ -929,7 +1041,10 @@ export const getMaterialConsumption =
         records
       );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "GET MATERIAL CONSUMPTION ERROR:",
+        error
+      );
 
       return res.status(500).json({
         message:
@@ -939,11 +1054,12 @@ export const getMaterialConsumption =
   };
 
 /*
-|--------------------------------------------------------------------------
-| DELETE PRODUCTION
-|--------------------------------------------------------------------------
-*/
-
+ * DELETE PRODUCTION ORDER
+ *
+ * CRM / FOUNDER responsibility.
+ *
+ * Production staff cannot delete orders.
+ */
 export const deleteProduction =
   async (
     req: AuthRequest,
@@ -963,12 +1079,11 @@ export const deleteProduction =
       }
 
       /*
-       * Delete production-side
+       * Remove production-side
        * consumption records too.
        *
        * This does NOT touch inventory.
        */
-
       await MaterialConsumption.deleteMany(
         {
           production:
@@ -985,7 +1100,10 @@ export const deleteProduction =
           "Production order deleted",
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "DELETE PRODUCTION ERROR:",
+        error
+      );
 
       return res.status(500).json({
         message:
@@ -995,11 +1113,8 @@ export const deleteProduction =
   };
 
 /*
-|--------------------------------------------------------------------------
-| CAPACITY CALCULATOR
-|--------------------------------------------------------------------------
-*/
-
+ * CAPACITY CALCULATOR
+ */
 export const calculateProduction =
   async (
     req: AuthRequest,
@@ -1036,12 +1151,64 @@ export const calculateProduction =
         result
       );
     } catch (error: any) {
-      console.error(error);
+      console.error(
+        "CALCULATE PRODUCTION ERROR:",
+        error
+      );
 
       return res.status(500).json({
         message:
-          error.message ||
+          error?.message ||
           "Failed to calculate production.",
+      });
+    }
+  };
+
+/*
+ * UPLOAD PRODUCTION ORDER IMAGE
+ *
+ * The route must attach the Cloudinary
+ * upload middleware before this controller.
+ *
+ * Expected:
+ * multipart/form-data
+ * field name: image
+ *
+ * Returns:
+ * {
+ *   image: "cloudinary-url"
+ * }
+ */
+export const uploadProductionImage =
+  async (
+    req: AuthRequest,
+    res: Response
+  ) => {
+    try {
+      const file =
+        (req as any).file;
+
+      if (!file) {
+        return res.status(400).json({
+          message:
+            "Image is required",
+        });
+      }
+
+      return res.json({
+        image:
+          file.path,
+      });
+    } catch (error: any) {
+      console.error(
+        "UPLOAD PRODUCTION IMAGE ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        message:
+          error?.message ||
+          "Failed to upload production image",
       });
     }
   };

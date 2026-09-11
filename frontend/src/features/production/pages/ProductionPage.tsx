@@ -1,50 +1,43 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import AdminLayout from "../../../app/layouts/AdminLayout";
-
-import api from "../../../services/api/axios";
 
 import { getBOMs } from "../../bom/services/bom.service";
 
 import {
   getProductions,
-  createProduction,
-  updateProduction,
-  deleteProduction,
   calculateProduction,
   getMaterialConsumption,
 } from "../services/production.services";
 
-import {
-  getProductionClients,
-  createProductionClient,
-} from "../services/productionClient.service";
-
-import ProductionCreateModal from "../components/ProductionCreateModal";
 import ProductionProgressModal from "../components/ProductionProgressModal";
 import ProductionCompletionModal from "../components/ProductionCompletionModal";
-import ProductionEditModal from "../components/ProductionEditModal";
 
 import { exportCapacityExcel } from "../../../utils/exportCapacityExcel";
 import { exportCapacityPdf } from "../../../utils/exportCapacityPdf";
 import { exportProductionReceiptPdf } from "../../../utils/exportProductionReceiptPdf";
 
+import {
+  FiBox,
+  FiCalendar,
+  FiCheckCircle,
+  FiChevronRight,
+  FiClock,
+  FiImage,
+  FiInfo,
+  FiLayers,
+  FiMaximize2,
+  FiPackage,
+  FiTruck,
+  FiX,
+} from "react-icons/fi";
+
 const ProductionPage = () => {
   const [productions, setProductions] =
-    useState<any[]>([]);
-
-  const [clients, setClients] =
-    useState<any[]>([]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | ACCOUNT CUSTOMERS
-  |--------------------------------------------------------------------------
-  | Existing customers from Accounts are available alongside
-  | the existing ProductionClient records.
-  */
-
-  const [accountCustomers, setAccountCustomers] =
     useState<any[]>([]);
 
   const [boms, setBoms] =
@@ -64,9 +57,6 @@ const ProductionPage = () => {
       "orders"
     );
 
-  const [showCreateModal, setShowCreateModal] =
-    useState(false);
-
   const [showProgressModal, setShowProgressModal] =
     useState(false);
 
@@ -85,8 +75,8 @@ const ProductionPage = () => {
   const [, setMaterialConsumption] =
     useState<any[]>([]);
 
-  const [showEditModal, setShowEditModal] =
-    useState(false);
+  const [previewImage, setPreviewImage] =
+    useState<string | null>(null);
 
   /*
   |--------------------------------------------------------------------------
@@ -101,53 +91,52 @@ const ProductionPage = () => {
       const [
         productionData,
         bomData,
-        clientData,
-        accountCustomerResponse,
       ] = await Promise.all([
         getProductions(),
         getBOMs(),
-        getProductionClients(),
-
-        /*
-         * Existing Accounts API.
-         *
-         * We only use CUSTOMER + Active records below.
-         */
-        api.get("/accounts/party"),
       ]);
 
-      setProductions(productionData);
-      setBoms(bomData);
-      setClients(clientData);
+      const safeProductions =
+        Array.isArray(productionData)
+          ? productionData
+          : [];
 
-      setAccountCustomers(
-        (
-          accountCustomerResponse.data || []
-        ).filter(
-          (party: any) =>
-            party.partyType === "CUSTOMER" &&
-            party.status === "Active"
-        )
+      const safeBOMs =
+        Array.isArray(bomData)
+          ? bomData
+          : [];
+
+      setProductions(
+        safeProductions
       );
 
-      if (productionData.length > 0) {
+      setBoms(
+        safeBOMs
+      );
+
+      if (
+        safeProductions.length > 0
+      ) {
         setSelectedProduction(
           (current: any) => {
             if (!current) {
-              return productionData[0];
+              return safeProductions[0];
             }
 
             return (
-              productionData.find(
+              safeProductions.find(
                 (item: any) =>
-                  item._id === current._id
+                  item._id ===
+                  current._id
               ) ||
-              productionData[0]
+              safeProductions[0]
             );
           }
         );
       } else {
-        setSelectedProduction(null);
+        setSelectedProduction(
+          null
+        );
       }
     } catch (error) {
       console.error(error);
@@ -166,7 +155,7 @@ const ProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | LOAD MATERIAL CONSUMPTION
+  | MATERIAL CONSUMPTION
   |--------------------------------------------------------------------------
   */
 
@@ -179,7 +168,11 @@ const ProductionPage = () => {
           productionId
         );
 
-      setMaterialConsumption(data);
+      setMaterialConsumption(
+        Array.isArray(data)
+          ? data
+          : []
+      );
     } catch (error) {
       console.error(error);
 
@@ -188,7 +181,9 @@ const ProductionPage = () => {
   };
 
   useEffect(() => {
-    if (!selectedProduction?._id) {
+    if (
+      !selectedProduction?._id
+    ) {
       setMaterialConsumption([]);
 
       return;
@@ -203,7 +198,7 @@ const ProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | SELECTED ITEM
+  | SELECTED PRODUCT
   |--------------------------------------------------------------------------
   */
 
@@ -214,7 +209,79 @@ const ProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | CAPACITY FOR SELECTED ITEM
+  | PRODUCT IMAGE
+  |--------------------------------------------------------------------------
+  |
+  | Production order stores an image snapshot.
+  | Fallback to populated product.image if available.
+  |
+  */
+
+  const getItemImage = (
+    item: any
+  ) => {
+    return (
+      item?.image ||
+      item?.product?.image ||
+      ""
+    );
+  };
+
+  const getItemName = (
+    item: any,
+    index = 0
+  ) => {
+    return (
+      item?.product?.name ||
+      item?.productName ||
+      `Product ${index + 1}`
+    );
+  };
+
+  const getItemMarka = (
+    item: any
+  ) => {
+    return (
+      item?.marka ||
+      item?.product?.marka ||
+      item?.product?.brand ||
+      ""
+    );
+  };
+
+  const getItemSku = (
+    item: any
+  ) => {
+    return (
+      item?.product?.sku ||
+      item?.sku ||
+      ""
+    );
+  };
+
+  const getItemCategory = (
+    item: any
+  ) => {
+    const category =
+      item?.category ||
+      item?.product?.category;
+
+    if (
+      typeof category ===
+      "object"
+    ) {
+      return (
+        category?.name ||
+        ""
+      );
+    }
+
+    return category || "";
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | PRODUCTION AVAILABILITY
   |--------------------------------------------------------------------------
   */
 
@@ -229,7 +296,9 @@ const ProductionPage = () => {
         !selectedItem?.bom ||
         !selectedItem?.quantity
       ) {
-        setSelectedAvailability(null);
+        setSelectedAvailability(
+          null
+        );
 
         return;
       }
@@ -257,7 +326,9 @@ const ProductionPage = () => {
       } catch (error) {
         console.error(error);
 
-        setSelectedAvailability(null);
+        setSelectedAvailability(
+          null
+        );
       }
     };
 
@@ -272,46 +343,7 @@ const ProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | CREATE
-  |--------------------------------------------------------------------------
-  */
-
-  const handleCreate = async (
-    data: any
-  ) => {
-    await createProduction(data);
-
-    await loadData();
-  };
-
-  /*
-  |--------------------------------------------------------------------------
-  | CREATE CLIENT
-  |--------------------------------------------------------------------------
-  |
-  | Existing ProductionClient creation remains untouched.
-  | AccountParty customers are selected from Accounts instead.
-  */
-
-  const handleCreateClient = async (
-    data: any
-  ) => {
-    const created =
-      await createProductionClient(
-        data
-      );
-
-    setClients((current) => [
-      created,
-      ...current,
-    ]);
-
-    return created;
-  };
-
-  /*
-  |--------------------------------------------------------------------------
-  | REFRESH AFTER MODAL
+  | REFRESH
   |--------------------------------------------------------------------------
   */
 
@@ -322,181 +354,141 @@ const ProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | DELETE
+  | CALCULATOR
   |--------------------------------------------------------------------------
   */
 
-  const handleDelete = async () => {
-    if (!selectedProduction) {
-      return;
-    }
+  const handleCalculate =
+    async () => {
+      if (!calculatorBOM) {
+        alert(
+          "Select a BOM."
+        );
 
-    const confirmed =
-      window.confirm(
-        `Delete ${selectedProduction.orderNumber}?`
-      );
+        return;
+      }
 
-    if (!confirmed) {
-      return;
-    }
+      if (
+        !calculatorQuantity ||
+        calculatorQuantity <= 0
+      ) {
+        alert(
+          "Enter a valid quantity."
+        );
 
-    try {
-      await deleteProduction(
-        selectedProduction._id
-      );
+        return;
+      }
 
-      setSelectedProduction(null);
+      try {
+        const result =
+          await calculateProduction({
+            bom:
+              calculatorBOM,
 
-      await loadData();
-    } catch (error) {
-      console.error(error);
+            quantity:
+              Number(
+                calculatorQuantity
+              ),
+          });
 
-      alert(
-        "Failed to delete production order."
-      );
-    }
-  };
+        setCalculatorResult(
+          result
+        );
+      } catch (error) {
+        console.error(error);
+
+        alert(
+          "Failed to calculate production capacity."
+        );
+      }
+    };
 
   /*
   |--------------------------------------------------------------------------
-  | QUICK EDIT
-  |--------------------------------------------------------------------------
-  |
-  | Keeps the deadline-friendly version simple.
-  | Full item editing will be handled through
-  | the production modal in the next polish pass.
-  */
-
-  const handleEdit = () => {
-    if (!selectedProduction) return;
-
-    setShowEditModal(true);
-  };
-
-  /*
-  |--------------------------------------------------------------------------
-  | CAPACITY CALCULATOR
+  | EXPORTS
   |--------------------------------------------------------------------------
   */
 
-  const handleCalculate = async () => {
-    if (!calculatorBOM) {
-      alert("Select a BOM.");
+  const handleExportExcel =
+    () => {
+      if (!calculatorResult) {
+        alert(
+          "Calculate capacity first."
+        );
 
-      return;
-    }
+        return;
+      }
 
-    if (
-      !calculatorQuantity ||
-      calculatorQuantity <= 0
-    ) {
-      alert(
-        "Enter a valid quantity."
+      const selectedBOM =
+        boms.find(
+          (bom: any) =>
+            bom._id ===
+            calculatorBOM
+        );
+
+      exportCapacityExcel(
+        calculatorResult,
+
+        selectedBOM
+          ?.finishedProduct
+          ?.name ||
+          "Production",
+
+        Number(
+          calculatorQuantity
+        ),
+
+        "Production_Capacity"
       );
+    };
 
-      return;
-    }
+  const handleExportPdf =
+    () => {
+      if (!calculatorResult) {
+        alert(
+          "Calculate capacity first."
+        );
 
-    try {
-      const result =
-        await calculateProduction({
-          bom: calculatorBOM,
+        return;
+      }
 
-          quantity:
-            Number(
-              calculatorQuantity
-            ),
-        });
+      const selectedBOM =
+        boms.find(
+          (bom: any) =>
+            bom._id ===
+            calculatorBOM
+        );
 
-      setCalculatorResult(
-        result
+      exportCapacityPdf(
+        calculatorResult,
+
+        selectedBOM
+          ?.finishedProduct
+          ?.name ||
+          "Production",
+
+        Number(
+          calculatorQuantity
+        ),
+
+        "Production Capacity Report"
       );
-    } catch (error) {
-      console.error(error);
+    };
 
-      alert(
-        "Failed to calculate production capacity."
+  const handleExportReceipt =
+    () => {
+      if (!selectedProduction) {
+        alert(
+          "Select a production order first."
+        );
+
+        return;
+      }
+
+      exportProductionReceiptPdf(
+        selectedProduction
       );
-    }
-  };
-
-  /*
-  |--------------------------------------------------------------------------
-  | EXPORT CAPACITY
-  |--------------------------------------------------------------------------
-  */
-
-  const handleExportExcel = () => {
-    if (!calculatorResult) {
-      alert(
-        "Calculate capacity first."
-      );
-
-      return;
-    }
-
-    const selectedBOM = boms.find(
-      (bom: any) =>
-        bom._id === calculatorBOM
-    );
-
-    exportCapacityExcel(
-      calculatorResult,
-
-      selectedBOM
-        ?.finishedProduct?.name ||
-        "Production",
-
-      Number(
-        calculatorQuantity
-      ),
-
-      "Production_Capacity"
-    );
-  };
-
-  const handleExportPdf = () => {
-    if (!calculatorResult) {
-      alert(
-        "Calculate capacity first."
-      );
-
-      return;
-    }
-
-    const selectedBOM = boms.find(
-      (bom: any) =>
-        bom._id === calculatorBOM
-    );
-
-    exportCapacityPdf(
-      calculatorResult,
-
-      selectedBOM
-        ?.finishedProduct?.name ||
-        "Production",
-
-      Number(
-        calculatorQuantity
-      ),
-
-      "Production Capacity Report"
-    );
-  };
-
-  const handleExportReceipt = () => {
-    if (!selectedProduction) {
-      alert(
-        "Select a production order first."
-      );
-
-      return;
-    }
-
-    exportProductionReceiptPdf(
-      selectedProduction
-    );
-  };
+    };
 
   /*
   |--------------------------------------------------------------------------
@@ -537,31 +529,84 @@ const ProductionPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | STATUS CLASS
+  | STATUS
   |--------------------------------------------------------------------------
   */
 
-  const getStatusClass = (
-    status: string
+  const getStatusClass =
+    (
+      status: string
+    ) => {
+      switch (status) {
+        case "Completed":
+          return "bg-emerald-50 text-emerald-700 border-emerald-100";
+
+        case "In Progress":
+        case "Started":
+          return "bg-blue-50 text-blue-700 border-blue-100";
+
+        case "Approved":
+          return "bg-purple-50 text-purple-700 border-purple-100";
+
+        case "Cancelled":
+          return "bg-red-50 text-red-700 border-red-100";
+
+        default:
+          return "bg-orange-50 text-orange-700 border-orange-100";
+      }
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | PROGRESS
+  |--------------------------------------------------------------------------
+  */
+
+  const getItemProgress = (
+    item: any
   ) => {
-    switch (status) {
-      case "Completed":
-        return "bg-green-100 text-green-700";
+    const quantity =
+      Number(
+        item?.quantity
+      ) || 0;
 
-      case "In Progress":
-      case "Started":
-        return "bg-blue-100 text-blue-700";
+    const actual =
+      Number(
+        item?.actualQuantity
+      ) || 0;
 
-      case "Approved":
-        return "bg-purple-100 text-purple-700";
-
-      case "Cancelled":
-        return "bg-red-100 text-red-700";
-
-      default:
-        return "bg-orange-100 text-orange-700";
+    if (
+      item?.completed
+    ) {
+      return 100;
     }
+
+    if (
+      quantity <= 0
+    ) {
+      return 0;
+    }
+
+    return Math.min(
+      100,
+      Math.round(
+        (actual /
+          quantity) *
+          100
+      )
+    );
   };
+
+  const selectedProgress =
+    getItemProgress(
+      selectedItem
+    );
+
+  /*
+  |--------------------------------------------------------------------------
+  | RENDER
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <AdminLayout>
@@ -569,44 +614,50 @@ const ProductionPage = () => {
 
         {/* HEADER */}
 
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 
           <div>
-            <p className="text-sm text-slate-500">
-              Admin &gt; Production
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#17357A]">
+              Admin / Production
             </p>
 
-            <h1 className="mt-1 text-3xl font-bold text-slate-900">
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
               Production Management
             </h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Orders, production planning,
-              capacity and completion tracking
+              Production execution, progress and completion tracking
             </p>
           </div>
 
-          <button
-            onClick={() =>
-              setShowCreateModal(true)
-            }
-            className="rounded-xl bg-[#17357A] px-5 py-3 font-semibold text-white shadow-sm hover:bg-[#102b68]"
-          >
-            + New Production Order
-          </button>
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm">
+            <FiPackage size={14} />
+
+            <span>
+              {productions.length} production{" "}
+              {productions.length === 1
+                ? "order"
+                : "orders"}
+            </span>
+          </div>
+
         </div>
 
         {/* TABS */}
 
-        <div className="mb-5 flex gap-2 rounded-xl border bg-white p-1 shadow-sm">
+        <div className="mb-5 flex w-fit gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
 
           <button
+            type="button"
             onClick={() =>
-              setActiveTab("orders")
+              setActiveTab(
+                "orders"
+              )
             }
-            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
-              activeTab === "orders"
-                ? "bg-[#17357A] text-white"
+            className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition ${
+              activeTab ===
+              "orders"
+                ? "bg-[#17357A] text-white shadow-sm"
                 : "text-slate-600 hover:bg-slate-50"
             }`}
           >
@@ -614,104 +665,159 @@ const ProductionPage = () => {
           </button>
 
           <button
+            type="button"
             onClick={() =>
               setActiveTab(
                 "calculator"
               )
             }
-            className={`rounded-lg px-5 py-2.5 text-sm font-semibold ${
+            className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition ${
               activeTab ===
               "calculator"
-                ? "bg-[#17357A] text-white"
+                ? "bg-[#17357A] text-white shadow-sm"
                 : "text-slate-600 hover:bg-slate-50"
             }`}
           >
             Capacity Calculator
           </button>
+
         </div>
 
         {/* STATS */}
 
-        <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Total Orders
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Total Orders
+              </p>
 
-            <p className="mt-2 text-3xl font-bold">
+              <FiLayers
+                size={16}
+                className="text-slate-400"
+              />
+            </div>
+
+            <p className="mt-2 text-3xl font-bold text-slate-900">
               {stats.total}
             </p>
           </div>
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Active
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Active
+              </p>
+
+              <FiClock
+                size={16}
+                className="text-blue-600"
+              />
+            </div>
 
             <p className="mt-2 text-3xl font-bold text-blue-700">
               {stats.active}
             </p>
           </div>
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Completed
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Completed
+              </p>
 
-            <p className="mt-2 text-3xl font-bold text-green-600">
+              <FiCheckCircle
+                size={16}
+                className="text-emerald-600"
+              />
+            </div>
+
+            <p className="mt-2 text-3xl font-bold text-emerald-600">
               {stats.completed}
             </p>
           </div>
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">
-              Draft Orders
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Draft Orders
+              </p>
+
+              <FiClock
+                size={16}
+                className="text-orange-500"
+              />
+            </div>
 
             <p className="mt-2 text-3xl font-bold text-orange-600">
               {stats.drafts}
             </p>
           </div>
+
         </div>
 
-        {/* ================================================================= */}
         {/* ORDERS */}
-        {/* ================================================================= */}
 
-        {activeTab === "orders" && (
-          <div className="grid gap-5 xl:grid-cols-[280px_1fr_360px]">
+        {activeTab ===
+          "orders" && (
+          <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_390px]">
 
             {/* ORDER LIST */}
 
-            <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-              <div className="border-b p-4">
+              <div className="border-b border-slate-100 p-4">
+
                 <div className="flex items-center justify-between">
-                  <h2 className="font-bold">
-                    Orders
-                  </h2>
 
-                  <span className="text-xs text-slate-500">
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      Production Orders
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      Select an order to inspect
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                     {productions.length}
                   </span>
+
                 </div>
+
               </div>
 
-              <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+              <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
 
                 {loading ? (
                   <div className="p-6 text-sm text-slate-500">
-                    Loading...
+                    Loading production orders...
                   </div>
                 ) : productions.length ===
                   0 ? (
-                  <div className="p-6 text-sm text-slate-500">
-                    No production orders.
+                  <div className="p-8 text-center">
+
+                    <FiPackage
+                      size={30}
+                      className="mx-auto text-slate-300"
+                    />
+
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      No production orders
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Orders created from CRM will appear here.
+                    </p>
+
                   </div>
                 ) : (
                   productions.map(
-                    (production) => {
+                    (
+                      production
+                    ) => {
                       const isSelected =
                         selectedProduction?._id ===
                         production._id;
@@ -719,8 +825,23 @@ const ProductionPage = () => {
                       const client =
                         production.client;
 
+                      const firstItem =
+                        production.items?.[0];
+
+                      const image =
+                        getItemImage(
+                          firstItem
+                        );
+
+                      const itemCount =
+                        production
+                          .items
+                          ?.length ||
+                        0;
+
                       return (
                         <button
+                          type="button"
                           key={
                             production._id
                           }
@@ -733,100 +854,155 @@ const ProductionPage = () => {
                               0
                             );
                           }}
-                          className={`w-full border-b p-4 text-left transition ${
+                          className={`group w-full border-b border-slate-100 p-3 text-left transition ${
                             isSelected
-                              ? "bg-blue-50"
+                              ? "bg-blue-50/70"
                               : "hover:bg-slate-50"
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2">
 
-                            <div>
-                              <p className="font-bold text-slate-900">
-                                {
-                                  production.orderNumber
-                                }
-                              </p>
+                          <div className="flex gap-3">
 
-                              <p className="mt-1 text-sm text-slate-600">
-                                {client?.name ||
-                                  client?.companyName ||
-                                  client?.firmName ||
-                                  "No client"}
-                              </p>
+                            {/* THUMBNAIL */}
+
+                            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+
+                              {image ? (
+                                <img
+                                  src={
+                                    image
+                                  }
+                                  alt={getItemName(
+                                    firstItem
+                                  )}
+                                  className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                  <FiImage
+                                    size={20}
+                                  />
+                                </div>
+                              )}
+
                             </div>
 
-                            <span
-                              className={`rounded-full px-2 py-1 text-[10px] font-semibold ${getStatusClass(
-                                production.status
-                              )}`}
-                            >
-                              {
-                                production.status
-                              }
-                            </span>
+                            {/* ORDER INFO */}
+
+                            <div className="min-w-0 flex-1">
+
+                              <div className="flex items-start justify-between gap-2">
+
+                                <div className="min-w-0">
+
+                                  <p className="truncate text-sm font-bold text-slate-900">
+                                    {
+                                      production.orderNumber
+                                    }
+                                  </p>
+
+                                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                                    {client?.name ||
+                                      client?.companyName ||
+                                      client?.firmName ||
+                                      "No client"}
+                                  </p>
+
+                                </div>
+
+                                <span
+                                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold ${getStatusClass(
+                                    production.status
+                                  )}`}
+                                >
+                                  {
+                                    production.status
+                                  }
+                                </span>
+
+                              </div>
+
+                              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+
+                                <span>
+                                  {itemCount}{" "}
+                                  product
+                                  {itemCount ===
+                                  1
+                                    ? ""
+                                    : "s"}
+                                </span>
+
+                                <span>
+                                  {production.targetDate
+                                    ? new Date(
+                                        production.targetDate
+                                      ).toLocaleDateString(
+                                        "en-IN"
+                                      )
+                                    : "-"}
+                                </span>
+
+                              </div>
+
+                            </div>
+
                           </div>
 
-                          <div className="mt-3 flex justify-between text-xs text-slate-500">
-                            <span>
-                              {
-                                production
-                                  .items
-                                  ?.length
-                              }{" "}
-                              product
-                              {production
-                                .items
-                                ?.length ===
-                                1
-                                ? ""
-                                : "s"}
-                            </span>
-
-                            <span>
-                              {production.targetDate
-                                ? new Date(
-                                    production.targetDate
-                                  ).toLocaleDateString(
-                                    "en-IN"
-                                  )
-                                : "-"}
-                            </span>
-                          </div>
                         </button>
                       );
                     }
                   )
                 )}
+
               </div>
+
             </div>
 
             {/* ORDER INFORMATION */}
 
-            <div className="min-w-0 rounded-2xl border bg-white shadow-sm">
+            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
               {!selectedProduction ? (
-                <div className="flex min-h-[500px] items-center justify-center p-8 text-slate-500">
-                  Select an order.
+                <div className="flex min-h-[550px] flex-col items-center justify-center p-8 text-center">
+
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-[#17357A]">
+                    <FiPackage
+                      size={28}
+                    />
+                  </div>
+
+                  <p className="mt-4 font-semibold text-slate-800">
+                    Select a production order
+                  </p>
+
+                  <p className="mt-1 max-w-xs text-sm text-slate-400">
+                    Product information, photographs and production details will appear here.
+                  </p>
+
                 </div>
               ) : (
                 <>
-                  <div className="border-b p-5">
 
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  {/* ORDER HEADER */}
 
-                      <div>
-                        <p className="text-xs uppercase tracking-wider text-slate-400">
+                  <div className="border-b border-slate-100 p-5">
+
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+
+                      <div className="min-w-0">
+
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#17357A]">
                           Production Order
                         </p>
 
-                        <h2 className="mt-1 text-2xl font-bold">
+                        <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
                           {
                             selectedProduction.orderNumber
                           }
                         </h2>
 
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-xs text-slate-400">
                           Created{" "}
                           {selectedProduction.createdAt
                             ? new Date(
@@ -836,10 +1012,11 @@ const ProductionPage = () => {
                               )
                             : "-"}
                         </p>
+
                       </div>
 
                       <span
-                        className={`w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${getStatusClass(
+                        className={`w-fit rounded-full border px-3 py-1.5 text-xs font-semibold ${getStatusClass(
                           selectedProduction.status
                         )}`}
                       >
@@ -847,22 +1024,27 @@ const ProductionPage = () => {
                           selectedProduction.status
                         }
                       </span>
+
                     </div>
+
                   </div>
 
-                  <div className="grid gap-4 border-b p-5 md:grid-cols-2">
+                  {/* CLIENT / SCHEDULE */}
+
+                  <div className="grid gap-4 border-b border-slate-100 bg-slate-50/50 p-5 sm:grid-cols-2">
 
                     <div>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                         Client
                       </p>
 
-                      <p className="mt-1 font-semibold">
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
                         {
                           selectedProduction
                             .client?.name ||
                           selectedProduction
-                            .client?.companyName ||
+                            .client
+                            ?.companyName ||
                           selectedProduction
                             .client?.firmName ||
                           "-"
@@ -872,7 +1054,7 @@ const ProductionPage = () => {
                       {selectedProduction
                         .client
                         ?.contactPerson && (
-                        <p className="text-sm text-slate-500">
+                        <p className="mt-0.5 text-xs text-slate-500">
                           {
                             selectedProduction
                               .client
@@ -880,30 +1062,14 @@ const ProductionPage = () => {
                           }
                         </p>
                       )}
-
-                      {(
-                        selectedProduction
-                          .client?.phone ||
-                        selectedProduction
-                          .client?.transportPhone
-                      ) && (
-                        <p className="text-sm text-slate-500">
-                          {
-                            selectedProduction
-                              .client?.phone ||
-                            selectedProduction
-                              .client?.transportPhone
-                          }
-                        </p>
-                      )}
                     </div>
 
                     <div>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                         Production Team
                       </p>
 
-                      <p className="mt-1 font-semibold">
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
                         {
                           selectedProduction.team ||
                           "Unassigned"
@@ -912,11 +1078,14 @@ const ProductionPage = () => {
                     </div>
 
                     <div>
-                      <p className="text-xs text-slate-400">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        <FiCalendar
+                          size={11}
+                        />
                         Target Date
                       </p>
 
-                      <p className="mt-1 font-semibold">
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
                         {selectedProduction.targetDate
                           ? new Date(
                               selectedProduction.targetDate
@@ -928,238 +1097,590 @@ const ProductionPage = () => {
                     </div>
 
                     <div>
-                      <p className="text-xs text-slate-400">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        <FiTruck
+                          size={11}
+                        />
                         Transport
                       </p>
 
-                      <p className="mt-1 font-semibold">
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
                         {
                           selectedProduction.transport ||
                           "-"
                         }
                       </p>
                     </div>
+
                   </div>
+
+                  {/* ORDER PRODUCTS */}
 
                   <div className="p-5">
 
-                    <h3 className="mb-3 font-bold">
-                      Order Summary
-                    </h3>
+                    <div className="mb-3 flex items-center justify-between">
+
+                      <div>
+                        <h3 className="font-bold text-slate-900">
+                          Products
+                        </h3>
+
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          Select a product to inspect its production details
+                        </p>
+                      </div>
+
+                      <span className="text-xs font-medium text-slate-400">
+                        {
+                          selectedProduction
+                            .items
+                            ?.length ||
+                          0
+                        }
+                      </span>
+
+                    </div>
 
                     <div className="space-y-2">
+
                       {selectedProduction.items?.map(
                         (
                           item: any,
                           index: number
-                        ) => (
-                          <button
-                            key={
-                              item._id ||
+                        ) => {
+                          const image =
+                            getItemImage(
+                              item
+                            );
+
+                          const progress =
+                            getItemProgress(
+                              item
+                            );
+
+                          const name =
+                            getItemName(
+                              item,
                               index
-                            }
-                            onClick={() =>
-                              setSelectedItemIndex(
+                            );
+
+                          return (
+                            <button
+                              type="button"
+                              key={
+                                item._id ||
                                 index
-                              )
-                            }
-                            className={`flex w-full items-center justify-between rounded-xl border p-3 text-left ${
-                              selectedItemIndex ===
-                              index
-                                ? "border-blue-300 bg-blue-50"
-                                : "hover:bg-slate-50"
-                            }`}
-                          >
-                            <div>
-                              <p className="font-semibold">
-                                {item.product
-                                  ?.name ||
-                                  `Product ${
-                                    index + 1
-                                  }`}
-                              </p>
-
-                              <p className="text-xs text-slate-500">
-                                Qty:{" "}
-                                {
-                                  item.quantity
-                                }
-                              </p>
-                            </div>
-
-                            <span
-                              className={`rounded-full px-2 py-1 text-xs ${
-                                item.completed
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-slate-100 text-slate-600"
+                              }
+                              onClick={() =>
+                                setSelectedItemIndex(
+                                  index
+                                )
+                              }
+                              className={`group flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
+                                selectedItemIndex ===
+                                index
+                                  ? "border-blue-300 bg-blue-50/70 shadow-sm"
+                                  : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                               }`}
                             >
-                              {item.completed
-                                ? "Completed"
-                                : "Pending"}
-                            </span>
-                          </button>
-                        )
+
+                              {/* PRODUCT IMAGE */}
+
+                              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+
+                                {image ? (
+                                  <img
+                                    src={
+                                      image
+                                    }
+                                    alt={
+                                      name
+                                    }
+                                    className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                    <FiImage
+                                      size={20}
+                                    />
+                                  </div>
+                                )}
+
+                              </div>
+
+                              {/* PRODUCT INFO */}
+
+                              <div className="min-w-0 flex-1">
+
+                                <div className="flex items-start justify-between gap-3">
+
+                                  <div className="min-w-0">
+
+                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                      {
+                                        name
+                                      }
+                                    </p>
+
+                                    {getItemMarka(
+                                      item
+                                    ) && (
+                                      <p className="mt-0.5 text-xs text-slate-500">
+                                        {
+                                          getItemMarka(
+                                            item
+                                          )
+                                        }
+                                      </p>
+                                    )}
+
+                                  </div>
+
+                                  <span className="shrink-0 text-xs font-semibold text-slate-600">
+                                    Qty{" "}
+                                    {
+                                      item.quantity
+                                    }
+                                  </span>
+
+                                </div>
+
+                                <div className="mt-2 flex items-center gap-3">
+
+                                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+
+                                    <div
+                                      className="h-full rounded-full bg-[#17357A] transition-all"
+                                      style={{
+                                        width: `${progress}%`,
+                                      }}
+                                    />
+
+                                  </div>
+
+                                  <span className="w-9 text-right text-[10px] font-semibold text-slate-500">
+                                    {
+                                      progress
+                                    }
+                                    %
+                                  </span>
+
+                                </div>
+
+                              </div>
+
+                              <FiChevronRight
+                                size={16}
+                                className="shrink-0 text-slate-300"
+                              />
+
+                            </button>
+                          );
+                        }
                       )}
+
                     </div>
+
                   </div>
 
                   {/* ACTIONS */}
 
-                  <div className="flex flex-wrap gap-2 border-t bg-slate-50 p-4">
+                  <div className="flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50 p-4">
 
-                    <button
-                      onClick={
-                        handleEdit
-                      }
-                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
-                    >
-                      Edit
-                    </button>
-
-                    {selectedProduction
-                      .status !==
+                    {selectedProduction.status !==
                       "In Progress" &&
-                      selectedProduction
-                        .status !==
+                      selectedProduction.status !==
                         "Completed" && (
                         <button
+                          type="button"
                           onClick={() =>
                             setShowProgressModal(
                               true
                             )
                           }
-                          className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white"
+                          className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
                         >
                           Mark In Progress
                         </button>
                       )}
 
-                    {selectedProduction
-                      .status ===
+                    {selectedProduction.status ===
                       "In Progress" && (
                       <button
+                        type="button"
                         onClick={() =>
                           setShowCompletionModal(
                             true
                           )
                         }
-                        className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white"
+                        className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
                       >
                         Complete Production
                       </button>
                     )}
 
                     <button
-                      onClick={
-                        handleDelete
-                      }
-                      className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600"
-                    >
-                      Delete
-                    </button>
-
-                    <button
+                      type="button"
                       onClick={
                         handleExportReceipt
                       }
-                      className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                     >
                       Export Receipt
                     </button>
+
                   </div>
+
                 </>
               )}
+
             </div>
 
             {/* PRODUCT DETAILS */}
 
-            <div className="min-w-0 rounded-2xl border bg-white shadow-sm">
+            <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
               {!selectedItem ? (
-                <div className="p-6 text-sm text-slate-500">
+                <div className="flex min-h-[550px] items-center justify-center p-6 text-sm text-slate-500">
                   Select a product.
                 </div>
               ) : (
                 <>
-                  <div className="border-b p-5">
 
-                    <p className="text-xs uppercase tracking-wider text-slate-400">
-                      Selected Product
-                    </p>
+                  {/* PRODUCT HERO */}
 
-                    <h2 className="mt-1 text-xl font-bold">
-                      {
+                  <div className="border-b border-slate-100">
+
+                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+
+                      {getItemImage(
                         selectedItem
-                          .product?.name
-                      }
-                    </h2>
+                      ) ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreviewImage(
+                              getItemImage(
+                                selectedItem
+                              )
+                            )
+                          }
+                          className="group relative h-full w-full"
+                        >
 
-                    <p className="mt-1 text-sm text-slate-500">
-                      Quantity:{" "}
-                      {
-                        selectedItem.quantity
-                      }
-                    </p>
+                          <img
+                            src={getItemImage(
+                              selectedItem
+                            )}
+                            alt={getItemName(
+                              selectedItem
+                            )}
+                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+                          />
+
+                          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent p-4 pt-12">
+
+                            <div className="text-left text-white">
+
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+                                Selected Product
+                              </p>
+
+                              <p className="mt-1 text-lg font-bold">
+                                {
+                                  getItemName(
+                                    selectedItem
+                                  )
+                                }
+                              </p>
+
+                            </div>
+
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-sm backdrop-blur">
+                              <FiMaximize2
+                                size={16}
+                              />
+                            </span>
+
+                          </div>
+
+                        </button>
+                      ) : (
+                        <div className="flex h-full flex-col items-center justify-center text-slate-300">
+
+                          <FiImage
+                            size={42}
+                          />
+
+                          <p className="mt-3 text-xs font-medium text-slate-400">
+                            No product photo available
+                          </p>
+
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* PRODUCT INFO */}
+
+                    <div className="p-5">
+
+                      <div className="flex items-start justify-between gap-4">
+
+                        <div className="min-w-0">
+
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#17357A]">
+                            Product
+                          </p>
+
+                          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
+                            {
+                              getItemName(
+                                selectedItem
+                              )
+                            }
+                          </h2>
+
+                          {getItemMarka(
+                            selectedItem
+                          ) && (
+                            <p className="mt-1 text-sm text-slate-500">
+                              Marka:{" "}
+                              <span className="font-medium text-slate-700">
+                                {
+                                  getItemMarka(
+                                    selectedItem
+                                  )
+                                }
+                              </span>
+                            </p>
+                          )}
+
+                        </div>
+
+                        <div className="shrink-0 rounded-xl bg-blue-50 px-3 py-2 text-right">
+
+                          <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-500">
+                            Quantity
+                          </p>
+
+                          <p className="text-xl font-bold text-[#17357A]">
+                            {
+                              selectedItem.quantity
+                            }
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+
+                        {getItemSku(
+                          selectedItem
+                        ) && (
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+
+                            <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+                              SKU
+                            </p>
+
+                            <p className="mt-1 truncate text-xs font-semibold text-slate-700">
+                              {
+                                getItemSku(
+                                  selectedItem
+                                )
+                              }
+                            </p>
+
+                          </div>
+                        )}
+
+                        {getItemCategory(
+                          selectedItem
+                        ) && (
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+
+                            <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+                              Category
+                            </p>
+
+                            <p className="mt-1 truncate text-xs font-semibold text-slate-700">
+                              {
+                                getItemCategory(
+                                  selectedItem
+                                )
+                              }
+                            </p>
+
+                          </div>
+                        )}
+
+                      </div>
+
+                    </div>
+
                   </div>
+
+                  {/* PROGRESS */}
+
+                  <div className="border-b border-slate-100 p-5">
+
+                    <div className="flex items-center justify-between">
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Production Progress
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-slate-800">
+                          {
+                            selectedItem.actualQuantity ??
+                            0
+                          }{" "}
+                          of{" "}
+                          {
+                            selectedItem.quantity
+                          }{" "}
+                          completed
+                        </p>
+                      </div>
+
+                      <p className="text-2xl font-bold text-[#17357A]">
+                        {
+                          selectedProgress
+                        }%
+                      </p>
+
+                    </div>
+
+                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100">
+
+                      <div
+                        className="h-full rounded-full bg-[#17357A] transition-all duration-500"
+                        style={{
+                          width: `${selectedProgress}%`,
+                        }}
+                      />
+
+                    </div>
+
+                    <div className="mt-2 flex justify-between text-[10px] text-slate-400">
+
+                      <span>
+                        Started
+                      </span>
+
+                      <span>
+                        {selectedItem.completed
+                          ? "Completed"
+                          : selectedItem.readyForDispatch
+                            ? "Ready for dispatch"
+                            : "In production"}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                  {/* BOM */}
 
                   <div className="space-y-4 p-5">
 
-                    <div className="rounded-xl bg-slate-50 p-4">
-                      <p className="text-xs text-slate-400">
-                        BOM
-                      </p>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
 
-                      <p className="mt-1 font-semibold">
-                        {selectedItem.bom
-                          ?.finishedProduct
-                          ?.name ||
-                          "Assigned BOM"}
-                      </p>
+                      <div className="flex items-center gap-2">
+
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#17357A] shadow-sm">
+                          <FiLayers
+                            size={15}
+                          />
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Bill of Materials
+                          </p>
+
+                          <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                            {selectedItem.bom
+                              ?.finishedProduct
+                              ?.name ||
+                              "Assigned BOM"}
+                          </p>
+                        </div>
+
+                      </div>
+
                     </div>
 
-                    {/* BOTTLENECK */}
+                    {/* CAPACITY */}
 
-                    <div className="rounded-xl border p-4">
+                    <div className="rounded-xl border border-slate-200 p-4">
 
-                      <p className="text-xs text-slate-400">
-                        Production Capacity
-                      </p>
+                      <div className="flex items-start justify-between">
 
-                      <p className="mt-1 text-2xl font-bold">
-                        {selectedAvailability
-                          ?.maximumProducible ??
-                          "-"}
-                      </p>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Production Capacity
+                          </p>
 
-                      <p className="text-xs text-slate-500">
-                        maximum producible
-                      </p>
+                          <p className="mt-1 text-3xl font-bold text-slate-900">
+                            {selectedAvailability
+                              ?.maximumProducible ??
+                              "-"}
+                          </p>
+
+                          <p className="text-[10px] text-slate-400">
+                            maximum producible
+                          </p>
+                        </div>
+
+                        <FiBox
+                          size={20}
+                          className="text-slate-300"
+                        />
+
+                      </div>
 
                       {selectedAvailability
                         ?.bottleneck && (
-                        <div className="mt-3 rounded-lg bg-orange-50 p-3">
-                          <p className="text-xs text-orange-600">
+                        <div className="mt-4 rounded-xl border border-orange-100 bg-orange-50 p-3">
+
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
                             Bottleneck
                           </p>
 
-                          <p className="font-semibold text-orange-800">
+                          <p className="mt-1 text-sm font-bold text-orange-800">
                             {
                               selectedAvailability.bottleneck
                             }
                           </p>
+
                         </div>
                       )}
+
                     </div>
 
                     {/* MATERIALS */}
 
                     <div>
-                      <p className="mb-2 font-semibold">
-                        Material Availability
-                      </p>
+
+                      <div className="mb-2 flex items-center justify-between">
+
+                        <p className="font-semibold text-slate-900">
+                          Material Availability
+                        </p>
+
+                        <FiInfo
+                          size={14}
+                          className="text-slate-300"
+                        />
+
+                      </div>
 
                       <div className="space-y-2">
+
                         {selectedAvailability
                           ?.materials
                           ?.map(
@@ -1171,167 +1692,257 @@ const ProductionPage = () => {
                                 key={
                                   index
                                 }
-                                className="rounded-lg border p-3"
+                                className="rounded-xl border border-slate-200 p-3"
                               >
+
                                 <div className="flex items-center justify-between gap-3">
-                                  <span className="text-sm font-medium">
+
+                                  <span className="min-w-0 truncate text-sm font-medium text-slate-800">
                                     {
                                       material.product
                                     }
                                   </span>
 
                                   <span
-                                    className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                                    className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${
                                       material.sufficient
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-red-100 text-red-700"
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : "bg-red-50 text-red-700"
                                     }`}
                                   >
                                     {material.sufficient
                                       ? "Available"
                                       : "Short"}
                                   </span>
+
                                 </div>
 
-                                <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-slate-500">
-                                  <span>
-                                    Required{" "}
-                                    <strong className="text-slate-800">
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+
+                                  <div>
+                                    <p className="text-[9px] uppercase tracking-wide text-slate-400">
+                                      Required
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
                                       {
                                         material.required
                                       }
-                                    </strong>
-                                  </span>
+                                    </p>
+                                  </div>
 
-                                  <span>
-                                    Available{" "}
-                                    <strong className="text-slate-800">
+                                  <div>
+                                    <p className="text-[9px] uppercase tracking-wide text-slate-400">
+                                      Available
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
                                       {
                                         material.available
                                       }
-                                    </strong>
-                                  </span>
+                                    </p>
+                                  </div>
 
-                                  <span>
-                                    Short{" "}
-                                    <strong className="text-red-600">
+                                  <div>
+                                    <p className="text-[9px] uppercase tracking-wide text-slate-400">
+                                      Short
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs font-semibold text-red-600">
                                       {
                                         material.shortage
                                       }
-                                    </strong>
-                                  </span>
+                                    </p>
+                                  </div>
+
                                 </div>
+
                               </div>
                             )
                           ) || (
-                          <p className="text-sm text-slate-500">
-                            No calculation available.
-                          </p>
+                          <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+                            No material calculation available.
+                          </div>
                         )}
+
                       </div>
+
                     </div>
 
                     {/* CHECKLIST */}
 
                     <div>
-                      <p className="mb-2 font-semibold">
+
+                      <p className="mb-2 font-semibold text-slate-900">
                         Production Checklist
                       </p>
 
-                      <div className="rounded-xl border p-3 text-sm">
-                        <p>
-                          Preparing:{" "}
-                          <span className="text-slate-500">
-                            {selectedItem
-                              .checklist
-                              ?.preparing
-                              ?.join(
-                                ", "
-                              ) ||
-                              "Nothing recorded"}
-                          </span>
-                        </p>
+                      <div className="rounded-xl border border-slate-200 p-4">
 
-                        <p className="mt-2">
-                          Leaving:{" "}
-                          <span className="text-slate-500">
-                            {selectedItem
-                              .checklist
-                              ?.leaving
-                              ?.join(
-                                ", "
-                              ) ||
-                              "Nothing recorded"}
-                          </span>
-                        </p>
+                        <div className="flex gap-3">
+
+                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#17357A]">
+                            <FiCheckCircle
+                              size={14}
+                            />
+                          </div>
+
+                          <div className="min-w-0">
+
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              Preparing
+                            </p>
+
+                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                              {selectedItem
+                                .checklist
+                                ?.preparing
+                                ?.join(
+                                  ", "
+                                ) ||
+                                "Nothing recorded"}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                        <div className="my-4 border-t border-slate-100" />
+
+                        <div className="flex gap-3">
+
+                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                            <FiTruck
+                              size={14}
+                            />
+                          </div>
+
+                          <div className="min-w-0">
+
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              Leaving
+                            </p>
+
+                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                              {selectedItem
+                                .checklist
+                                ?.leaving
+                                ?.join(
+                                  ", "
+                                ) ||
+                                "Nothing recorded"}
+                            </p>
+
+                          </div>
+
+                        </div>
 
                         {selectedItem
                           .checklist
                           ?.reason && (
-                          <p className="mt-2 text-xs text-orange-600">
-                            Reason:{" "}
-                            {
-                              selectedItem
-                                .checklist
-                                .reason
-                            }
-                          </p>
+                          <>
+                            <div className="my-4 border-t border-slate-100" />
+
+                            <div className="rounded-lg bg-orange-50 p-3">
+
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
+                                Reason
+                              </p>
+
+                              <p className="mt-1 text-xs leading-5 text-orange-800">
+                                {
+                                  selectedItem
+                                    .checklist
+                                    .reason
+                                }
+                              </p>
+
+                            </div>
+                          </>
                         )}
+
                       </div>
+
                     </div>
 
                     {/* COMPLETION */}
 
                     <div className="rounded-xl bg-slate-50 p-4">
-                      <div className="flex justify-between text-sm">
-                        <span>
+
+                      <div className="flex items-center justify-between text-sm">
+
+                        <span className="text-slate-500">
                           Actual Quantity
                         </span>
 
-                        <strong>
+                        <strong className="text-slate-900">
                           {selectedItem
                             .actualQuantity ??
-                            "-"}
+                            0}
                         </strong>
+
                       </div>
 
-                      <div className="mt-2 flex justify-between text-sm">
-                        <span>
+                      <div className="mt-3 flex items-center justify-between text-sm">
+
+                        <span className="text-slate-500">
                           Ready for Dispatch
                         </span>
 
-                        <strong>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                            selectedItem.readyForDispatch
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-200 text-slate-600"
+                          }`}
+                        >
                           {selectedItem
                             .readyForDispatch
-                            ? "Yes"
-                            : "No"}
-                        </strong>
+                            ? "Ready"
+                            : "Not Ready"}
+                        </span>
+
                       </div>
+
                     </div>
+
                   </div>
+
                 </>
               )}
+
             </div>
+
           </div>
         )}
 
-        {/* ================================================================= */}
-        {/* CAPACITY CALCULATOR */}
-        {/* ================================================================= */}
+        {/* CALCULATOR */}
 
         {activeTab ===
           "calculator" && (
-          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
 
-            <h2 className="text-2xl font-bold">
-              Material Capacity Calculator
-            </h2>
+            <div className="flex items-start gap-3">
 
-            <p className="mt-1 text-sm text-slate-500">
-              Calculate how much can actually be produced from current stock.
-            </p>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#17357A]">
+                <FiLayers
+                  size={18}
+                />
+              </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-[1fr_180px_auto]">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Material Capacity Calculator
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Calculate how much can actually be produced from current stock.
+                </p>
+              </div>
+
+            </div>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-[1fr_180px_auto]">
 
               <select
                 value={
@@ -1342,7 +1953,7 @@ const ProductionPage = () => {
                     e.target.value
                   )
                 }
-                className="rounded-lg border px-3 py-2.5"
+                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#17357A]"
               >
                 <option value="">
                   Select BOM
@@ -1351,8 +1962,12 @@ const ProductionPage = () => {
                 {boms.map(
                   (bom: any) => (
                     <option
-                      key={bom._id}
-                      value={bom._id}
+                      key={
+                        bom._id
+                      }
+                      value={
+                        bom._id
+                      }
                     >
                       {bom.finishedProduct
                         ?.name ||
@@ -1360,6 +1975,7 @@ const ProductionPage = () => {
                     </option>
                   )
                 )}
+
               </select>
 
               <input
@@ -1375,38 +1991,43 @@ const ProductionPage = () => {
                     )
                   )
                 }
-                className="rounded-lg border px-3 py-2.5"
+                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#17357A]"
               />
 
               <button
+                type="button"
                 onClick={
                   handleCalculate
                 }
-                className="rounded-lg bg-[#17357A] px-5 py-2.5 font-semibold text-white"
+                className="rounded-xl bg-[#17357A] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#23458f]"
               >
                 Calculate
               </button>
+
             </div>
 
             {calculatorResult && (
               <div className="mt-6">
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
 
-                  <div className="rounded-xl border bg-slate-50 p-5">
-                    <p className="text-sm text-slate-500">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Maximum Producible
                     </p>
 
-                    <p className="mt-1 text-3xl font-bold">
+                    <p className="mt-1 text-3xl font-bold text-slate-900">
                       {
                         calculatorResult.maximumProducible
                       }
                     </p>
+
                   </div>
 
-                  <div className="rounded-xl border bg-orange-50 p-5">
-                    <p className="text-sm text-orange-600">
+                  <div className="rounded-xl border border-orange-100 bg-orange-50 p-5">
+
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-500">
                       Bottleneck
                     </p>
 
@@ -1416,36 +2037,45 @@ const ProductionPage = () => {
                         "None"
                       }
                     </p>
+
                   </div>
+
                 </div>
 
-                <div className="mt-5 overflow-x-auto rounded-xl border">
+                <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+
                   <table className="w-full text-sm">
+
                     <thead className="bg-slate-50">
+
                       <tr>
-                        <th className="px-4 py-3 text-left">
+
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">
                           Material
                         </th>
 
-                        <th className="px-4 py-3 text-right">
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">
                           Required
                         </th>
 
-                        <th className="px-4 py-3 text-right">
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">
                           Available
                         </th>
 
-                        <th className="px-4 py-3 text-right">
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">
                           Shortage
                         </th>
 
-                        <th className="px-4 py-3 text-center">
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">
                           Status
                         </th>
+
                       </tr>
+
                     </thead>
 
                     <tbody>
+
                       {calculatorResult.materials?.map(
                         (
                           material: any,
@@ -1455,108 +2085,133 @@ const ProductionPage = () => {
                             key={
                               index
                             }
-                            className="border-t"
+                            className="border-t border-slate-100"
                           >
-                            <td className="px-4 py-3">
+
+                            <td className="px-4 py-3 font-medium text-slate-700">
                               {
                                 material.product
                               }
                             </td>
 
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-4 py-3 text-right text-slate-600">
                               {
                                 material.required
                               }
                             </td>
 
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-4 py-3 text-right text-slate-600">
                               {
                                 material.available
                               }
                             </td>
 
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-4 py-3 text-right font-medium text-red-600">
                               {
                                 material.shortage
                               }
                             </td>
 
                             <td className="px-4 py-3 text-center">
+
                               <span
-                                className={`rounded-full px-2 py-1 text-xs ${
+                                className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
                                   material.sufficient
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "bg-red-50 text-red-700"
                                 }`}
                               >
                                 {material.sufficient
                                   ? "Sufficient"
                                   : "Shortage"}
                               </span>
+
                             </td>
+
                           </tr>
                         )
                       )}
+
                     </tbody>
+
                   </table>
+
                 </div>
 
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap gap-2">
+
                   <button
+                    type="button"
                     onClick={
                       handleExportExcel
                     }
-                    className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                   >
                     Export Excel
                   </button>
 
                   <button
+                    type="button"
                     onClick={
                       handleExportPdf
                     }
-                    className="rounded-lg border bg-white px-4 py-2 text-sm font-semibold"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                   >
                     Export PDF
                   </button>
+
                 </div>
+
               </div>
             )}
+
           </div>
         )}
 
-        {/* MODALS */}
+        {/* IMAGE PREVIEW */}
 
-        <ProductionCreateModal
-          open={
-            showCreateModal
-          }
-          clients={clients}
-          accountCustomers={
-            accountCustomers
-          }
-          boms={boms}
-          rawProducts={boms.flatMap(
-            (bom: any) =>
-              (bom.materials || [])
-                .map(
-                  (material: any) =>
-                    material.product
-                )
-                .filter(Boolean)
-          )}
-          onClose={() =>
-            setShowCreateModal(
-              false
-            )
-          }
-          onCreate={
-            handleCreate
-          }
-          onCreateClient={
-            handleCreateClient
-          }
-        />
+        {previewImage && (
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm md:p-8"
+            onClick={() =>
+              setPreviewImage(null)
+            }
+          >
+
+            <button
+              type="button"
+              onClick={() =>
+                setPreviewImage(null)
+              }
+              aria-label="Close image preview"
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 shadow-xl transition hover:bg-slate-100 md:right-6 md:top-6"
+            >
+              <FiX
+                size={19}
+              />
+            </button>
+
+            <div
+              className="relative flex max-h-[90vh] max-w-[1100px] items-center justify-center"
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+
+              <img
+                src={
+                  previewImage
+                }
+                alt="Product Preview"
+                className="max-h-[88vh] max-w-full rounded-2xl object-contain shadow-2xl"
+              />
+
+            </div>
+
+          </div>
+        )}
+
+        {/* PROGRESS MODAL */}
 
         <ProductionProgressModal
           open={
@@ -1575,6 +2230,8 @@ const ProductionPage = () => {
           }
         />
 
+        {/* COMPLETION MODAL */}
+
         <ProductionCompletionModal
           open={
             showCompletionModal
@@ -1592,36 +2249,6 @@ const ProductionPage = () => {
           }
         />
 
-        <ProductionEditModal
-          open={showEditModal}
-          production={
-            selectedProduction
-          }
-          clients={clients}
-          boms={boms}
-          rawProducts={boms.flatMap(
-            (bom: any) =>
-              (bom.materials || [])
-                .map(
-                  (material: any) =>
-                    material.product
-                )
-                .filter(Boolean)
-          )}
-          onClose={() =>
-            setShowEditModal(false)
-          }
-          onSave={async (data) => {
-            await updateProduction(
-              selectedProduction._id,
-              data
-            );
-
-            setShowEditModal(false);
-
-            await loadData();
-          }}
-        />
       </div>
     </AdminLayout>
   );

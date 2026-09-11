@@ -11,7 +11,9 @@ import {
   FiArrowUpRight,
   FiCalendar,
   FiChevronDown,
+  FiChevronUp,
   FiClock,
+  FiCreditCard,
   FiFilter,
   FiRefreshCw,
   FiSearch,
@@ -94,9 +96,8 @@ const CRMDueDates = () => {
   const [loading, setLoading] =
     useState(true);
 
-  /* =========================================================
-     FILTERS
-  ========================================================= */
+  const [showStats, setShowStats] =
+    useState(false);
 
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("ALL");
@@ -113,10 +114,6 @@ const CRMDueDates = () => {
   const [showFilters, setShowFilters] =
     useState(false);
 
-  /* =========================================================
-     DUE DATE EDITING
-  ========================================================= */
-
   const [editingPartyId, setEditingPartyId] =
     useState<string | null>(null);
 
@@ -125,10 +122,6 @@ const CRMDueDates = () => {
 
   const [savingDueDate, setSavingDueDate] =
     useState(false);
-
-  /* =========================================================
-     LEDGER
-  ========================================================= */
 
   const [expandedPartyId, setExpandedPartyId] =
     useState<string | null>(null);
@@ -143,10 +136,6 @@ const CRMDueDates = () => {
         LedgerTransaction[]
       >
     >({});
-
-  /* =========================================================
-     LOAD DUE DATES
-  ========================================================= */
 
   const loadDueDates = async () => {
     try {
@@ -176,10 +165,6 @@ const CRMDueDates = () => {
     loadDueDates();
   }, []);
 
-  /* =========================================================
-     TODAY
-  ========================================================= */
-
   const today = useMemo(() => {
     const date = new Date();
 
@@ -192,10 +177,6 @@ const CRMDueDates = () => {
 
     return date;
   }, []);
-
-  /* =========================================================
-     DATE HELPERS
-  ========================================================= */
 
   const formatInputDate = (
     value?: string | null
@@ -290,10 +271,6 @@ const CRMDueDates = () => {
     );
   };
 
-  /* =========================================================
-     DUE STATUS
-  ========================================================= */
-
   const getDueStatus = (
     dueDate?: string | null
   ): DueStatus => {
@@ -375,10 +352,6 @@ const CRMDueDates = () => {
     }
   };
 
-  /* =========================================================
-     SALESPERSONS
-  ========================================================= */
-
   const salespeople = useMemo(() => {
     const map =
       new Map<
@@ -416,10 +389,6 @@ const CRMDueDates = () => {
         )
     );
   }, [parties]);
-
-  /* =========================================================
-     ACTIVE FILTER COUNT
-  ========================================================= */
 
   const activeFilterCount =
     useMemo(() => {
@@ -459,20 +428,12 @@ const CRMDueDates = () => {
       paymentTermsFilter,
     ]);
 
-  /* =========================================================
-     CLEAR FILTERS
-  ========================================================= */
-
   const clearFilters = () => {
     setStatusFilter("ALL");
     setSalespersonFilter("ALL");
     setBalanceFilter("ALL");
     setPaymentTermsFilter("ALL");
   };
-
-  /* =========================================================
-     FILTER PARTIES
-  ========================================================= */
 
   const filteredParties =
     useMemo(() => {
@@ -626,10 +587,6 @@ const CRMDueDates = () => {
       today,
     ]);
 
-  /* =========================================================
-     SUMMARY
-  ========================================================= */
-
   const summary = useMemo(() => {
     let overdue = 0;
     let dueToday = 0;
@@ -675,19 +632,16 @@ const CRMDueDates = () => {
     return {
       total:
         filteredParties.length,
+
       overdue,
+
       dueToday,
+
       upcoming,
+
       outstanding,
     };
-  }, [
-    filteredParties,
-    today,
-  ]);
-
-  /* =========================================================
-     CHANGE DUE DATE
-  ========================================================= */
+  }, [filteredParties]);
 
   const startDueDateEdit = (
     party: CRMParty
@@ -721,11 +675,12 @@ const CRMDueDates = () => {
         );
 
       const updatedDueDate =
-  (
-    updatedParty?.customerDetails?.dueDate ??
-    updatedParty?.dueDate ??
-    dueDateInput
-  ) || null;
+        (
+          updatedParty?.customerDetails
+            ?.dueDate ??
+          updatedParty?.dueDate ??
+          dueDateInput
+        ) || null;
 
       setParties(
         (
@@ -759,10 +714,6 @@ const CRMDueDates = () => {
       setSavingDueDate(false);
     }
   };
-
-  /* =========================================================
-     LEDGER
-  ========================================================= */
 
   const loadPartyLedger = async (
     partyId: string
@@ -841,10 +792,6 @@ const CRMDueDates = () => {
       partyId
     );
   };
-
-  /* =========================================================
-     RENDER
-  ========================================================= */
 
   return (
     <div className="space-y-6">
@@ -948,151 +895,318 @@ const CRMDueDates = () => {
         </div>
       </section>
 
-      {/* SUMMARY */}
+      {/* COLLAPSIBLE STATS */}
 
-      <section
-        className="
-          grid
-          grid-cols-2
-          gap-3
-          lg:grid-cols-4
-        "
-      >
-        <div
-          className="
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            p-4
-            shadow-sm
-          "
-        >
-          <p
+      <section>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() =>
+              setShowStats(
+                (current) =>
+                  !current
+              )
+            }
+            title={
+              showStats
+                ? "Hide summary"
+                : "Show summary"
+            }
             className="
-              text-[11px]
-              font-medium
-              uppercase
-              tracking-wide
-              text-slate-400
+              flex
+              h-9
+              w-9
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              text-slate-500
+              shadow-sm
+              transition
+              hover:bg-slate-50
+              hover:text-[#172B6B]
             "
           >
-            Outstanding
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-xl
-              font-bold
-              text-slate-900
-            "
-          >
-            ₹
-            {formatAmount(
-              summary.outstanding
+            {showStats ? (
+              <FiChevronUp size={16} />
+            ) : (
+              <FiChevronDown size={16} />
             )}
-          </p>
+          </button>
         </div>
 
-        <div
-          className="
-            rounded-2xl
-            border
-            border-red-100
-            bg-red-50/50
-            p-4
-          "
-        >
-          <p
+        {showStats && (
+          <div
             className="
-              text-[11px]
-              font-medium
-              uppercase
-              tracking-wide
-              text-red-500
+              mt-3
+              grid
+              grid-cols-2
+              gap-3
+              xl:grid-cols-4
             "
           >
-            Overdue
-          </p>
+            {/* OUTSTANDING */}
 
-          <p
-            className="
-              mt-1
-              text-xl
-              font-bold
-              text-red-700
-            "
-          >
-            {summary.overdue}
-          </p>
-        </div>
+            <div
+              className="
+                rounded-2xl
+                border
+                border-blue-100
+                bg-white
+                p-4
+                shadow-sm
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-blue-50
+                  text-[#172B6B]
+                "
+              >
+                <FiCreditCard
+                  size={17}
+                />
+              </div>
 
-        <div
-          className="
-            rounded-2xl
-            border
-            border-amber-100
-            bg-amber-50/50
-            p-4
-          "
-        >
-          <p
-            className="
-              text-[11px]
-              font-medium
-              uppercase
-              tracking-wide
-              text-amber-600
-            "
-          >
-            Due Today
-          </p>
+              <p
+                className="
+                  mt-4
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-500
+                "
+              >
+                Outstanding
+              </p>
 
-          <p
-            className="
-              mt-1
-              text-xl
-              font-bold
-              text-amber-700
-            "
-          >
-            {summary.dueToday}
-          </p>
-        </div>
+              <p
+                className="
+                  mt-1
+                  text-2xl
+                  font-bold
+                  text-[#172B6B]
+                "
+              >
+                ₹
+                {formatAmount(
+                  summary.outstanding
+                )}
+              </p>
 
-        <div
-          className="
-            rounded-2xl
-            border
-            border-emerald-100
-            bg-emerald-50/50
-            p-4
-          "
-        >
-          <p
-            className="
-              text-[11px]
-              font-medium
-              uppercase
-              tracking-wide
-              text-emerald-600
-            "
-          >
-            Upcoming
-          </p>
+              <p
+                className="
+                  mt-1
+                  text-[10px]
+                  text-slate-400
+                "
+              >
+                Current filtered balance
+              </p>
+            </div>
 
-          <p
-            className="
-              mt-1
-              text-xl
-              font-bold
-              text-emerald-700
-            "
-          >
-            {summary.upcoming}
-          </p>
-        </div>
+            {/* OVERDUE */}
+
+            <div
+              className="
+                rounded-2xl
+                border
+                border-red-100
+                bg-white
+                p-4
+                shadow-sm
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-red-50
+                  text-red-600
+                "
+              >
+                <FiAlertCircle
+                  size={17}
+                />
+              </div>
+
+              <p
+                className="
+                  mt-4
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-500
+                "
+              >
+                Overdue
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-2xl
+                  font-bold
+                  text-red-600
+                "
+              >
+                {summary.overdue}
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-[10px]
+                  text-slate-400
+                "
+              >
+                Requires attention
+              </p>
+            </div>
+
+            {/* DUE TODAY */}
+
+            <div
+              className="
+                rounded-2xl
+                border
+                border-amber-100
+                bg-white
+                p-4
+                shadow-sm
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-amber-50
+                  text-amber-600
+                "
+              >
+                <FiCalendar
+                  size={17}
+                />
+              </div>
+
+              <p
+                className="
+                  mt-4
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-500
+                "
+              >
+                Due Today
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-2xl
+                  font-bold
+                  text-amber-600
+                "
+              >
+                {summary.dueToday}
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-[10px]
+                  text-slate-400
+                "
+              >
+                Due today
+              </p>
+            </div>
+
+            {/* UPCOMING */}
+
+            <div
+              className="
+                rounded-2xl
+                border
+                border-emerald-100
+                bg-white
+                p-4
+                shadow-sm
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-emerald-50
+                  text-emerald-600
+                "
+              >
+                <FiClock
+                  size={17}
+                />
+              </div>
+
+              <p
+                className="
+                  mt-4
+                  text-[10px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-500
+                "
+              >
+                Upcoming
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-2xl
+                  font-bold
+                  text-emerald-600
+                "
+              >
+                {summary.upcoming}
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-[10px]
+                  text-slate-400
+                "
+              >
+                Future due dates
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* SEARCH + FILTER */}
@@ -1821,8 +1935,6 @@ const CRMDueDates = () => {
                           party._id
                         }
                       >
-                        {/* CUSTOMER ROW */}
-
                         <tr
                           className="
                             border-b
@@ -1831,8 +1943,6 @@ const CRMDueDates = () => {
                             hover:bg-slate-50/60
                           "
                         >
-                          {/* CUSTOMER */}
-
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
                               <div
@@ -1890,8 +2000,6 @@ const CRMDueDates = () => {
                             </div>
                           </td>
 
-                          {/* OUTSTANDING */}
-
                           <td className="px-5 py-4">
                             <span
                               className={`
@@ -1915,8 +2023,6 @@ const CRMDueDates = () => {
                             </span>
                           </td>
 
-                          {/* TERMS */}
-
                           <td className="px-5 py-4">
                             <span
                               className="
@@ -1936,10 +2042,6 @@ const CRMDueDates = () => {
                                 : "--"}
                             </span>
                           </td>
-
-                          {/* DUE DATE
-                              DISPLAY ONLY
-                          */}
 
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
@@ -1964,8 +2066,6 @@ const CRMDueDates = () => {
                               </span>
                             </div>
                           </td>
-
-                          {/* STATUS */}
 
                           <td className="px-5 py-4">
                             <span
@@ -2000,8 +2100,6 @@ const CRMDueDates = () => {
                               }
                             </span>
                           </td>
-
-                          {/* ACTIONS */}
 
                           <td className="px-5 py-4">
                             {isEditing ? (
@@ -2038,8 +2136,6 @@ const CRMDueDates = () => {
                                     text-slate-700
                                     outline-none
                                     focus:border-[#172B6B]
-                                    focus:ring-2
-                                    focus:ring-[#172B6B]/10
                                   "
                                 />
 
@@ -2061,9 +2157,6 @@ const CRMDueDates = () => {
                                     text-xs
                                     font-semibold
                                     text-white
-                                    transition
-                                    hover:bg-[#10295D]
-                                    disabled:cursor-not-allowed
                                     disabled:opacity-50
                                   "
                                 >
@@ -2090,9 +2183,6 @@ const CRMDueDates = () => {
                                     text-xs
                                     font-semibold
                                     text-slate-600
-                                    transition
-                                    hover:bg-slate-50
-                                    disabled:opacity-50
                                   "
                                 >
                                   Cancel
@@ -2107,8 +2197,6 @@ const CRMDueDates = () => {
                                   gap-2
                                 "
                               >
-                                {/* CHANGE DUE DATE */}
-
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -2134,7 +2222,6 @@ const CRMDueDates = () => {
                                     hover:bg-blue-50
                                     hover:text-[#172B6B]
                                   "
-                                  title="Change Due Date"
                                 >
                                   <FiCalendar
                                     size={14}
@@ -2142,8 +2229,6 @@ const CRMDueDates = () => {
 
                                   Change Due Date
                                 </button>
-
-                                {/* VIEW LEDGER */}
 
                                 <button
                                   type="button"
@@ -2166,9 +2251,7 @@ const CRMDueDates = () => {
                                     font-semibold
                                     text-slate-600
                                     transition
-                                    hover:border-slate-300
                                     hover:bg-slate-50
-                                    hover:text-slate-800
                                   "
                                 >
                                   {isExpanded
@@ -2192,10 +2275,6 @@ const CRMDueDates = () => {
                           </td>
                         </tr>
 
-                        {/* =================================================
-                            READ-ONLY LEDGER ROW
-                        ================================================= */}
-
                         {isExpanded && (
                           <tr
                             className="
@@ -2218,8 +2297,6 @@ const CRMDueDates = () => {
                                     bg-white
                                   "
                                 >
-                                  {/* LEDGER HEADER */}
-
                                   <div
                                     className="
                                       flex
@@ -2282,8 +2359,6 @@ const CRMDueDates = () => {
                                       Source
                                     </span>
                                   </div>
-
-                                  {/* LEDGER CONTENT */}
 
                                   <div
                                     className="
@@ -2410,8 +2485,6 @@ const CRMDueDates = () => {
                                                   sm:items-center
                                                 "
                                               >
-                                                {/* DATE */}
-
                                                 <div>
                                                   <p
                                                     className="
@@ -2438,8 +2511,6 @@ const CRMDueDates = () => {
                                                     )}
                                                   </p>
                                                 </div>
-
-                                                {/* TYPE + REMARKS */}
 
                                                 <div className="min-w-0">
                                                   <div className="flex items-center gap-2">
@@ -2505,8 +2576,6 @@ const CRMDueDates = () => {
                                                   </p>
                                                 </div>
 
-                                                {/* AMOUNT */}
-
                                                 <div>
                                                   <p
                                                     className="
@@ -2541,8 +2610,6 @@ const CRMDueDates = () => {
                                                     )}
                                                   </p>
                                                 </div>
-
-                                                {/* BALANCE */}
 
                                                 <div className="sm:text-right">
                                                   <p
@@ -2594,8 +2661,6 @@ const CRMDueDates = () => {
                                     )}
                                   </div>
 
-                                  {/* LEDGER FOOTER */}
-
                                   <div
                                     className="
                                       border-t
@@ -2633,8 +2698,6 @@ const CRMDueDates = () => {
             </tbody>
           </table>
         </div>
-
-        {/* FOOTER */}
 
         {!loading &&
           filteredParties.length >

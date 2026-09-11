@@ -9,13 +9,15 @@ import {
   FiClock,
   FiEdit2,
   FiFileText,
+  FiFilter,
   FiImage,
   FiPackage,
   FiRefreshCw,
+  FiSearch,
   FiTrash2,
   FiTruck,
   FiUser,
-  FiXCircle,
+  FiX,
 } from "react-icons/fi";
 
 interface Props {
@@ -114,7 +116,9 @@ const getProductMarka = (item: any) => {
 };
 
 const getProductCategory = (item: any) => {
-  const category = item?.category || item?.product?.category;
+  const category =
+    item?.category ||
+    item?.product?.category;
 
   if (typeof category === "string") {
     return category;
@@ -144,7 +148,10 @@ const getProgressPercentage = (item: any) => {
 
   if (!quantity) return 0;
 
-  return Math.min(Math.round((actual / quantity) * 100), 100);
+  return Math.min(
+    Math.round((actual / quantity) * 100),
+    100
+  );
 };
 
 const getStatusConfig = (status?: string) => {
@@ -153,15 +160,13 @@ const getStatusConfig = (status?: string) => {
     .toLowerCase()
     .replace(/_/g, " ");
 
-  if (
-    normalized.includes("complete") ||
-    normalized.includes("completed")
-  ) {
+  if (normalized.includes("complete")) {
     return {
       label: "Completed",
       icon: FiCheckCircle,
       dot: "bg-emerald-500",
-      badge: "border-emerald-100 bg-emerald-50 text-emerald-700",
+      badge:
+        "border-emerald-100 bg-emerald-50 text-emerald-700",
     };
   }
 
@@ -173,7 +178,8 @@ const getStatusConfig = (status?: string) => {
       label: "Ready for Dispatch",
       icon: FiTruck,
       dot: "bg-indigo-500",
-      badge: "border-indigo-100 bg-indigo-50 text-indigo-700",
+      badge:
+        "border-indigo-100 bg-indigo-50 text-indigo-700",
     };
   }
 
@@ -186,19 +192,18 @@ const getStatusConfig = (status?: string) => {
       label: "In Production",
       icon: FiPackage,
       dot: "bg-violet-500",
-      badge: "border-violet-100 bg-violet-50 text-violet-700",
+      badge:
+        "border-violet-100 bg-violet-50 text-violet-700",
     };
   }
 
-  if (
-    normalized.includes("cancel") ||
-    normalized.includes("cancelled")
-  ) {
+  if (normalized.includes("cancel")) {
     return {
       label: "Cancelled",
-      icon: FiXCircle,
+      icon: FiX,
       dot: "bg-red-500",
-      badge: "border-red-100 bg-red-50 text-red-700",
+      badge:
+        "border-red-100 bg-red-50 text-red-700",
     };
   }
 
@@ -210,7 +215,8 @@ const getStatusConfig = (status?: string) => {
       label: "Pending",
       icon: FiClock,
       dot: "bg-amber-500",
-      badge: "border-amber-100 bg-amber-50 text-amber-700",
+      badge:
+        "border-amber-100 bg-amber-50 text-amber-700",
     };
   }
 
@@ -218,13 +224,19 @@ const getStatusConfig = (status?: string) => {
     label: status || "Pending",
     icon: FiClock,
     dot: "bg-slate-400",
-    badge: "border-slate-200 bg-slate-50 text-slate-600",
+    badge:
+      "border-slate-200 bg-slate-50 text-slate-600",
   };
 };
 
 const getChecklistState = (item: any) => {
-  const preparing = Boolean(item?.checklist?.preparing);
-  const leaving = Boolean(item?.checklist?.leaving);
+  const preparing = Boolean(
+    item?.checklist?.preparing
+  );
+
+  const leaving = Boolean(
+    item?.checklist?.leaving
+  );
 
   if (item?.completed) {
     return "Completed";
@@ -269,10 +281,18 @@ const getOrderProgress = (order: any) => {
     0
   );
 
-  const remaining = Math.max(total - completed, 0);
+  const remaining = Math.max(
+    total - completed,
+    0
+  );
 
   const percentage = total
-    ? Math.min(Math.round((completed / total) * 100), 100)
+    ? Math.min(
+        Math.round(
+          (completed / total) * 100
+        ),
+        100
+      )
     : 0;
 
   return {
@@ -289,18 +309,24 @@ const getTimeline = (order: any) => {
     description: string;
     date?: string;
     icon: any;
-    state: "done" | "current" | "pending";
+    state:
+      | "done"
+      | "current"
+      | "pending";
   }> = [];
 
   timeline.push({
     title: "Order Created",
-    description: "Production order was created from CRM.",
+    description:
+      "Production order was created from CRM.",
     date: order?.createdAt,
     icon: FiFileText,
     state: "done",
   });
 
-  const status = String(order?.status || "")
+  const status = String(
+    order?.status || ""
+  )
     .toLowerCase()
     .replace(/_/g, " ");
 
@@ -308,12 +334,16 @@ const getTimeline = (order: any) => {
 
   const hasPreparing = products.some(
     (item: any) =>
-      Boolean(item?.checklist?.preparing)
+      Boolean(
+        item?.checklist?.preparing
+      )
   );
 
   const hasLeaving = products.some(
     (item: any) =>
-      Boolean(item?.checklist?.leaving)
+      Boolean(
+        item?.checklist?.leaving
+      )
   );
 
   const hasActualQuantity = products.some(
@@ -332,7 +362,9 @@ const getTimeline = (order: any) => {
     Boolean(order?.readyForDispatch) ||
     products.some(
       (item: any) =>
-        Boolean(item?.readyForDispatch)
+        Boolean(
+          item?.readyForDispatch
+        )
     );
 
   timeline.push({
@@ -410,47 +442,136 @@ const OrdersTable = ({
   const [expandedOrder, setExpandedOrder] =
     useState<string | null>(null);
 
+  const [showFilters, setShowFilters] =
+    useState(false);
+
+  const [search, setSearch] =
+    useState("");
+
+  const [statusFilter, setStatusFilter] =
+    useState("all");
+
+  const [clientFilter, setClientFilter] =
+    useState("all");
+
+  const clients = useMemo(() => {
+    const names = orders
+      .map((order) =>
+        getClientName(order)
+      )
+      .filter(Boolean);
+
+    return Array.from(
+      new Set(names)
+    ).sort();
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    const query = search
+      .trim()
+      .toLowerCase();
+
+    return orders.filter((order) => {
+      const client = getClientName(
+        order
+      ).toLowerCase();
+
+      const orderNumber = String(
+        order?.orderNumber || ""
+      ).toLowerCase();
+
+      const normalizedStatus =
+        String(
+          order?.status || ""
+        )
+          .toLowerCase()
+          .replace(/_/g, " ");
+
+      const matchesSearch =
+        !query ||
+        orderNumber.includes(query) ||
+        client.includes(query);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        normalizedStatus ===
+          statusFilter;
+
+      const matchesClient =
+        clientFilter === "all" ||
+        client === clientFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesClient
+      );
+    });
+  }, [
+    orders,
+    search,
+    statusFilter,
+    clientFilter,
+  ]);
+
   const summary = useMemo(() => {
     let totalQuantity = 0;
     let completedQuantity = 0;
     let remainingQuantity = 0;
 
     orders.forEach((order) => {
-      const progress = getOrderProgress(order);
+      const progress =
+        getOrderProgress(order);
 
       totalQuantity += progress.total;
-      completedQuantity += progress.completed;
-      remainingQuantity += progress.remaining;
+      completedQuantity +=
+        progress.completed;
+      remainingQuantity +=
+        progress.remaining;
     });
 
     return {
       totalOrders: orders.length,
-      activeOrders: orders.filter((order) => {
-        const normalized = String(
-          order?.status || ""
-        ).toLowerCase();
 
-        return (
-          !normalized.includes("complete") &&
-          !normalized.includes("cancel")
-        );
-      }).length,
-      completedOrders: orders.filter((order) => {
-        const products = getProducts(order);
+      activeOrders: orders.filter(
+        (order) => {
+          const normalized =
+            String(
+              order?.status || ""
+            ).toLowerCase();
 
-        if (products.length) {
-          return products.every(
-            (item: any) =>
-              Boolean(item?.completed)
+          return (
+            !normalized.includes(
+              "complete"
+            ) &&
+            !normalized.includes(
+              "cancel"
+            )
           );
         }
+      ).length,
 
-        return String(
-          order?.status || ""
-        )
-          .toLowerCase()
-          .includes("complete");
-      }).length,
+      completedOrders:
+        orders.filter((order) => {
+          const products =
+            getProducts(order);
+
+          if (products.length) {
+            return products.every(
+              (item: any) =>
+                Boolean(
+                  item?.completed
+                )
+            );
+          }
+
+          return String(
+            order?.status || ""
+          )
+            .toLowerCase()
+            .includes("complete");
+        }).length,
+
       totalQuantity,
       completedQuantity,
       remainingQuantity,
@@ -458,10 +579,24 @@ const OrdersTable = ({
   }, [orders]);
 
   const toggleOrder = (id: string) => {
-    setExpandedOrder((current) =>
-      current === id ? null : id
+    setExpandedOrder(
+      (current) =>
+        current === id
+          ? null
+          : id
     );
   };
+
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setClientFilter("all");
+  };
+
+  const hasActiveFilters =
+    Boolean(search) ||
+    statusFilter !== "all" ||
+    clientFilter !== "all";
 
   return (
     <section
@@ -473,8 +608,6 @@ const OrdersTable = ({
         shadow-sm
       "
     >
-      {/* Header */}
-
       <div
         className="
           border-b border-slate-100
@@ -544,132 +677,373 @@ const OrdersTable = ({
             </div>
           </div>
 
-          {/* Summary */}
-
           <div
             className="
-              grid grid-cols-2
+              flex flex-wrap
+              items-center
               gap-2
-              sm:grid-cols-4
-              xl:min-w-[600px]
             "
           >
             <div
               className="
-                rounded-xl
-                border border-slate-100
-                bg-slate-50
-                px-3 py-2.5
+                grid grid-cols-2
+                gap-2
+                sm:grid-cols-4
               "
             >
-              <p
+              <div
                 className="
-                  text-[9px] font-bold
-                  uppercase tracking-wider
-                  text-slate-400
+                  rounded-xl
+                  border border-slate-100
+                  bg-slate-50
+                  px-3 py-2.5
                 "
               >
-                Orders
-              </p>
+                <p
+                  className="
+                    text-[9px] font-bold
+                    uppercase tracking-wider
+                    text-slate-400
+                  "
+                >
+                  Orders
+                </p>
 
-              <p
+                <p
+                  className="
+                    mt-1 text-lg
+                    font-bold text-slate-900
+                  "
+                >
+                  {summary.totalOrders}
+                </p>
+              </div>
+
+              <div
                 className="
-                  mt-1 text-lg
-                  font-bold text-slate-900
+                  rounded-xl
+                  border border-blue-100
+                  bg-blue-50/60
+                  px-3 py-2.5
                 "
               >
-                {summary.totalOrders}
-              </p>
+                <p
+                  className="
+                    text-[9px] font-bold
+                    uppercase tracking-wider
+                    text-blue-600
+                  "
+                >
+                  Active
+                </p>
+
+                <p
+                  className="
+                    mt-1 text-lg
+                    font-bold text-blue-700
+                  "
+                >
+                  {summary.activeOrders}
+                </p>
+              </div>
+
+              <div
+                className="
+                  rounded-xl
+                  border border-emerald-100
+                  bg-emerald-50/60
+                  px-3 py-2.5
+                "
+              >
+                <p
+                  className="
+                    text-[9px] font-bold
+                    uppercase tracking-wider
+                    text-emerald-600
+                  "
+                >
+                  Completed
+                </p>
+
+                <p
+                  className="
+                    mt-1 text-lg
+                    font-bold text-emerald-700
+                  "
+                >
+                  {summary.completedOrders}
+                </p>
+              </div>
+
+              <div
+                className="
+                  rounded-xl
+                  border border-violet-100
+                  bg-violet-50/60
+                  px-3 py-2.5
+                "
+              >
+                <p
+                  className="
+                    text-[9px] font-bold
+                    uppercase tracking-wider
+                    text-violet-600
+                  "
+                >
+                  Remaining
+                </p>
+
+                <p
+                  className="
+                    mt-1 text-lg
+                    font-bold text-violet-700
+                  "
+                >
+                  {summary.remainingQuantity}
+                </p>
+              </div>
             </div>
 
-            <div
-              className="
-                rounded-xl
-                border border-blue-100
-                bg-blue-50/60
-                px-3 py-2.5
-              "
+            <button
+              type="button"
+              onClick={() =>
+                setShowFilters(
+                  (current) =>
+                    !current
+                )
+              }
+              className={`
+                inline-flex h-10
+                items-center gap-2
+                rounded-xl border
+                px-3
+                text-xs font-semibold
+                transition
+                ${
+                  showFilters
+                    ? "border-[#172B6B]/20 bg-[#172B6B]/5 text-[#172B6B]"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }
+              `}
             >
-              <p
-                className="
-                  text-[9px] font-bold
-                  uppercase tracking-wider
-                  text-blue-600
-                "
-              >
-                Active
-              </p>
+              <FiFilter size={14} />
 
-              <p
-                className="
-                  mt-1 text-lg
-                  font-bold text-blue-700
-                "
-              >
-                {summary.activeOrders}
-              </p>
-            </div>
+              Filters
 
-            <div
-              className="
-                rounded-xl
-                border border-emerald-100
-                bg-emerald-50/60
-                px-3 py-2.5
-              "
-            >
-              <p
-                className="
-                  text-[9px] font-bold
-                  uppercase tracking-wider
-                  text-emerald-600
-                "
-              >
-                Completed
-              </p>
+              {hasActiveFilters && (
+                <span
+                  className="
+                    flex h-4 min-w-4
+                    items-center justify-center
+                    rounded-full
+                    bg-[#172B6B]
+                    px-1
+                    text-[9px]
+                    text-white
+                  "
+                >
+                  !
+                </span>
+              )}
 
-              <p
-                className="
-                  mt-1 text-lg
-                  font-bold text-emerald-700
-                "
-              >
-                {summary.completedOrders}
-              </p>
-            </div>
-
-            <div
-              className="
-                rounded-xl
-                border border-violet-100
-                bg-violet-50/60
-                px-3 py-2.5
-              "
-            >
-              <p
-                className="
-                  text-[9px] font-bold
-                  uppercase tracking-wider
-                  text-violet-600
-                "
-              >
-                Remaining
-              </p>
-
-              <p
-                className="
-                  mt-1 text-lg
-                  font-bold text-violet-700
-                "
-              >
-                {summary.remainingQuantity}
-              </p>
-            </div>
+              {showFilters ? (
+                <FiChevronUp size={13} />
+              ) : (
+                <FiChevronDown size={13} />
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {showFilters && (
+        <div
+          className="
+            border-b border-slate-100
+            bg-slate-50/60
+            px-5 py-4
+            sm:px-6
+          "
+        >
+          <div
+            className="
+              flex flex-col gap-3
+              lg:flex-row
+              lg:items-end
+            "
+          >
+            <div className="min-w-0 flex-1">
+              <label
+                className="
+                  mb-1.5 block
+                  text-[10px] font-bold
+                  uppercase tracking-wider
+                  text-slate-400
+                "
+              >
+                Search
+              </label>
+
+              <div className="relative">
+                <FiSearch
+                  size={14}
+                  className="
+                    absolute left-3
+                    top-1/2
+                    -translate-y-1/2
+                    text-slate-400
+                  "
+                />
+
+                <input
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Order number or customer..."
+                  className="
+                    h-10 w-full
+                    rounded-xl
+                    border border-slate-200
+                    bg-white
+                    pl-9 pr-3
+                    text-xs
+                    outline-none
+                    transition
+                    focus:border-[#172B6B]/30
+                    focus:ring-2
+                    focus:ring-[#172B6B]/5
+                  "
+                />
+              </div>
+            </div>
+
+            <div className="w-full lg:w-48">
+              <label
+                className="
+                  mb-1.5 block
+                  text-[10px] font-bold
+                  uppercase tracking-wider
+                  text-slate-400
+                "
+              >
+                Status
+              </label>
+
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(
+                    e.target.value
+                  )
+                }
+                className="
+                  h-10 w-full
+                  rounded-xl
+                  border border-slate-200
+                  bg-white
+                  px-3
+                  text-xs
+                  outline-none
+                "
+              >
+                <option value="all">
+                  All Statuses
+                </option>
+
+                <option value="draft">
+                  Draft
+                </option>
+
+                <option value="started">
+                  Started
+                </option>
+
+                <option value="in progress">
+                  In Progress
+                </option>
+
+                <option value="completed">
+                  Completed
+                </option>
+
+                <option value="cancelled">
+                  Cancelled
+                </option>
+              </select>
+            </div>
+
+            <div className="w-full lg:w-52">
+              <label
+                className="
+                  mb-1.5 block
+                  text-[10px] font-bold
+                  uppercase tracking-wider
+                  text-slate-400
+                "
+              >
+                Customer
+              </label>
+
+              <select
+                value={clientFilter}
+                onChange={(e) =>
+                  setClientFilter(
+                    e.target.value
+                  )
+                }
+                className="
+                  h-10 w-full
+                  rounded-xl
+                  border border-slate-200
+                  bg-white
+                  px-3
+                  text-xs
+                  outline-none
+                "
+              >
+                <option value="all">
+                  All Customers
+                </option>
+
+                {clients.map(
+                  (client) => (
+                    <option
+                      key={client}
+                      value={client}
+                    >
+                      {client}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="
+                inline-flex h-10
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                border border-slate-200
+                bg-white
+                px-3
+                text-xs font-semibold
+                text-slate-500
+                hover:bg-slate-50
+              "
+            >
+              <FiX size={13} />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="min-w-[1050px] w-full">
@@ -769,9 +1143,12 @@ const OrdersTable = ({
           </thead>
 
           <tbody>
-            {orders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-20">
+                <td
+                  colSpan={8}
+                  className="px-6 py-20"
+                >
                   <div
                     className="
                       mx-auto flex max-w-sm
@@ -788,7 +1165,9 @@ const OrdersTable = ({
                         text-slate-400
                       "
                     >
-                      <FiPackage size={27} />
+                      <FiPackage
+                        size={27}
+                      />
                     </div>
 
                     <h3
@@ -797,7 +1176,9 @@ const OrdersTable = ({
                         font-bold text-slate-800
                       "
                     >
-                      No production orders yet
+                      {hasActiveFilters
+                        ? "No matching orders"
+                        : "No production orders yet"}
                     </h3>
 
                     <p
@@ -806,539 +1187,1217 @@ const OrdersTable = ({
                         leading-5 text-slate-500
                       "
                     >
-                      Orders created by CRM will
-                      appear here with their complete
-                      production history.
+                      {hasActiveFilters
+                        ? "Try changing or clearing your filters."
+                        : "Orders created by CRM will appear here with their complete production history."}
                     </p>
+
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        onClick={
+                          clearFilters
+                        }
+                        className="
+                          mt-4
+                          inline-flex
+                          items-center
+                          gap-2
+                          rounded-lg
+                          border
+                          border-slate-200
+                          bg-white
+                          px-3 py-2
+                          text-xs
+                          font-semibold
+                          text-slate-600
+                        "
+                      >
+                        <FiX size={13} />
+                        Clear Filters
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
             ) : (
-              orders.map((order) => {
-                const orderId = order?._id;
+              filteredOrders.map(
+                (order) => {
+                  const orderId =
+                    order?._id;
 
-                const expanded =
-                  expandedOrder === orderId;
+                  const expanded =
+                    expandedOrder ===
+                    orderId;
 
-                const products =
-                  getProducts(order);
+                  const products =
+                    getProducts(order);
 
-                const progress =
-                  getOrderProgress(order);
+                  const progress =
+                    getOrderProgress(
+                      order
+                    );
 
-                const status =
-                  getStatusConfig(
-                    order?.status
-                  );
+                  const status =
+                    getStatusConfig(
+                      order?.status
+                    );
 
-                const StatusIcon =
-                  status.icon;
+                  const StatusIcon =
+                    status.icon;
 
-                return (
-                  <tr
-                    key={orderId}
-                    className="
-                      border-b border-slate-100
-                      last:border-b-0
-                    "
-                  >
-                    {/* Main Row */}
-
-                    <td
-                      colSpan={8}
-                      className="p-0"
+                  return (
+                    <tr
+                      key={orderId}
+                      className="
+                        border-b border-slate-100
+                        last:border-b-0
+                      "
                     >
-                      <div
-                        className="
-                          grid
-                          grid-cols-[48px_1.1fr_1.2fr_1.5fr_1.4fr_1.25fr_1fr_150px]
-                          items-center
-                          min-w-[1050px]
-                          transition
-                          hover:bg-slate-50/60
-                        "
+                      <td
+                        colSpan={8}
+                        className="p-0"
                       >
-                        {/* Expand */}
-
-                        <div className="flex justify-center">
-                          <button
-                            type="button"
-                            title={
-                              expanded
-                                ? "Collapse order"
-                                : "View order tracking"
-                            }
-                            onClick={() =>
-                              toggleOrder(
-                                orderId
-                              )
-                            }
-                            className="
-                              flex h-8 w-8
-                              items-center justify-center
-                              rounded-lg
-                              border border-slate-200
-                              bg-white
-                              text-slate-500
-                              transition
-                              hover:border-[#172B6B]/20
-                              hover:bg-[#172B6B]/5
-                              hover:text-[#172B6B]
-                            "
-                          >
-                            {expanded ? (
-                              <FiChevronUp
-                                size={15}
-                              />
-                            ) : (
-                              <FiChevronDown
-                                size={15}
-                              />
-                            )}
-                          </button>
-                        </div>
-
-                        {/* Order */}
-
-                        <div className="px-4 py-5">
-                          <div className="flex items-center gap-3">
-                            <div
+                        <div
+                          className="
+                            grid
+                            grid-cols-[48px_1.1fr_1.2fr_1.5fr_1.4fr_1.25fr_1fr_150px]
+                            items-center
+                            min-w-[1050px]
+                            transition
+                            hover:bg-slate-50/60
+                          "
+                        >
+                          <div className="flex justify-center">
+                            <button
+                              type="button"
+                              title={
+                                expanded
+                                  ? "Collapse order"
+                                  : "View order tracking"
+                              }
+                              onClick={() =>
+                                toggleOrder(
+                                  orderId
+                                )
+                              }
                               className="
-                                flex h-9 w-9 shrink-0
-                                items-center justify-center
-                                rounded-xl
-                                bg-[#172B6B]/8
-                                text-[#172B6B]
-                              "
-                            >
-                              <FiPackage
-                                size={16}
-                              />
-                            </div>
-
-                            <div className="min-w-0">
-                              <p
-                                className="
-                                  truncate text-sm
-                                  font-bold text-slate-900
-                                "
-                              >
-                                {order?.orderNumber ||
-                                  "Production Order"}
-                              </p>
-
-                              <p
-                                className="
-                                  mt-0.5 text-[10px]
-                                  text-slate-400
-                                "
-                              >
-                                {formatDate(
-                                  order?.createdAt
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Client */}
-
-                        <div className="px-4 py-5">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className="
-                                flex h-8 w-8 shrink-0
+                                flex h-8 w-8
                                 items-center justify-center
                                 rounded-lg
-                                bg-slate-100
+                                border border-slate-200
+                                bg-white
                                 text-slate-500
+                                transition
+                                hover:border-[#172B6B]/20
+                                hover:bg-[#172B6B]/5
+                                hover:text-[#172B6B]
                               "
                             >
-                              <FiUser size={14} />
-                            </div>
+                              {expanded ? (
+                                <FiChevronUp
+                                  size={15}
+                                />
+                              ) : (
+                                <FiChevronDown
+                                  size={15}
+                                />
+                              )}
+                            </button>
+                          </div>
 
-                            <div className="min-w-0">
-                              <p
+                          <div className="px-4 py-5">
+                            <div className="flex items-center gap-3">
+                              <div
                                 className="
-                                  truncate text-sm
-                                  font-semibold
-                                  text-slate-800
+                                  flex h-9 w-9 shrink-0
+                                  items-center justify-center
+                                  rounded-xl
+                                  bg-[#172B6B]/8
+                                  text-[#172B6B]
                                 "
                               >
-                                {getClientName(
-                                  order
-                                )}
-                              </p>
+                                <FiPackage
+                                  size={16}
+                                />
+                              </div>
 
-                              <p
-                                className="
-                                  mt-0.5 text-[10px]
-                                  text-slate-400
-                                "
-                              >
-                                Customer
-                              </p>
+                              <div className="min-w-0">
+                                <p
+                                  className="
+                                    truncate text-sm
+                                    font-bold text-slate-900
+                                  "
+                                >
+                                  {order?.orderNumber ||
+                                    "Production Order"}
+                                </p>
+
+                                <p
+                                  className="
+                                    mt-0.5 text-[10px]
+                                    text-slate-400
+                                  "
+                                >
+                                  {formatDate(
+                                    order?.createdAt
+                                  )}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Products */}
+                          <div className="px-4 py-5">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                className="
+                                  flex h-8 w-8 shrink-0
+                                  items-center justify-center
+                                  rounded-lg
+                                  bg-slate-100
+                                  text-slate-500
+                                "
+                              >
+                                <FiUser
+                                  size={14}
+                                />
+                              </div>
 
-                        <div className="px-4 py-5">
-                          {products.length ? (
-                            <div className="space-y-1.5">
-                              {products
-                                .slice(0, 2)
-                                .map(
-                                  (
-                                    item: any,
-                                    index: number
-                                  ) => (
-                                    <div
-                                      key={
-                                        item?._id ||
-                                        index
-                                      }
-                                      className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                      "
-                                    >
+                              <div className="min-w-0">
+                                <p
+                                  className="
+                                    truncate text-sm
+                                    font-semibold
+                                    text-slate-800
+                                  "
+                                >
+                                  {getClientName(
+                                    order
+                                  )}
+                                </p>
+
+                                <p
+                                  className="
+                                    mt-0.5 text-[10px]
+                                    text-slate-400
+                                  "
+                                >
+                                  Customer
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="px-4 py-5">
+                            {products.length ? (
+                              <div className="space-y-1.5">
+                                {products
+                                  .slice(0, 2)
+                                  .map(
+                                    (
+                                      item: any,
+                                      index: number
+                                    ) => (
                                       <div
+                                        key={
+                                          item?._id ||
+                                          index
+                                        }
                                         className="
-                                          flex h-7 w-7
-                                          shrink-0
+                                          flex
                                           items-center
-                                          justify-center
-                                          overflow-hidden
-                                          rounded-lg
-                                          bg-slate-100
-                                          text-slate-400
+                                          gap-2
                                         "
                                       >
-                                        {getProductImage(
-                                          item
-                                        ) ? (
-                                          <img
-                                            src={getProductImage(
-                                              item
-                                            )}
-                                            alt=""
-                                            className="
-                                              h-full w-full
-                                              object-cover
-                                            "
-                                          />
-                                        ) : (
-                                          <FiPackage
-                                            size={12}
-                                          />
-                                        )}
-                                      </div>
-
-                                      <div className="min-w-0">
-                                        <p
+                                        <div
                                           className="
-                                            truncate
-                                            text-xs
-                                            font-semibold
-                                            text-slate-700
-                                          "
-                                        >
-                                          {getProductName(
-                                            item
-                                          )}
-                                        </p>
-
-                                        <p
-                                          className="
-                                            text-[9px]
+                                            flex h-7 w-7
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            overflow-hidden
+                                            rounded-lg
+                                            bg-slate-100
                                             text-slate-400
                                           "
                                         >
-                                          Qty{" "}
-                                          {getQuantity(
+                                          {getProductImage(
                                             item
+                                          ) ? (
+                                            <img
+                                              src={getProductImage(
+                                                item
+                                              )}
+                                              alt=""
+                                              className="
+                                                h-full w-full
+                                                object-cover
+                                              "
+                                            />
+                                          ) : (
+                                            <FiPackage
+                                              size={12}
+                                            />
                                           )}
-                                        </p>
+                                        </div>
+
+                                        <div className="min-w-0">
+                                          <p
+                                            className="
+                                              truncate
+                                              text-xs
+                                              font-semibold
+                                              text-slate-700
+                                            "
+                                          >
+                                            {getProductName(
+                                              item
+                                            )}
+                                          </p>
+
+                                          <p
+                                            className="
+                                              text-[9px]
+                                              text-slate-400
+                                            "
+                                          >
+                                            Qty{" "}
+                                            {getQuantity(
+                                              item
+                                            )}
+                                          </p>
+                                        </div>
                                       </div>
-                                    </div>
-                                  )
+                                    )
+                                  )}
+
+                                {products.length >
+                                  2 && (
+                                  <p
+                                    className="
+                                      text-[10px]
+                                      font-semibold
+                                      text-[#172B6B]
+                                    "
+                                  >
+                                    +
+                                    {products.length -
+                                      2}{" "}
+                                    more products
+                                  </p>
                                 )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">
+                                No products
+                              </span>
+                            )}
+                          </div>
 
-                              {products.length > 2 && (
-                                <p
-                                  className="
-                                    text-[10px]
-                                    font-semibold
-                                    text-[#172B6B]
-                                  "
-                                >
-                                  +{" "}
-                                  {products.length -
-                                    2}{" "}
-                                  more products
-                                </p>
-                              )}
+                          <div className="px-4 py-5">
+                            <div className="flex items-center justify-between">
+                              <span
+                                className="
+                                  text-xs font-bold
+                                  text-slate-700
+                                "
+                              >
+                                {
+                                  progress.percentage
+                                }
+                                %
+                              </span>
+
+                              <span
+                                className="
+                                  text-[10px]
+                                  text-slate-400
+                                "
+                              >
+                                {
+                                  progress.completed
+                                }
+                                /
+                                {
+                                  progress.total
+                                }
+                              </span>
                             </div>
-                          ) : (
-                            <span className="text-xs text-slate-400">
-                              No products
-                            </span>
-                          )}
-                        </div>
 
-                        {/* Progress */}
-
-                        <div className="px-4 py-5">
-                          <div className="flex items-center justify-between">
-                            <span
+                            <div
                               className="
-                                text-xs font-bold
-                                text-slate-700
+                                mt-2 h-1.5
+                                overflow-hidden
+                                rounded-full
+                                bg-slate-100
                               "
                             >
-                              {progress.percentage}%
-                            </span>
+                              <div
+                                className="
+                                  h-full
+                                  rounded-full
+                                  bg-[#172B6B]
+                                  transition-all
+                                "
+                                style={{
+                                  width: `${progress.percentage}%`,
+                                }}
+                              />
+                            </div>
 
-                            <span
+                            <p
                               className="
-                                text-[10px]
+                                mt-1.5
+                                text-[9px]
                                 text-slate-400
                               "
                             >
-                              {progress.completed}/
-                              {progress.total}
+                              {
+                                progress.remaining
+                              }{" "}
+                              remaining
+                            </p>
+                          </div>
+
+                          <div className="px-4 py-5">
+                            <span
+                              className={`
+                                inline-flex
+                                items-center
+                                gap-2
+                                rounded-full
+                                border
+                                px-3 py-1.5
+                                text-[10px]
+                                font-bold
+                                ${status.badge}
+                              `}
+                            >
+                              <span
+                                className={`
+                                  h-1.5 w-1.5
+                                  rounded-full
+                                  ${status.dot}
+                                `}
+                              />
+
+                              <StatusIcon
+                                size={11}
+                              />
+
+                              {
+                                status.label
+                              }
                             </span>
+                          </div>
+
+                          <div className="px-4 py-5">
+                            <div className="flex items-center gap-2">
+                              <FiCalendar
+                                size={13}
+                                className="text-slate-400"
+                              />
+
+                              <div>
+                                <p
+                                  className="
+                                    text-xs
+                                    font-semibold
+                                    text-slate-700
+                                  "
+                                >
+                                  {formatDate(
+                                    order?.targetDate
+                                  )}
+                                </p>
+
+                                <p
+                                  className="
+                                    mt-0.5 text-[9px]
+                                    text-slate-400
+                                  "
+                                >
+                                  Target date
+                                </p>
+                              </div>
+                            </div>
                           </div>
 
                           <div
                             className="
-                              mt-2 h-1.5
-                              overflow-hidden
-                              rounded-full
-                              bg-slate-100
+                              flex
+                              items-center
+                              justify-center
+                              gap-1.5
+                              px-4 py-5
+                            "
+                          >
+                            <button
+                              type="button"
+                              title="Edit order"
+                              onClick={() =>
+                                onEdit(order)
+                              }
+                              className="
+                                inline-flex
+                                h-9 w-9
+                                items-center
+                                justify-center
+                                rounded-lg
+                                border
+                                border-slate-200
+                                bg-white
+                                text-slate-500
+                                transition
+                                hover:border-blue-200
+                                hover:bg-blue-50
+                                hover:text-blue-700
+                              "
+                            >
+                              <FiEdit2
+                                size={14}
+                              />
+                            </button>
+
+                            <button
+                              type="button"
+                              title="Delete order"
+                              onClick={() =>
+                                onDelete(order)
+                              }
+                              className="
+                                inline-flex
+                                h-9 w-9
+                                items-center
+                                justify-center
+                                rounded-lg
+                                border
+                                border-slate-200
+                                bg-white
+                                text-slate-400
+                                transition
+                                hover:border-red-200
+                                hover:bg-red-50
+                                hover:text-red-600
+                              "
+                            >
+                              <FiTrash2
+                                size={14}
+                              />
+                            </button>
+
+                            <button
+                              type="button"
+                              title={
+                                expanded
+                                  ? "Hide tracking"
+                                  : "View tracking"
+                              }
+                              onClick={() =>
+                                toggleOrder(
+                                  orderId
+                                )
+                              }
+                              className="
+                                inline-flex
+                                h-9 w-9
+                                items-center
+                                justify-center
+                                rounded-lg
+                                bg-[#172B6B]
+                                text-white
+                                transition
+                                hover:bg-[#102158]
+                              "
+                            >
+                              {expanded ? (
+                                <FiChevronUp
+                                  size={14}
+                                />
+                              ) : (
+                                <FiChevronDown
+                                  size={14}
+                                />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {expanded && (
+                          <div
+                            className="
+                              border-t
+                              border-slate-100
+                              bg-slate-50/60
+                              px-5 py-6
+                              sm:px-8
                             "
                           >
                             <div
                               className="
-                                h-full
-                                rounded-full
-                                bg-[#172B6B]
-                                transition-all
+                                grid
+                                gap-6
+                                xl:grid-cols-[1.4fr_1fr]
                               "
-                              style={{
-                                width: `${progress.percentage}%`,
-                              }}
-                            />
-                          </div>
+                            >
+                              <div className="space-y-5">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <FiFileText
+                                      size={15}
+                                      className="text-[#172B6B]"
+                                    />
 
-                          <p
-                            className="
-                              mt-1.5
-                              text-[9px]
-                              text-slate-400
-                            "
-                          >
-                            {progress.remaining}{" "}
-                            remaining
-                          </p>
-                        </div>
+                                    <h3
+                                      className="
+                                        text-sm
+                                        font-bold
+                                        text-slate-900
+                                      "
+                                    >
+                                      Order Information
+                                    </h3>
 
-                        {/* Status */}
+                                    <span
+                                      className="
+                                        rounded-full
+                                        bg-white
+                                        px-2 py-0.5
+                                        text-[9px]
+                                        font-semibold
+                                        text-slate-400
+                                      "
+                                    >
+                                      CRM View
+                                    </span>
+                                  </div>
 
-                        <div className="px-4 py-5">
-                          <span
-                            className={`
-                              inline-flex
-                              items-center
-                              gap-2
-                              rounded-full
-                              border
-                              px-3 py-1.5
-                              text-[10px]
-                              font-bold
-                              ${status.badge}
-                            `}
-                          >
-                            <span
-                              className={`
-                                h-1.5 w-1.5
-                                rounded-full
-                                ${status.dot}
-                              `}
-                            />
+                                  <p
+                                    className="
+                                      mt-1
+                                      text-[11px]
+                                      text-slate-400
+                                    "
+                                  >
+                                    Customer-facing order
+                                    information and
+                                    production status.
+                                  </p>
+                                </div>
 
-                            <StatusIcon
-                              size={11}
-                            />
+                                <div
+                                  className="
+                                    grid
+                                    gap-3
+                                    sm:grid-cols-3
+                                  "
+                                >
+                                  <div
+                                    className="
+                                      rounded-xl
+                                      border
+                                      border-slate-200
+                                      bg-white
+                                      p-4
+                                    "
+                                  >
+                                    <p
+                                      className="
+                                        text-[9px]
+                                        font-bold
+                                        uppercase
+                                        tracking-wider
+                                        text-slate-400
+                                      "
+                                    >
+                                      Order
+                                    </p>
 
-                            {status.label}
-                          </span>
-                        </div>
+                                    <p
+                                      className="
+                                        mt-1
+                                        text-sm
+                                        font-bold
+                                        text-slate-800
+                                      "
+                                    >
+                                      {order?.orderNumber ||
+                                        "-"}
+                                    </p>
+                                  </div>
 
-                        {/* Target */}
+                                  <div
+                                    className="
+                                      rounded-xl
+                                      border
+                                      border-slate-200
+                                      bg-white
+                                      p-4
+                                    "
+                                  >
+                                    <p
+                                      className="
+                                        text-[9px]
+                                        font-bold
+                                        uppercase
+                                        tracking-wider
+                                        text-slate-400
+                                      "
+                                    >
+                                      Created
+                                    </p>
 
-                        <div className="px-4 py-5">
-                          <div className="flex items-center gap-2">
-                            <FiCalendar
-                              size={13}
-                              className="text-slate-400"
-                            />
+                                    <p
+                                      className="
+                                        mt-1
+                                        text-sm
+                                        font-bold
+                                        text-slate-800
+                                      "
+                                    >
+                                      {formatDate(
+                                        order?.createdAt
+                                      )}
+                                    </p>
+                                  </div>
 
-                            <div>
-                              <p
-                                className="
-                                  text-xs
-                                  font-semibold
-                                  text-slate-700
-                                "
-                              >
-                                {formatDate(
-                                  order?.targetDate
+                                  <div
+                                    className="
+                                      rounded-xl
+                                      border
+                                      border-slate-200
+                                      bg-white
+                                      p-4
+                                    "
+                                  >
+                                    <p
+                                      className="
+                                        text-[9px]
+                                        font-bold
+                                        uppercase
+                                        tracking-wider
+                                        text-slate-400
+                                      "
+                                    >
+                                      Target
+                                    </p>
+
+                                    <p
+                                      className="
+                                        mt-1
+                                        text-sm
+                                        font-bold
+                                        text-slate-800
+                                      "
+                                    >
+                                      {formatDate(
+                                        order?.targetDate
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div
+                                  className="
+                                    overflow-hidden
+                                    rounded-2xl
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                  "
+                                >
+                                  <div
+                                    className="
+                                      border-b
+                                      border-slate-100
+                                      px-4 py-3
+                                    "
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <FiPackage
+                                          size={14}
+                                          className="text-[#172B6B]"
+                                        />
+
+                                        <h4
+                                          className="
+                                            text-xs
+                                            font-bold
+                                            text-slate-800
+                                          "
+                                        >
+                                          Products in Order
+                                        </h4>
+                                      </div>
+
+                                      <span
+                                        className="
+                                          rounded-full
+                                          bg-slate-100
+                                          px-2 py-1
+                                          text-[9px]
+                                          font-bold
+                                          text-slate-500
+                                        "
+                                      >
+                                        {
+                                          products.length
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="divide-y divide-slate-100">
+                                    {products.length ? (
+                                      products.map(
+                                        (
+                                          item: any,
+                                          index: number
+                                        ) => {
+                                          const itemProgress =
+                                            getProgressPercentage(
+                                              item
+                                            );
+
+                                          const remaining =
+                                            getRemainingQuantity(
+                                              item
+                                            );
+
+                                          const checklist =
+                                            getChecklistState(
+                                              item
+                                            );
+
+                                          return (
+                                            <div
+                                              key={
+                                                item?._id ||
+                                                index
+                                              }
+                                              className="p-4"
+                                            >
+                                              <div
+                                                className="
+                                                  flex
+                                                  flex-col
+                                                  gap-4
+                                                  sm:flex-row
+                                                "
+                                              >
+                                                <div
+                                                  className="
+                                                    flex
+                                                    h-20 w-20
+                                                    shrink-0
+                                                    items-center
+                                                    justify-center
+                                                    overflow-hidden
+                                                    rounded-xl
+                                                    border
+                                                    border-slate-200
+                                                    bg-slate-100
+                                                    text-slate-400
+                                                  "
+                                                >
+                                                  {getProductImage(
+                                                    item
+                                                  ) ? (
+                                                    <img
+                                                      src={getProductImage(
+                                                        item
+                                                      )}
+                                                      alt={getProductName(
+                                                        item
+                                                      )}
+                                                      className="
+                                                        h-full
+                                                        w-full
+                                                        object-cover
+                                                      "
+                                                    />
+                                                  ) : (
+                                                    <FiImage
+                                                      size={22}
+                                                    />
+                                                  )}
+                                                </div>
+
+                                                <div className="min-w-0 flex-1">
+                                                  <div
+                                                    className="
+                                                      flex
+                                                      flex-wrap
+                                                      items-center
+                                                      gap-2
+                                                    "
+                                                  >
+                                                    <h5
+                                                      className="
+                                                        text-sm
+                                                        font-bold
+                                                        text-slate-900
+                                                      "
+                                                    >
+                                                      {getProductName(
+                                                        item
+                                                      )}
+                                                    </h5>
+
+                                                    <span
+                                                      className="
+                                                        rounded-full
+                                                        bg-slate-100
+                                                        px-2
+                                                        py-1
+                                                        text-[9px]
+                                                        font-semibold
+                                                        text-slate-500
+                                                      "
+                                                    >
+                                                      {
+                                                        checklist
+                                                      }
+                                                    </span>
+                                                  </div>
+
+                                                  <div
+                                                    className="
+                                                      mt-2
+                                                      flex
+                                                      flex-wrap
+                                                      gap-x-4
+                                                      gap-y-1
+                                                    "
+                                                  >
+                                                    {getProductMarka(
+                                                      item
+                                                    ) && (
+                                                      <span className="text-[10px] text-slate-500">
+                                                        <strong className="text-slate-700">
+                                                          Marka:
+                                                        </strong>{" "}
+                                                        {getProductMarka(
+                                                          item
+                                                        )}
+                                                      </span>
+                                                    )}
+
+                                                    {getProductCategory(
+                                                      item
+                                                    ) && (
+                                                      <span className="text-[10px] text-slate-500">
+                                                        <strong className="text-slate-700">
+                                                          Category:
+                                                        </strong>{" "}
+                                                        {getProductCategory(
+                                                          item
+                                                        )}
+                                                      </span>
+                                                    )}
+
+                                                    <span className="text-[10px] text-slate-500">
+                                                      <strong className="text-slate-700">
+                                                        Quantity:
+                                                      </strong>{" "}
+                                                      {getQuantity(
+                                                        item
+                                                      )}
+                                                    </span>
+                                                  </div>
+
+                                                  <div className="mt-4">
+                                                    <div className="flex items-center justify-between">
+                                                      <span
+                                                        className="
+                                                          text-[10px]
+                                                          font-semibold
+                                                          text-slate-500
+                                                        "
+                                                      >
+                                                        Production
+                                                        progress
+                                                      </span>
+
+                                                      <span
+                                                        className="
+                                                          text-[10px]
+                                                          font-bold
+                                                          text-slate-700
+                                                        "
+                                                      >
+                                                        {
+                                                          itemProgress
+                                                        }
+                                                        %
+                                                      </span>
+                                                    </div>
+
+                                                    <div
+                                                      className="
+                                                        mt-1.5
+                                                        h-1.5
+                                                        overflow-hidden
+                                                        rounded-full
+                                                        bg-slate-100
+                                                      "
+                                                    >
+                                                      <div
+                                                        className="
+                                                          h-full
+                                                          rounded-full
+                                                          bg-[#172B6B]
+                                                        "
+                                                        style={{
+                                                          width: `${itemProgress}%`,
+                                                        }}
+                                                      />
+                                                    </div>
+
+                                                    <div
+                                                      className="
+                                                        mt-1.5
+                                                        flex
+                                                        justify-between
+                                                        text-[9px]
+                                                        text-slate-400
+                                                      "
+                                                    >
+                                                      <span>
+                                                        Done{" "}
+                                                        <strong className="text-slate-600">
+                                                          {getActualQuantity(
+                                                            item
+                                                          )}
+                                                        </strong>
+                                                      </span>
+
+                                                      <span>
+                                                        Remaining{" "}
+                                                        <strong className="text-slate-600">
+                                                          {
+                                                            remaining
+                                                          }
+                                                        </strong>
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </div>
+
+                                              {(item?.importantNotes ||
+                                                item
+                                                  ?.checklist
+                                                  ?.reason ||
+                                                item?.remarks) && (
+                                                <div
+                                                  className="
+                                                    mt-4
+                                                    grid
+                                                    gap-2
+                                                    sm:grid-cols-3
+                                                  "
+                                                >
+                                                  {item?.importantNotes && (
+                                                    <div
+                                                      className="
+                                                        rounded-xl
+                                                        border
+                                                        border-amber-100
+                                                        bg-amber-50
+                                                        p-3
+                                                      "
+                                                    >
+                                                      <div className="flex items-center gap-1.5">
+                                                        <FiAlertCircle
+                                                          size={12}
+                                                          className="text-amber-600"
+                                                        />
+
+                                                        <p
+                                                          className="
+                                                            text-[9px]
+                                                            font-bold
+                                                            uppercase
+                                                            tracking-wider
+                                                            text-amber-700
+                                                          "
+                                                        >
+                                                          Important
+                                                          Notes
+                                                        </p>
+                                                      </div>
+
+                                                      <p
+                                                        className="
+                                                          mt-1.5
+                                                          text-[10px]
+                                                          leading-4
+                                                          text-amber-800
+                                                        "
+                                                      >
+                                                        {
+                                                          item.importantNotes
+                                                        }
+                                                      </p>
+                                                    </div>
+                                                  )}
+
+                                                  {item
+                                                    ?.checklist
+                                                    ?.reason && (
+                                                    <div
+                                                      className="
+                                                        rounded-xl
+                                                        border
+                                                        border-red-100
+                                                        bg-red-50
+                                                        p-3
+                                                      "
+                                                    >
+                                                      <div className="flex items-center gap-1.5">
+                                                        <FiAlertCircle
+                                                          size={12}
+                                                          className="text-red-600"
+                                                        />
+
+                                                        <p
+                                                          className="
+                                                            text-[9px]
+                                                            font-bold
+                                                            uppercase
+                                                            tracking-wider
+                                                            text-red-700
+                                                          "
+                                                        >
+                                                          Pending
+                                                          Reason
+                                                        </p>
+                                                      </div>
+
+                                                      <p
+                                                        className="
+                                                          mt-1.5
+                                                          text-[10px]
+                                                          leading-4
+                                                          text-red-800
+                                                        "
+                                                      >
+                                                        {
+                                                          item
+                                                            .checklist
+                                                            .reason
+                                                        }
+                                                      </p>
+                                                    </div>
+                                                  )}
+
+                                                  {item?.remarks && (
+                                                    <div
+                                                      className="
+                                                        rounded-xl
+                                                        border
+                                                        border-slate-200
+                                                        bg-slate-50
+                                                        p-3
+                                                      "
+                                                    >
+                                                      <div className="flex items-center gap-1.5">
+                                                        <FiFileText
+                                                          size={12}
+                                                          className="text-slate-500"
+                                                        />
+
+                                                        <p
+                                                          className="
+                                                            text-[9px]
+                                                            font-bold
+                                                            uppercase
+                                                            tracking-wider
+                                                            text-slate-500
+                                                          "
+                                                        >
+                                                          Production
+                                                          Remarks
+                                                        </p>
+                                                      </div>
+
+                                                      <p
+                                                        className="
+                                                          mt-1.5
+                                                          text-[10px]
+                                                          leading-4
+                                                          text-slate-600
+                                                        "
+                                                      >
+                                                        {
+                                                          item.remarks
+                                                        }
+                                                      </p>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        }
+                                      )
+                                    ) : (
+                                      <div className="p-5 text-center text-xs text-slate-400">
+                                        No product details
+                                        available.
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {order?.notes && (
+                                  <div
+                                    className="
+                                      rounded-2xl
+                                      border
+                                      border-slate-200
+                                      bg-white
+                                      p-4
+                                    "
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <FiFileText
+                                        size={14}
+                                        className="text-slate-500"
+                                      />
+
+                                      <h4
+                                        className="
+                                          text-xs
+                                          font-bold
+                                          text-slate-800
+                                        "
+                                      >
+                                        Order Notes
+                                      </h4>
+                                    </div>
+
+                                    <p
+                                      className="
+                                        mt-2
+                                        text-xs
+                                        leading-5
+                                        text-slate-600
+                                      "
+                                    >
+                                      {
+                                        order.notes
+                                      }
+                                    </p>
+                                  </div>
                                 )}
-                              </p>
+                              </div>
 
-                              <p
-                                className="
-                                  mt-0.5 text-[9px]
-                                  text-slate-400
-                                "
-                              >
-                                Target date
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-
-                        <div
-                          className="
-                            flex
-                            items-center
-                            justify-center
-                            gap-1.5
-                            px-4 py-5
-                          "
-                        >
-                          <button
-                            type="button"
-                            title="Edit order"
-                            onClick={() =>
-                              onEdit(order)
-                            }
-                            className="
-                              inline-flex
-                              h-9 w-9
-                              items-center
-                              justify-center
-                              rounded-lg
-                              border
-                              border-slate-200
-                              bg-white
-                              text-slate-500
-                              transition
-                              hover:border-blue-200
-                              hover:bg-blue-50
-                              hover:text-blue-700
-                            "
-                          >
-                            <FiEdit2
-                              size={14}
-                            />
-                          </button>
-
-                          <button
-                            type="button"
-                            title="Delete order"
-                            onClick={() =>
-                              onDelete(order)
-                            }
-                            className="
-                              inline-flex
-                              h-9 w-9
-                              items-center
-                              justify-center
-                              rounded-lg
-                              border
-                              border-slate-200
-                              bg-white
-                              text-slate-400
-                              transition
-                              hover:border-red-200
-                              hover:bg-red-50
-                              hover:text-red-600
-                            "
-                          >
-                            <FiTrash2
-                              size={14}
-                            />
-                          </button>
-
-                          <button
-                            type="button"
-                            title={
-                              expanded
-                                ? "Hide tracking"
-                                : "View tracking"
-                            }
-                            onClick={() =>
-                              toggleOrder(
-                                orderId
-                              )
-                            }
-                            className="
-                              inline-flex
-                              h-9 w-9
-                              items-center
-                              justify-center
-                              rounded-lg
-                              bg-[#172B6B]
-                              text-white
-                              transition
-                              hover:bg-[#102158]
-                            "
-                          >
-                            {expanded ? (
-                              <FiChevronUp
-                                size={14}
-                              />
-                            ) : (
-                              <FiChevronDown
-                                size={14}
-                              />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Expanded Tracking */}
-
-                      {expanded && (
-                        <div
-                          className="
-                            border-t
-                            border-slate-100
-                            bg-slate-50/60
-                            px-5 py-6
-                            sm:px-8
-                          "
-                        >
-                          <div
-                            className="
-                              grid
-                              gap-6
-                              xl:grid-cols-[1.4fr_1fr]
-                            "
-                          >
-                            {/* Left: Order Information */}
-
-                            <div className="space-y-5">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <FiFileText
+                                  <FiRefreshCw
                                     size={15}
                                     className="text-[#172B6B]"
                                   />
@@ -1350,12 +2409,14 @@ const OrdersTable = ({
                                       text-slate-900
                                     "
                                   >
-                                    Order Information
+                                    Production Timeline
                                   </h3>
 
                                   <span
                                     className="
                                       rounded-full
+                                      border
+                                      border-slate-200
                                       bg-white
                                       px-2 py-0.5
                                       text-[9px]
@@ -1363,7 +2424,7 @@ const OrdersTable = ({
                                       text-slate-400
                                     "
                                   >
-                                    CRM View
+                                    Read Only
                                   </span>
                                 </div>
 
@@ -1374,1054 +2435,367 @@ const OrdersTable = ({
                                     text-slate-400
                                   "
                                 >
-                                  Customer-facing order
-                                  information and
-                                  production status.
+                                  Live execution tracking
+                                  provided by Production.
+                                  CRM cannot modify this
+                                  information.
                                 </p>
-                              </div>
-
-                              {/* Order Meta */}
-
-                              <div
-                                className="
-                                  grid
-                                  gap-3
-                                  sm:grid-cols-3
-                                "
-                              >
-                                <div
-                                  className="
-                                    rounded-xl
-                                    border
-                                    border-slate-200
-                                    bg-white
-                                    p-4
-                                  "
-                                >
-                                  <p
-                                    className="
-                                      text-[9px]
-                                      font-bold
-                                      uppercase
-                                      tracking-wider
-                                      text-slate-400
-                                    "
-                                  >
-                                    Order
-                                  </p>
-
-                                  <p
-                                    className="
-                                      mt-1
-                                      text-sm
-                                      font-bold
-                                      text-slate-800
-                                    "
-                                  >
-                                    {order?.orderNumber ||
-                                      "-"}
-                                  </p>
-                                </div>
 
                                 <div
                                   className="
-                                    rounded-xl
-                                    border
-                                    border-slate-200
-                                    bg-white
-                                    p-4
-                                  "
-                                >
-                                  <p
-                                    className="
-                                      text-[9px]
-                                      font-bold
-                                      uppercase
-                                      tracking-wider
-                                      text-slate-400
-                                    "
-                                  >
-                                    Created
-                                  </p>
-
-                                  <p
-                                    className="
-                                      mt-1
-                                      text-sm
-                                      font-bold
-                                      text-slate-800
-                                    "
-                                  >
-                                    {formatDate(
-                                      order?.createdAt
-                                    )}
-                                  </p>
-                                </div>
-
-                                <div
-                                  className="
-                                    rounded-xl
-                                    border
-                                    border-slate-200
-                                    bg-white
-                                    p-4
-                                  "
-                                >
-                                  <p
-                                    className="
-                                      text-[9px]
-                                      font-bold
-                                      uppercase
-                                      tracking-wider
-                                      text-slate-400
-                                    "
-                                  >
-                                    Target
-                                  </p>
-
-                                  <p
-                                    className="
-                                      mt-1
-                                      text-sm
-                                      font-bold
-                                      text-slate-800
-                                    "
-                                  >
-                                    {formatDate(
-                                      order?.targetDate
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Product Details */}
-
-                              <div
-                                className="
-                                  overflow-hidden
-                                  rounded-2xl
-                                  border
-                                  border-slate-200
-                                  bg-white
-                                "
-                              >
-                                <div
-                                  className="
-                                    border-b
-                                    border-slate-100
-                                    px-4 py-3
-                                  "
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <FiPackage
-                                        size={14}
-                                        className="text-[#172B6B]"
-                                      />
-
-                                      <h4
-                                        className="
-                                          text-xs
-                                          font-bold
-                                          text-slate-800
-                                        "
-                                      >
-                                        Products in Order
-                                      </h4>
-                                    </div>
-
-                                    <span
-                                      className="
-                                        rounded-full
-                                        bg-slate-100
-                                        px-2 py-1
-                                        text-[9px]
-                                        font-bold
-                                        text-slate-500
-                                      "
-                                    >
-                                      {products.length}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="divide-y divide-slate-100">
-                                  {products.length ? (
-                                    products.map(
-                                      (
-                                        item: any,
-                                        index: number
-                                      ) => {
-                                        const itemProgress =
-                                          getProgressPercentage(
-                                            item
-                                          );
-
-                                        const remaining =
-                                          getRemainingQuantity(
-                                            item
-                                          );
-
-                                        const checklist =
-                                          getChecklistState(
-                                            item
-                                          );
-
-                                        return (
-                                          <div
-                                            key={
-                                              item?._id ||
-                                              index
-                                            }
-                                            className="p-4"
-                                          >
-                                            <div
-                                              className="
-                                                flex
-                                                flex-col
-                                                gap-4
-                                                sm:flex-row
-                                              "
-                                            >
-                                              {/* Image */}
-
-                                              <div
-                                                className="
-                                                  flex
-                                                  h-16 w-16
-                                                  shrink-0
-                                                  items-center
-                                                  justify-center
-                                                  overflow-hidden
-                                                  rounded-xl
-                                                  bg-slate-100
-                                                  text-slate-400
-                                                "
-                                              >
-                                                {getProductImage(
-                                                  item
-                                                ) ? (
-                                                  <img
-                                                    src={getProductImage(
-                                                      item
-                                                    )}
-                                                    alt={getProductName(
-                                                      item
-                                                    )}
-                                                    className="
-                                                      h-full
-                                                      w-full
-                                                      object-cover
-                                                    "
-                                                  />
-                                                ) : (
-                                                  <FiImage
-                                                    size={22}
-                                                  />
-                                                )}
-                                              </div>
-
-                                              <div className="min-w-0 flex-1">
-                                                <div
-                                                  className="
-                                                    flex
-                                                    flex-wrap
-                                                    items-center
-                                                    gap-2
-                                                  "
-                                                >
-                                                  <h5
-                                                    className="
-                                                      text-sm
-                                                      font-bold
-                                                      text-slate-900
-                                                    "
-                                                  >
-                                                    {getProductName(
-                                                      item
-                                                    )}
-                                                  </h5>
-
-                                                  <span
-                                                    className="
-                                                      rounded-full
-                                                      bg-slate-100
-                                                      px-2
-                                                      py-1
-                                                      text-[9px]
-                                                      font-semibold
-                                                      text-slate-500
-                                                    "
-                                                  >
-                                                    {
-                                                      checklist
-                                                    }
-                                                  </span>
-                                                </div>
-
-                                                <div
-                                                  className="
-                                                    mt-2
-                                                    flex
-                                                    flex-wrap
-                                                    gap-x-4
-                                                    gap-y-1
-                                                  "
-                                                >
-                                                  {getProductMarka(
-                                                    item
-                                                  ) && (
-                                                    <span className="text-[10px] text-slate-500">
-                                                      <strong className="text-slate-700">
-                                                        Marka:
-                                                      </strong>{" "}
-                                                      {getProductMarka(
-                                                        item
-                                                      )}
-                                                    </span>
-                                                  )}
-
-                                                  {getProductCategory(
-                                                    item
-                                                  ) && (
-                                                    <span className="text-[10px] text-slate-500">
-                                                      <strong className="text-slate-700">
-                                                        Category:
-                                                      </strong>{" "}
-                                                      {getProductCategory(
-                                                        item
-                                                      )}
-                                                    </span>
-                                                  )}
-
-                                                  <span className="text-[10px] text-slate-500">
-                                                    <strong className="text-slate-700">
-                                                      Quantity:
-                                                    </strong>{" "}
-                                                    {getQuantity(
-                                                      item
-                                                    )}
-                                                  </span>
-                                                </div>
-
-                                                {/* Progress */}
-
-                                                <div className="mt-4">
-                                                  <div className="flex items-center justify-between">
-                                                    <span
-                                                      className="
-                                                        text-[10px]
-                                                        font-semibold
-                                                        text-slate-500
-                                                      "
-                                                    >
-                                                      Production
-                                                      progress
-                                                    </span>
-
-                                                    <span
-                                                      className="
-                                                        text-[10px]
-                                                        font-bold
-                                                        text-slate-700
-                                                      "
-                                                    >
-                                                      {
-                                                        itemProgress
-                                                      }
-                                                      %
-                                                    </span>
-                                                  </div>
-
-                                                  <div
-                                                    className="
-                                                      mt-1.5
-                                                      h-1.5
-                                                      overflow-hidden
-                                                      rounded-full
-                                                      bg-slate-100
-                                                    "
-                                                  >
-                                                    <div
-                                                      className="
-                                                        h-full
-                                                        rounded-full
-                                                        bg-[#172B6B]
-                                                      "
-                                                      style={{
-                                                        width: `${itemProgress}%`,
-                                                      }}
-                                                    />
-                                                  </div>
-
-                                                  <div
-                                                    className="
-                                                      mt-1.5
-                                                      flex
-                                                      justify-between
-                                                      text-[9px]
-                                                      text-slate-400
-                                                    "
-                                                  >
-                                                    <span>
-                                                      Done{" "}
-                                                      <strong className="text-slate-600">
-                                                        {
-                                                          getActualQuantity(
-                                                            item
-                                                          )
-                                                        }
-                                                      </strong>
-                                                    </span>
-
-                                                    <span>
-                                                      Remaining{" "}
-                                                      <strong className="text-slate-600">
-                                                        {
-                                                          remaining
-                                                        }
-                                                      </strong>
-                                                    </span>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-
-                                            {/* Production Notes */}
-
-                                            {(item
-                                              ?.importantNotes ||
-                                              item
-                                                ?.checklist
-                                                ?.reason ||
-                                              item?.remarks) && (
-                                              <div
-                                                className="
-                                                  mt-4
-                                                  grid
-                                                  gap-2
-                                                  sm:grid-cols-3
-                                                "
-                                              >
-                                                {item?.importantNotes && (
-                                                  <div
-                                                    className="
-                                                      rounded-xl
-                                                      border
-                                                      border-amber-100
-                                                      bg-amber-50
-                                                      p-3
-                                                    "
-                                                  >
-                                                    <div className="flex items-center gap-1.5">
-                                                      <FiAlertCircle
-                                                        size={12}
-                                                        className="text-amber-600"
-                                                      />
-
-                                                      <p
-                                                        className="
-                                                          text-[9px]
-                                                          font-bold
-                                                          uppercase
-                                                          tracking-wider
-                                                          text-amber-700
-                                                        "
-                                                      >
-                                                        Important
-                                                        Notes
-                                                      </p>
-                                                    </div>
-
-                                                    <p
-                                                      className="
-                                                        mt-1.5
-                                                        text-[10px]
-                                                        leading-4
-                                                        text-amber-800
-                                                      "
-                                                    >
-                                                      {
-                                                        item.importantNotes
-                                                      }
-                                                    </p>
-                                                  </div>
-                                                )}
-
-                                                {item?.checklist
-                                                  ?.reason && (
-                                                  <div
-                                                    className="
-                                                      rounded-xl
-                                                      border
-                                                      border-red-100
-                                                      bg-red-50
-                                                      p-3
-                                                    "
-                                                  >
-                                                    <div className="flex items-center gap-1.5">
-                                                      <FiAlertCircle
-                                                        size={12}
-                                                        className="text-red-600"
-                                                      />
-
-                                                      <p
-                                                        className="
-                                                          text-[9px]
-                                                          font-bold
-                                                          uppercase
-                                                          tracking-wider
-                                                          text-red-700
-                                                        "
-                                                      >
-                                                        Pending
-                                                        Reason
-                                                      </p>
-                                                    </div>
-
-                                                    <p
-                                                      className="
-                                                        mt-1.5
-                                                        text-[10px]
-                                                        leading-4
-                                                        text-red-800
-                                                      "
-                                                    >
-                                                      {
-                                                        item
-                                                          .checklist
-                                                          .reason
-                                                      }
-                                                    </p>
-                                                  </div>
-                                                )}
-
-                                                {item?.remarks && (
-                                                  <div
-                                                    className="
-                                                      rounded-xl
-                                                      border
-                                                      border-slate-200
-                                                      bg-slate-50
-                                                      p-3
-                                                    "
-                                                  >
-                                                    <div className="flex items-center gap-1.5">
-                                                      <FiFileText
-                                                        size={12}
-                                                        className="text-slate-500"
-                                                      />
-
-                                                      <p
-                                                        className="
-                                                          text-[9px]
-                                                          font-bold
-                                                          uppercase
-                                                          tracking-wider
-                                                          text-slate-500
-                                                        "
-                                                      >
-                                                        Production
-                                                        Remarks
-                                                      </p>
-                                                    </div>
-
-                                                    <p
-                                                      className="
-                                                        mt-1.5
-                                                        text-[10px]
-                                                        leading-4
-                                                        text-slate-600
-                                                      "
-                                                    >
-                                                      {
-                                                        item.remarks
-                                                      }
-                                                    </p>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      }
-                                    )
-                                  ) : (
-                                    <div className="p-5 text-center text-xs text-slate-400">
-                                      No product details
-                                      available.
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Order Notes */}
-
-                              {order?.notes && (
-                                <div
-                                  className="
+                                    mt-5
                                     rounded-2xl
                                     border
                                     border-slate-200
                                     bg-white
-                                    p-4
+                                    p-5
                                   "
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <FiFileText
-                                      size={14}
-                                      className="text-slate-500"
-                                    />
+                                  <div className="relative">
+                                    {getTimeline(
+                                      order
+                                    ).map(
+                                      (
+                                        event,
+                                        index,
+                                        array
+                                      ) => {
+                                        const Icon =
+                                          event.icon;
 
-                                    <h4
-                                      className="
-                                        text-xs
-                                        font-bold
-                                        text-slate-800
-                                      "
-                                    >
-                                      Order Notes
-                                    </h4>
-                                  </div>
+                                        return (
+                                          <div
+                                            key={`${event.title}-${index}`}
+                                            className="
+                                              relative
+                                              flex gap-4
+                                            "
+                                          >
+                                            {index <
+                                              array.length -
+                                                1 && (
+                                              <div
+                                                className={`
+                                                  absolute
+                                                  left-[15px]
+                                                  top-8
+                                                  h-[calc(100%-4px)]
+                                                  w-px
+                                                  ${
+                                                    event.state ===
+                                                    "done"
+                                                      ? "bg-[#172B6B]/30"
+                                                      : "bg-slate-200"
+                                                  }
+                                                `}
+                                              />
+                                            )}
 
-                                  <p
-                                    className="
-                                      mt-2
-                                      text-xs
-                                      leading-5
-                                      text-slate-600
-                                    "
-                                  >
-                                    {order.notes}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Right: Timeline */}
-
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <FiRefreshCw
-                                  size={15}
-                                  className="text-[#172B6B]"
-                                />
-
-                                <h3
-                                  className="
-                                    text-sm
-                                    font-bold
-                                    text-slate-900
-                                  "
-                                >
-                                  Production Timeline
-                                </h3>
-
-                                <span
-                                  className="
-                                    rounded-full
-                                    border
-                                    border-slate-200
-                                    bg-white
-                                    px-2 py-0.5
-                                    text-[9px]
-                                    font-semibold
-                                    text-slate-400
-                                  "
-                                >
-                                  Read Only
-                                </span>
-                              </div>
-
-                              <p
-                                className="
-                                  mt-1
-                                  text-[11px]
-                                  text-slate-400
-                                "
-                              >
-                                Live execution tracking
-                                provided by Production.
-                                CRM cannot modify this
-                                information.
-                              </p>
-
-                              <div
-                                className="
-                                  mt-5
-                                  rounded-2xl
-                                  border
-                                  border-slate-200
-                                  bg-white
-                                  p-5
-                                "
-                              >
-                                <div className="relative">
-                                  {getTimeline(
-                                    order
-                                  ).map(
-                                    (
-                                      event,
-                                      index,
-                                      array
-                                    ) => {
-                                      const Icon =
-                                        event.icon;
-
-                                      return (
-                                        <div
-                                          key={`${event.title}-${index}`}
-                                          className="
-                                            relative
-                                            flex gap-4
-                                          "
-                                        >
-                                          {index <
-                                            array.length -
-                                              1 && (
                                             <div
                                               className={`
-                                                absolute
-                                                left-[15px]
-                                                top-8
-                                                h-[calc(100%-4px)]
-                                                w-px
+                                                relative
+                                                z-10
+                                                flex
+                                                h-8 w-8
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-full
+                                                border
                                                 ${
                                                   event.state ===
                                                   "done"
-                                                    ? "bg-[#172B6B]/30"
-                                                    : "bg-slate-200"
+                                                    ? "border-[#172B6B]/20 bg-[#172B6B]/10 text-[#172B6B]"
+                                                    : event.state ===
+                                                      "current"
+                                                    ? "border-amber-200 bg-amber-50 text-amber-600"
+                                                    : "border-slate-200 bg-slate-50 text-slate-300"
                                                 }
                                               `}
-                                            />
-                                          )}
-
-                                          <div
-                                            className={`
-                                              relative
-                                              z-10
-                                              flex
-                                              h-8 w-8
-                                              shrink-0
-                                              items-center
-                                              justify-center
-                                              rounded-full
-                                              border
-                                              ${
-                                                event.state ===
-                                                "done"
-                                                  ? "border-[#172B6B]/20 bg-[#172B6B]/10 text-[#172B6B]"
-                                                  : event.state ===
-                                                    "current"
-                                                  ? "border-amber-200 bg-amber-50 text-amber-600"
-                                                  : "border-slate-200 bg-slate-50 text-slate-300"
-                                              }
-                                            `}
-                                          >
-                                            {event.state ===
-                                            "done" ? (
-                                              <FiCheck
-                                                size={13}
-                                              />
-                                            ) : (
-                                              <Icon
-                                                size={13}
-                                              />
-                                            )}
-                                          </div>
-
-                                          <div
-                                            className={`
-                                              min-w-0
-                                              flex-1
-                                              ${
-                                                index <
-                                                array.length -
-                                                  1
-                                                  ? "pb-7"
-                                                  : ""
-                                              }
-                                            `}
-                                          >
-                                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                              <h4
-                                                className={`
-                                                  text-xs
-                                                  font-bold
-                                                  ${
-                                                    event.state ===
-                                                    "pending"
-                                                      ? "text-slate-400"
-                                                      : "text-slate-800"
-                                                  }
-                                                `}
-                                              >
-                                                {
-                                                  event.title
-                                                }
-                                              </h4>
-
-                                              {event.date && (
-                                                <span
-                                                  className="
-                                                    text-[9px]
-                                                    text-slate-400
-                                                  "
-                                                >
-                                                  {formatDateTime(
-                                                    event.date
-                                                  )}
-                                                </span>
+                                            >
+                                              {event.state ===
+                                              "done" ? (
+                                                <FiCheck
+                                                  size={13}
+                                                />
+                                              ) : (
+                                                <Icon
+                                                  size={13}
+                                                />
                                               )}
                                             </div>
 
-                                            <p
-                                              className="
-                                                mt-1
-                                                text-[10px]
-                                                leading-4
-                                                text-slate-500
-                                              "
+                                            <div
+                                              className={`
+                                                min-w-0
+                                                flex-1
+                                                ${
+                                                  index <
+                                                  array.length -
+                                                    1
+                                                    ? "pb-7"
+                                                    : ""
+                                                }
+                                              `}
                                             >
-                                              {
-                                                event.description
-                                              }
-                                            </p>
+                                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <h4
+                                                  className={`
+                                                    text-xs
+                                                    font-bold
+                                                    ${
+                                                      event.state ===
+                                                      "pending"
+                                                        ? "text-slate-400"
+                                                        : "text-slate-800"
+                                                    }
+                                                  `}
+                                                >
+                                                  {
+                                                    event.title
+                                                  }
+                                                </h4>
+
+                                                {event.date && (
+                                                  <span
+                                                    className="
+                                                      text-[9px]
+                                                      text-slate-400
+                                                    "
+                                                  >
+                                                    {formatDateTime(
+                                                      event.date
+                                                    )}
+                                                  </span>
+                                                )}
+                                              </div>
+
+                                              <p
+                                                className="
+                                                  mt-1
+                                                  text-[10px]
+                                                  leading-4
+                                                  text-slate-500
+                                                "
+                                              >
+                                                {
+                                                  event.description
+                                                }
+                                              </p>
+                                            </div>
                                           </div>
-                                        </div>
-                                      );
-                                    }
-                                  )}
+                                        );
+                                      }
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
 
-                              {/* Overall Progress */}
+                                <div
+                                  className="
+                                    mt-4
+                                    rounded-2xl
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    p-5
+                                  "
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p
+                                        className="
+                                          text-[9px]
+                                          font-bold
+                                          uppercase
+                                          tracking-wider
+                                          text-slate-400
+                                        "
+                                      >
+                                        Overall Production
+                                      </p>
 
-                              <div
-                                className="
-                                  mt-4
-                                  rounded-2xl
-                                  border
-                                  border-slate-200
-                                  bg-white
-                                  p-5
-                                "
-                              >
-                                <div className="flex items-center justify-between">
+                                      <p
+                                        className="
+                                          mt-1
+                                          text-lg
+                                          font-bold
+                                          text-slate-900
+                                        "
+                                      >
+                                        {
+                                          progress.percentage
+                                        }
+                                        %
+                                      </p>
+                                    </div>
+
+                                    <div
+                                      className="
+                                        flex
+                                        items-center
+                                        gap-4
+                                        text-right
+                                      "
+                                    >
+                                      <div>
+                                        <p className="text-[9px] text-slate-400">
+                                          Completed
+                                        </p>
+
+                                        <p
+                                          className="
+                                            mt-0.5
+                                            text-sm
+                                            font-bold
+                                            text-emerald-600
+                                          "
+                                        >
+                                          {
+                                            progress.completed
+                                          }
+                                        </p>
+                                      </div>
+
+                                      <div>
+                                        <p className="text-[9px] text-slate-400">
+                                          Remaining
+                                        </p>
+
+                                        <p
+                                          className="
+                                            mt-0.5
+                                            text-sm
+                                            font-bold
+                                            text-amber-600
+                                          "
+                                        >
+                                          {
+                                            progress.remaining
+                                          }
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div
+                                    className="
+                                      mt-4 h-2
+                                      overflow-hidden
+                                      rounded-full
+                                      bg-slate-100
+                                    "
+                                  >
+                                    <div
+                                      className="
+                                        h-full
+                                        rounded-full
+                                        bg-[#172B6B]
+                                        transition-all
+                                      "
+                                      style={{
+                                        width: `${progress.percentage}%`,
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div
+                                    className="
+                                      mt-2
+                                      flex
+                                      items-center
+                                      justify-between
+                                    "
+                                  >
+                                    <span className="text-[9px] text-slate-400">
+                                      {
+                                        progress.completed
+                                      }{" "}
+                                      completed
+                                    </span>
+
+                                    <span className="text-[9px] text-slate-400">
+                                      {
+                                        progress.total
+                                      }{" "}
+                                      total
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div
+                                  className="
+                                    mt-4
+                                    flex items-start gap-3
+                                    rounded-2xl
+                                    border
+                                    border-blue-100
+                                    bg-blue-50/60
+                                    p-4
+                                  "
+                                >
+                                  <div
+                                    className="
+                                      mt-0.5
+                                      flex h-7 w-7
+                                      shrink-0
+                                      items-center
+                                      justify-center
+                                      rounded-lg
+                                      bg-white
+                                      text-blue-600
+                                      shadow-sm
+                                    "
+                                  >
+                                    <FiCheckCircle
+                                      size={14}
+                                    />
+                                  </div>
+
                                   <div>
                                     <p
                                       className="
-                                        text-[9px]
+                                        text-[10px]
                                         font-bold
-                                        uppercase
-                                        tracking-wider
-                                        text-slate-400
+                                        text-blue-800
                                       "
                                     >
-                                      Overall Production
+                                      Production tracking
+                                      is read-only
                                     </p>
 
                                     <p
                                       className="
                                         mt-1
-                                        text-lg
-                                        font-bold
-                                        text-slate-900
+                                        text-[10px]
+                                        leading-4
+                                        text-blue-700
                                       "
                                     >
-                                      {
-                                        progress.percentage
-                                      }
-                                      %
+                                      CRM can view the
+                                      current production
+                                      progress and use it
+                                      for customer
+                                      communication.
+                                      Production staff are
+                                      responsible for
+                                      updating execution
+                                      details.
                                     </p>
                                   </div>
-
-                                  <div
-                                    className="
-                                      flex
-                                      items-center
-                                      gap-4
-                                      text-right
-                                    "
-                                  >
-                                    <div>
-                                      <p
-                                        className="
-                                          text-[9px]
-                                          text-slate-400
-                                        "
-                                      >
-                                        Completed
-                                      </p>
-
-                                      <p
-                                        className="
-                                          mt-0.5
-                                          text-sm
-                                          font-bold
-                                          text-emerald-600
-                                        "
-                                      >
-                                        {
-                                          progress.completed
-                                        }
-                                      </p>
-                                    </div>
-
-                                    <div>
-                                      <p
-                                        className="
-                                          text-[9px]
-                                          text-slate-400
-                                        "
-                                      >
-                                        Remaining
-                                      </p>
-
-                                      <p
-                                        className="
-                                          mt-0.5
-                                          text-sm
-                                          font-bold
-                                          text-amber-600
-                                        "
-                                      >
-                                        {
-                                          progress.remaining
-                                        }
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div
-                                  className="
-                                    mt-4 h-2
-                                    overflow-hidden
-                                    rounded-full
-                                    bg-slate-100
-                                  "
-                                >
-                                  <div
-                                    className="
-                                      h-full
-                                      rounded-full
-                                      bg-[#172B6B]
-                                      transition-all
-                                    "
-                                    style={{
-                                      width: `${progress.percentage}%`,
-                                    }}
-                                  />
-                                </div>
-
-                                <div
-                                  className="
-                                    mt-2
-                                    flex
-                                    items-center
-                                    justify-between
-                                  "
-                                >
-                                  <span
-                                    className="
-                                      text-[9px]
-                                      text-slate-400
-                                    "
-                                  >
-                                    {progress.completed}{" "}
-                                    completed
-                                  </span>
-
-                                  <span
-                                    className="
-                                      text-[9px]
-                                      text-slate-400
-                                    "
-                                  >
-                                    {progress.total}{" "}
-                                    total
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* CRM Permission Notice */}
-
-                              <div
-                                className="
-                                  mt-4
-                                  flex items-start gap-3
-                                  rounded-2xl
-                                  border
-                                  border-blue-100
-                                  bg-blue-50/60
-                                  p-4
-                                "
-                              >
-                                <div
-                                  className="
-                                    mt-0.5
-                                    flex h-7 w-7
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded-lg
-                                    bg-white
-                                    text-blue-600
-                                    shadow-sm
-                                  "
-                                >
-                                  <FiCheckCircle
-                                    size={14}
-                                  />
-                                </div>
-
-                                <div>
-                                  <p
-                                    className="
-                                      text-[10px]
-                                      font-bold
-                                      text-blue-800
-                                    "
-                                  >
-                                    Production tracking
-                                    is read-only
-                                  </p>
-
-                                  <p
-                                    className="
-                                      mt-1
-                                      text-[10px]
-                                      leading-4
-                                      text-blue-700
-                                    "
-                                  >
-                                    CRM can view the
-                                    current production
-                                    progress and use it
-                                    for customer
-                                    communication.
-                                    Production staff are
-                                    responsible for
-                                    updating execution
-                                    details.
-                                  </p>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }
+              )
             )}
           </tbody>
         </table>
       </div>
-
-      {/* Footer */}
 
       {orders.length > 0 && (
         <div
@@ -2444,11 +2818,13 @@ const OrdersTable = ({
           >
             Showing{" "}
             <span className="font-semibold text-slate-600">
+              {filteredOrders.length}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-slate-600">
               {orders.length}
             </span>{" "}
-            {orders.length === 1
-              ? "production order"
-              : "production orders"}
+            production orders
           </p>
 
           <div

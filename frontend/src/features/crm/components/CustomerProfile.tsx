@@ -7,7 +7,6 @@ import {
   FiCheckCircle,
   FiChevronRight,
   FiClock,
-  FiCreditCard,
   FiEdit3,
   FiFileText,
   FiMapPin,
@@ -34,8 +33,6 @@ interface Props {
   onCreateOrder: (customer: any) => void;
 
   onAddNote: () => void;
-
-  onRecordPayment: (customer: any) => void;
 
   /*
     Mobile list -> detail navigation.
@@ -306,7 +303,6 @@ const CustomerProfile = ({
   onDelete,
   onCreateOrder,
   onAddNote,
-  onRecordPayment,
   onBackToList,
 }: Props) => {
   if (!customer) {
@@ -787,32 +783,6 @@ const CustomerProfile = ({
             New Order
           </button>
 
-          <button
-            onClick={() =>
-              onRecordPayment(customer)
-            }
-            className="
-              inline-flex
-              h-10
-              items-center
-              justify-center
-              gap-2
-              rounded-xl
-              border
-              border-blue-200
-              bg-blue-50
-              px-4
-              text-xs
-              font-bold
-              text-blue-700
-              transition-all
-              hover:bg-blue-100
-              active:scale-[0.98]
-            "
-          >
-            <FiCreditCard size={15} />
-            Record Payment
-          </button>
 
           <div className="hidden h-6 w-px bg-slate-200 sm:block" />
 
@@ -881,7 +851,7 @@ const CustomerProfile = ({
 
       <Section
         title="CRM Activity Timeline"
-        subtitle="Meetings, follow-ups, payments and customer interactions."
+        subtitle="Meetings, follow-ups and customer interactions."
         icon={<FiActivity size={17} />}
         action={
           <button
@@ -1458,7 +1428,7 @@ const CustomerProfile = ({
       <Section
         title="Commercial Information"
         subtitle="Pricing, payment terms and account balances."
-        icon={<FiCreditCard size={17} />}
+        icon={<FiBriefcase size={17} />}
       >
         <div
           className="
@@ -1685,10 +1655,6 @@ const ActivityIcon = ({
     return <FiPhone size={17} />;
   }
 
-  if (type === "PAYMENT") {
-    return <FiCreditCard size={17} />;
-  }
-
   if (type === "PRODUCT") {
     return <FiPackage size={17} />;
   }
@@ -1713,7 +1679,6 @@ const ActivityBadge = ({
   const labels: Record<string, string> = {
     MEETING: "Meeting",
     FOLLOW_UP: "Follow-up",
-    PAYMENT: "Payment",
     PRODUCT: "Product",
     COMPLAINT: "Complaint",
     GENERAL: "General",

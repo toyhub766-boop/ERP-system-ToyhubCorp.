@@ -12,11 +12,6 @@ import {
 } from "../services/order.service";
 
 import {
-  getPaymentsByCustomer,
-  deletePayment,
-} from "../services/payment.service";
-
-import {
   getCustomers,
   deleteCustomer,
 } from "../services/customer.service";
@@ -33,11 +28,9 @@ import CustomerList from "../components/CustomerList";
 import CustomerProfile from "../components/CustomerProfile";
 
 import OrdersTable from "../components/OrdersTable";
-import PaymentsOverview from "../components/PaymentsOverview";
 
 import CustomerModal from "../components/CustomerModal";
 import OrderModal from "../components/OrderModal";
-import PaymentModal from "../components/PaymentModal";
 import AddNoteModal from "../components/AddNoteModal";
 
 import SalesPipeline from "../components/SalesPipeline";
@@ -58,8 +51,7 @@ type CRMTab =
   | "customers"
   | "pipeline"
   | "dues"
-  | "orders"
-  | "payments";
+  | "orders";
 
 type CRMRecord = any;
 
@@ -110,13 +102,10 @@ const CRMPage = () => {
     useState("");
 
   // =========================================================
-  // ORDERS / PAYMENTS
+  // ORDERS
   // =========================================================
 
   const [orders, setOrders] =
-    useState<any[]>([]);
-
-  const [payments, setPayments] =
     useState<any[]>([]);
 
   // =========================================================
@@ -137,19 +126,6 @@ const CRMPage = () => {
     useState(false);
 
   const [editingOrder, setEditingOrder] =
-    useState<any>(null);
-
-  // =========================================================
-  // PAYMENT MODAL
-  // =========================================================
-
-  const [showPaymentModal, setShowPaymentModal] =
-    useState(false);
-
-  const [editingPayment, setEditingPayment] =
-    useState<any>(null);
-
-  const [selectedOrder, setSelectedOrder] =
     useState<any>(null);
 
   // =========================================================
@@ -385,7 +361,7 @@ const CRMPage = () => {
   ]);
 
   // =========================================================
-  // LOAD ORDERS / PAYMENTS
+  // LOAD ORDERS
   // =========================================================
 
   const loadCustomerData =
@@ -400,7 +376,6 @@ const CRMPage = () => {
         "ACCOUNTS"
       ) {
         setOrders([]);
-        setPayments([]);
         return;
       }
 
@@ -410,18 +385,12 @@ const CRMPage = () => {
 
       if (!id) {
         setOrders([]);
-        setPayments([]);
         return;
       }
 
       try {
-        const [
-          ordersData,
-          paymentsData,
-        ] = await Promise.all([
-          getOrdersByCustomer(id),
-          getPaymentsByCustomer(id),
-        ]);
+        const ordersData =
+          await getOrdersByCustomer(id);
 
         setOrders(
           Array.isArray(
@@ -430,22 +399,13 @@ const CRMPage = () => {
             ? ordersData
             : []
         );
-
-        setPayments(
-          Array.isArray(
-            paymentsData
-          )
-            ? paymentsData
-            : []
-        );
       } catch (error) {
         console.error(
-          "Failed to load customer data:",
+          "Failed to load customer orders:",
           error
         );
 
         setOrders([]);
-        setPayments([]);
       }
     };
 
@@ -458,7 +418,6 @@ const CRMPage = () => {
       !selectedCustomer?._id
     ) {
       setOrders([]);
-      setPayments([]);
       return;
     }
 
@@ -574,7 +533,6 @@ const CRMPage = () => {
         );
 
         setOrders([]);
-        setPayments([]);
 
         await loadCustomers();
       } catch (error) {
@@ -616,36 +574,6 @@ const CRMPage = () => {
     };
 
   // =========================================================
-  // DELETE PAYMENT
-  // =========================================================
-
-  const handleDeletePayment =
-    async (
-      payment: any
-    ) => {
-      if (
-        !window.confirm(
-          "Delete payment?"
-        )
-      ) {
-        return;
-      }
-
-      try {
-        await deletePayment(
-          payment._id
-        );
-
-        await loadCustomerData();
-      } catch (error) {
-        console.error(
-          "Failed to delete payment:",
-          error
-        );
-      }
-    };
-
-  // =========================================================
   // CREATE ORDER
   // =========================================================
 
@@ -667,24 +595,6 @@ const CRMPage = () => {
       setShowOrderModal(
         true
       );
-    };
-
-  // =========================================================
-  // RECORD PAYMENT
-  // =========================================================
-
-  const handleRecordPayment =
-    () => {
-      if (
-        selectedCustomer?.source ===
-        "ACCOUNTS"
-      ) {
-        window.alert(
-          "Payments for Account Parties are managed through Accounts."
-        );
-
-        return;
-      }
     };
 
   // =========================================================
@@ -1127,9 +1037,6 @@ const CRMPage = () => {
                 orders={
                   orders
                 }
-                payments={
-                  payments
-                }
               />
             </div>
           </section>
@@ -1267,9 +1174,6 @@ const CRMPage = () => {
                           true
                         );
                       }}
-                      onRecordPayment={
-                        handleRecordPayment
-                      }
                     />
                   </div>
                 </div>
@@ -1312,10 +1216,6 @@ const CRMPage = () => {
                           );
 
                           setOrders(
-                            []
-                          );
-
-                          setPayments(
                             []
                           );
                         }}
@@ -1363,9 +1263,6 @@ const CRMPage = () => {
                             true
                           );
                         }}
-                        onRecordPayment={
-                          handleRecordPayment
-                        }
                       />
                     </div>
                   )}
@@ -1415,54 +1312,9 @@ const CRMPage = () => {
                 onDelete={
                   handleDeleteOrder
                 }
-                onRecordPayment={(
-                  order
-                ) => {
-                  setSelectedOrder(
-                    order
-                  );
-
-                  setEditingPayment(
-                    null
-                  );
-
-                  setShowPaymentModal(
-                    true
-                  );
-                }}
               />
             )}
 
-            {/* =================================================
-                PAYMENTS
-            ================================================= */}
-
-            {activeTab ===
-              "payments" && (
-              <PaymentsOverview
-                payments={
-                  payments
-                }
-                onEdit={(
-                  payment
-                ) => {
-                  setEditingPayment(
-                    payment
-                  );
-
-                  setSelectedOrder(
-                    payment.order
-                  );
-
-                  setShowPaymentModal(
-                    true
-                  );
-                }}
-                onDelete={
-                  handleDeletePayment
-                }
-              />
-            )}
           </div>
         </section>
 
@@ -1530,50 +1382,6 @@ const CRMPage = () => {
             );
 
             setEditingOrder(
-              null
-            );
-          }}
-        />
-
-        {/* =====================================================
-            PAYMENT MODAL
-        ===================================================== */}
-
-        <PaymentModal
-          open={
-            showPaymentModal
-          }
-          order={
-            selectedOrder
-          }
-          payment={
-            editingPayment
-          }
-          onClose={() => {
-            setShowPaymentModal(
-              false
-            );
-
-            setEditingPayment(
-              null
-            );
-
-            setSelectedOrder(
-              null
-            );
-          }}
-          onSuccess={async () => {
-            await loadCustomerData();
-
-            setShowPaymentModal(
-              false
-            );
-
-            setEditingPayment(
-              null
-            );
-
-            setSelectedOrder(
               null
             );
           }}

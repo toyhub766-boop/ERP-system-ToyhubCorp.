@@ -29,6 +29,7 @@ import {
 } from "react-icons/fi";
 
 import api from "../../../services/api/axios";
+import CustomerProfile from "./CustomerProfile";
 
 import {
   getSalesPipeline,
@@ -3191,96 +3192,39 @@ const ProfileDrawer = ({
 
             {/* CUSTOMER PROFILE */}
 
-            <ProfileSection
-              title="Customer Profile"
-              icon={
-                <FiUser
-                  size={14}
-                />
-              }
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#172B6B]/10 text-[#172B6B]">
+                  <FiUser size={14} />
+                </div>
 
-                <InfoBox
-                  label="Company"
-                  value={
-                    record.companyName ||
-                    record.firmName
-                  }
-                />
-
-                <InfoBox
-                  label="Contact Person"
-                  value={
-                    record.contactPerson
-                  }
-                />
-
-                <InfoBox
-                  label="Phone"
-                  value={
-                    record.phone
-                  }
-                />
-
-                <InfoBox
-                  label="Email"
-                  value={
-                    record.email
-                  }
-                />
-
-                <InfoBox
-                  label="Customer Code"
-                  value={
-                    record.customerCode ||
-                    record.partyCode
-                  }
-                />
-
-                <InfoBox
-                  label="Type"
-                  value={
-                    type
-                  }
-                />
-
-                <InfoBox
-                  label="Address"
-                  value={
-                    record.address ||
-                    record.customerDetails?.address ||
-                    record.billingAddress
-                  }
-                />
-
-                <InfoBox
-                  label="City"
-                  value={
-                    record.city ||
-                    record.customerDetails?.city
-                  }
-                />
-
+                <h3 className="text-xs font-bold text-slate-800">
+                  Customer Profile
+                </h3>
               </div>
 
-              {(record.remarks ||
-                record.customerDetails?.remarks) && (
-                  <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-
-                    <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
-                      Ratelist / Commercial Notes
-                    </p>
-
-                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">
-                      {record.remarks ||
-                        record.customerDetails?.remarks}
-                    </p>
-
-                  </div>
-                )}
-
-            </ProfileSection>
+              <CustomerProfile
+                customer={record}
+                orders={[]}
+                onEdit={() => {
+                  onEdit();
+                }}
+                onDelete={() => {
+                  window.alert(
+                    "Customer deletion is managed from the main CRM customer workspace."
+                  );
+                }}
+                onCreateOrder={() => {
+                  window.alert(
+                    "Orders are managed from the CRM Orders section."
+                  );
+                }}
+                onAddNote={() => {
+                  setShowAddConversation(true);
+                  setEditingNoteId(null);
+                }}
+              />
+            </section>
 
             {/* ADD CONVERSATION */}
 

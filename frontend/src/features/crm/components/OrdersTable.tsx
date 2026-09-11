@@ -1,7 +1,6 @@
 import {
   FiCheckCircle,
   FiClock,
-  FiCreditCard,
   FiEdit2,
   FiPackage,
   FiTrash2,
@@ -13,7 +12,6 @@ interface Props {
   orders: any[];
   onEdit: (order: any) => void;
   onDelete: (order: any) => void;
-  onRecordPayment: (order: any) => void;
 }
 
 const getStatusConfig = (status: string) => {
@@ -94,7 +92,6 @@ const OrdersTable = ({
   orders,
   onEdit,
   onDelete,
-  onRecordPayment,
 }: Props) => {
   const totalOrders = orders.length;
 
@@ -766,42 +763,6 @@ const OrdersTable = ({
                           gap-1.5
                         "
                       >
-
-                        {/* Payment */}
-
-                        <button
-                          type="button"
-                          title="Record payment"
-                          onClick={() =>
-                            onRecordPayment(
-                              order
-                            )
-                          }
-                          className="
-                            inline-flex
-                            h-9
-                            items-center
-                            gap-1.5
-                            rounded-lg
-                            border
-                            border-emerald-100
-                            bg-emerald-50
-                            px-3
-                            text-[11px]
-                            font-bold
-                            text-emerald-700
-                            transition
-                            hover:border-emerald-200
-                            hover:bg-emerald-100
-                            active:scale-[0.97]
-                          "
-                        >
-                          <FiCreditCard
-                            size={14}
-                          />
-
-                          Payment
-                        </button>
 
 
                         {/* Edit */}

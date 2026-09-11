@@ -8,13 +8,11 @@ import {
 interface Props {
   customers: any[];
   orders: any[];
-  payments: any[];
 }
 
 const CRMStats = ({
   customers,
   orders,
-  payments,
 }: Props) => {
   const totalCustomers = customers.length;
 
@@ -26,16 +24,13 @@ const CRMStats = ({
     (order) => order.status === "Pending"
   ).length;
 
-  const outstandingAmount = payments.reduce(
-    (total, payment) => {
-      const order = payment.order;
-
-      if (!order) return total;
-
-      return (
-        total +
-        (order.totalAmount - payment.amountPaid)
+  const outstandingAmount = customers.reduce(
+    (total, customer) => {
+      const balance = Number(
+        customer.currentBalance || 0
       );
+
+      return total + Math.max(balance, 0);
     },
     0
   );

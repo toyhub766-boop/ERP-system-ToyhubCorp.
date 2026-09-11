@@ -3,7 +3,6 @@ import {
   FiTrendingUp,
   FiCalendar,
   FiPackage,
-  FiCreditCard,
 } from "react-icons/fi";
 
 interface Props {
@@ -11,8 +10,7 @@ interface Props {
     | "customers"
     | "pipeline"
     | "dues"
-    | "orders"
-    | "payments";
+    | "orders";
 
   setActiveTab: (
     tab:
@@ -20,7 +18,6 @@ interface Props {
       | "pipeline"
       | "dues"
       | "orders"
-      | "payments"
   ) => void;
 }
 
@@ -44,11 +41,6 @@ const tabs = [
     id: "orders",
     label: "Orders",
     icon: <FiPackage size={16} />,
-  },
-  {
-    id: "payments",
-    label: "Payments",
-    icon: <FiCreditCard size={16} />,
   },
 ] as const;
 
@@ -78,13 +70,16 @@ const CRMTabs = ({
         "
       >
         {tabs.map((tab) => {
-          const active = activeTab === tab.id;
+          const active =
+            activeTab === tab.id;
 
           return (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() =>
+                setActiveTab(tab.id)
+              }
               className={`
                 group
                 inline-flex
@@ -100,6 +95,7 @@ const CRMTabs = ({
                 transition-all
                 duration-200
                 sm:px-5
+
                 ${
                   active
                     ? `
@@ -121,6 +117,7 @@ const CRMTabs = ({
                 className={`
                   transition-colors
                   duration-200
+
                   ${
                     active
                       ? "text-[#172B6B]"
@@ -131,7 +128,9 @@ const CRMTabs = ({
                 {tab.icon}
               </span>
 
-              <span>{tab.label}</span>
+              <span>
+                {tab.label}
+              </span>
             </button>
           );
         })}

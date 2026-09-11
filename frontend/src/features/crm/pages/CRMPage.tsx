@@ -47,9 +47,9 @@ import {
   FiAlertCircle,
   FiArrowUpRight,
   FiCalendar,
-  FiCheckCircle,
-  FiChevronDown,
   FiClock,
+  FiActivity,
+  FiBarChart2,
 } from "react-icons/fi";
 
 import type { Customer } from "../types/customer.types";
@@ -72,60 +72,18 @@ const CRMPage = () => {
     useState<CRMTab>("customers");
 
   // =========================================================
-  // CRM OVERVIEW COLLAPSE
+  // CRM OVERVIEW
   // =========================================================
 
   const [showCRMOverview, setShowCRMOverview] =
-    useState(() => {
-      try {
-        return (
-          localStorage.getItem(
-            "toyhub-crm-overview-expanded"
-          ) === "true"
-        );
-      } catch {
-        return false;
-      }
-    });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "toyhub-crm-overview-expanded",
-        String(showCRMOverview)
-      );
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [showCRMOverview]);
+    useState(false);
 
   // =========================================================
-  // FOLLOW-UP COMMAND CENTER COLLAPSE
+  // FOLLOW-UP COMMAND CENTER
   // =========================================================
 
   const [showFollowUpCenter, setShowFollowUpCenter] =
-    useState(() => {
-      try {
-        return (
-          localStorage.getItem(
-            "toyhub-crm-followup-expanded"
-          ) === "true"
-        );
-      } catch {
-        return false;
-      }
-    });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "toyhub-crm-followup-expanded",
-        String(showFollowUpCenter)
-      );
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [showFollowUpCenter]);
+    useState(false);
 
   // =========================================================
   // CRM LEADS / CUSTOMERS
@@ -219,21 +177,9 @@ const CRMPage = () => {
         safeData
       );
 
-      /*
-       * Keep the currently selected CRM record
-       * synchronized after reload.
-       *
-       * Accounts Party records are handled separately
-       * by loadAccountParties().
-       */
-
       setSelectedCustomer(
         (current: any) => {
           if (!safeData.length) {
-            /*
-             * Do not clear an Accounts Party selection
-             * when only CRM records are being refreshed.
-             */
             if (
               current?.source ===
               "ACCOUNTS"
@@ -244,21 +190,10 @@ const CRMPage = () => {
             return null;
           }
 
-          /*
-           * Nothing selected yet.
-           *
-           * We intentionally do not automatically select
-           * the first CRM record because Accounts Parties
-           * are also part of the workspace.
-           */
           if (!current?._id) {
             return null;
           }
 
-          /*
-           * If current selection is a CRM record,
-           * update it from the fresh CRM response.
-           */
           if (
             current.source ===
             "CRM"
@@ -311,10 +246,6 @@ const CRMPage = () => {
           safeData
         );
 
-        /*
-         * Keep selected Accounts Party synchronized
-         * with the latest Accounts response.
-         */
         setSelectedCustomer(
           (current: any) => {
             if (
@@ -371,50 +302,19 @@ const CRMPage = () => {
 
   const crmRecords =
     useMemo(() => {
-      /*
-       * =====================================================
-       * CRM RECORDS
-       * =====================================================
-       *
-       * These are records created through CRM.
-       *
-       * They remain CRM-owned records.
-       */
-
       const crmRecords =
         customers.map(
           (customer: any) => ({
             ...customer,
-
             source: "CRM",
             crmType: "LEAD",
           })
         );
 
-      /*
-       * =====================================================
-       * ACCOUNTS PARTIES
-       * =====================================================
-       *
-       * Accounts is the source of truth for Party records.
-       *
-       * CRM reads those records.
-       *
-       * We DO NOT create duplicate CRM customers.
-       *
-       * CUSTOMER + SUPPLIER parties are included.
-       * COMPANY_EXPENSE records are not CRM records.
-       */
-
       const partyRecords =
         accountParties
           .filter(
             (party: any) => {
-              /*
-               * Inactive parties should not appear
-               * in the active CRM workspace.
-               */
-
               if (
                 party.status ===
                 "Inactive"
@@ -422,22 +322,12 @@ const CRMPage = () => {
                 return false;
               }
 
-              /*
-               * Company expenses are accounting records,
-               * not CRM relationships.
-               */
-
               if (
                 party.partyType ===
                 "COMPANY_EXPENSE"
               ) {
                 return false;
               }
-
-              /*
-               * Only actual Account Parties belong
-               * in the CRM Party view.
-               */
 
               return (
                 party.partyType ===
@@ -453,20 +343,6 @@ const CRMPage = () => {
                 party
               )
           );
-
-      /*
-       * =====================================================
-       * COMBINED WORKSPACE
-       * =====================================================
-       *
-       * CRM Leads first.
-       * Accounts Parties second.
-       *
-       * CustomerList will classify these using:
-       *
-       * CRM       -> Leads
-       * ACCOUNTS  -> Parties
-       */
 
       return [
         ...crmRecords,
@@ -518,24 +394,6 @@ const CRMPage = () => {
     ) => {
       const customer =
         selectedCustomer;
-
-      /*
-       * =====================================================
-       * ACCOUNTS PARTY
-       * =====================================================
-       *
-       * An Accounts Party is NOT a CRM Customer document.
-       *
-       * Therefore do not use the AccountParty _id with:
-       *
-       * /orders/customer/:id
-       *
-       * or:
-       *
-       * /payments/customer/:id
-       *
-       * The financial source of truth remains Accounts.
-       */
 
       if (
         customer?.source ===
@@ -632,15 +490,6 @@ const CRMPage = () => {
       let todayCount = 0;
       let upcoming = 0;
 
-      /*
-       * Reminder activities currently live
-       * on CRM Customer records.
-       *
-       * Accounts Parties are intentionally not
-       * included here until their activity layer
-       * is connected.
-       */
-
       customers.forEach(
         (customer: any) => {
           customer.specialNotes?.forEach(
@@ -696,12 +545,6 @@ const CRMPage = () => {
     async (
       customer: any
     ) => {
-      /*
-       * Accounts owns Party records.
-       *
-       * They must never be deleted from CRM.
-       */
-
       if (
         customer.source ===
         "ACCOUNTS"
@@ -808,13 +651,6 @@ const CRMPage = () => {
 
   const handleCreateOrder =
     () => {
-      /*
-       * AccountParty order integration will use
-       * the existing Party relationship.
-       *
-       * Do not create a duplicate CRM customer.
-       */
-
       if (
         selectedCustomer?.source ===
         "ACCOUNTS"
@@ -849,10 +685,6 @@ const CRMPage = () => {
 
         return;
       }
-
-      /*
-       * Existing CRM payment flow remains unchanged.
-       */
     };
 
   // =========================================================
@@ -886,20 +718,106 @@ const CRMPage = () => {
         />
 
         {/* =====================================================
-            FOLLOW-UP COMMAND CENTER + CRM STATUS
+            COMPACT CRM UTILITY CONTROLS
         ===================================================== */}
 
-        <section
+        <div
           className="
-            grid
-            gap-4
-            lg:grid-cols-[minmax(0,1fr)_auto]
+            flex
+            items-center
+            justify-end
+            gap-2
           "
         >
-          {/* ===================================================
-              FOLLOW-UP COMMAND CENTER
-          =================================================== */}
+          {/* FOLLOW-UP */}
 
+          <button
+            type="button"
+            onClick={() =>
+              setShowFollowUpCenter(
+                (previous) =>
+                  !previous
+              )
+            }
+            aria-label="Toggle Follow-up Command Center"
+            aria-expanded={
+              showFollowUpCenter
+            }
+            title="Follow-up Command Center"
+            className={`
+              flex
+              h-10
+              w-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              border
+              bg-white
+              shadow-sm
+              transition-all
+              duration-200
+              ${
+                showFollowUpCenter
+                  ? "border-[#172B6B] bg-[#172B6B] text-white"
+                  : "border-slate-200 text-[#172B6B] hover:border-slate-300 hover:bg-slate-50"
+              }
+            `}
+          >
+            <FiActivity
+              size={17}
+              strokeWidth={2}
+            />
+          </button>
+
+          {/* CRM OVERVIEW */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setShowCRMOverview(
+                (previous) =>
+                  !previous
+              )
+            }
+            aria-label="Toggle CRM Overview"
+            aria-expanded={
+              showCRMOverview
+            }
+            title="CRM Overview"
+            className={`
+              flex
+              h-10
+              w-10
+              shrink-0
+              items-center
+              justify-center
+              rounded-xl
+              border
+              bg-white
+              shadow-sm
+              transition-all
+              duration-200
+              ${
+                showCRMOverview
+                  ? "border-[#172B6B] bg-[#172B6B] text-white"
+                  : "border-slate-200 text-[#172B6B] hover:border-slate-300 hover:bg-slate-50"
+              }
+            `}
+          >
+            <FiBarChart2
+              size={17}
+              strokeWidth={2}
+            />
+          </button>
+        </div>
+
+        {/* =====================================================
+            FOLLOW-UP COMMAND CENTER
+            EXISTING CONTENT PRESERVED
+        ===================================================== */}
+
+        {showFollowUpCenter && (
           <section
             className="
               overflow-hidden
@@ -910,612 +828,294 @@ const CRMPage = () => {
               shadow-sm
             "
           >
-            {/* COLLAPSED HEADER */}
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowFollowUpCenter(
-                  (previous) =>
-                    !previous
-                )
-              }
+            <div
               className="
                 flex
-                w-full
-                items-center
-                justify-between
-                gap-4
-                px-5
-                py-4
-                text-left
-                transition-colors
-                hover:bg-slate-50
-                sm:px-6
+                flex-col
+                gap-5
+                p-4
+                sm:p-5
+                lg:flex-row
+                lg:items-center
+                lg:justify-between
               "
-              aria-expanded={
-                showFollowUpCenter
-              }
             >
-              <div
-                className="
-                  flex
-                  min-w-0
-                  items-center
-                  gap-3
-                "
-              >
-                <div
+              {/* DESCRIPTION */}
+
+              <div className="min-w-0">
+                <h2
                   className="
-                    flex
-                    h-9
-                    w-9
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-blue-50
-                    text-[#172B6B]
+                    text-xl
+                    font-bold
+                    tracking-tight
+                    text-slate-900
                   "
                 >
-                  <FiCheckCircle
-                    size={16}
-                  />
-                </div>
+                  Stay ahead of customer conversations
+                </h2>
 
-                <div className="min-w-0">
+                <p
+                  className="
+                    mt-1
+                    text-sm
+                    text-slate-500
+                  "
+                >
+                  Track overdue, today's and upcoming
+                  customer activities.
+                </p>
+              </div>
+
+              {/* REMINDER CARDS */}
+
+              <div
+                className="
+                  grid
+                  grid-cols-3
+                  gap-2
+                  sm:gap-3
+                  lg:min-w-[300px]
+                "
+              >
+                {/* OVERDUE */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(
+                      "dues"
+                    )
+                  }
+                  className="
+                    group
+                    min-w-0
+                    rounded-2xl
+                    border
+                    border-red-100
+                    bg-red-50/60
+                    p-3
+                    text-left
+                    transition
+                    hover:border-red-200
+                    hover:bg-red-50
+                  "
+                >
                   <div
                     className="
                       flex
                       items-center
-                      gap-2
+                      justify-between
                     "
                   >
-                    <span
-                      className="
-                        h-2
-                        w-2
-                        shrink-0
-                        rounded-full
-                        bg-[#172B6B]
-                      "
+                    <FiAlertCircle
+                      size={15}
+                      className="text-red-500"
                     />
 
-                    <span
+                    <FiArrowUpRight
+                      size={13}
                       className="
-                        text-[11px]
-                        font-bold
-                        uppercase
-                        tracking-[0.16em]
-                        text-[#172B6B]
+                        text-red-300
+                        transition
+                        group-hover:text-red-500
                       "
-                    >
-                      Follow-up Command Center
-                    </span>
+                    />
                   </div>
 
                   <p
                     className="
-                      mt-1
-                      truncate
-                      text-xs
-                      text-slate-400
+                      mt-3
+                      text-2xl
+                      font-bold
+                      text-red-600
                     "
                   >
-                    {showFollowUpCenter
-                      ? "Track overdue, today's and upcoming customer activities."
-                      : "Click to view follow-up activity"}
+                    {
+                      reminderStats.overdue
+                    }
                   </p>
-                </div>
-              </div>
 
-              <span
-                className="
-                  flex
-                  h-8
-                  w-8
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-lg
-                  border
-                  border-slate-200
-                  bg-white
-                  text-slate-400
-                "
-              >
-                <FiChevronDown
-                  size={16}
-                  className={
-                    showFollowUpCenter
-                      ? "rotate-180 transition-transform duration-200"
-                      : "transition-transform duration-200"
+                  <p
+                    className="
+                      mt-0.5
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-wide
+                      text-red-500
+                    "
+                  >
+                    Overdue
+                  </p>
+                </button>
+
+                {/* TODAY */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(
+                      "dues"
+                    )
                   }
-                />
-              </span>
-            </button>
-
-            {/* EXPANDED CONTENT */}
-
-            {showFollowUpCenter && (
-              <div
-                className="
-                  border-t
-                  border-slate-100
-                  p-4
-                  sm:p-5
-                "
-              >
-                <div
                   className="
-                    flex
-                    flex-col
-                    gap-5
-                    lg:flex-row
-                    lg:items-center
-                    lg:justify-between
+                    group
+                    min-w-0
+                    rounded-2xl
+                    border
+                    border-amber-100
+                    bg-amber-50/60
+                    p-3
+                    text-left
+                    transition
+                    hover:border-amber-200
+                    hover:bg-amber-50
                   "
                 >
-                  {/* DESCRIPTION */}
-
-                  <div className="min-w-0">
-                    <h2
-                      className="
-                        text-xl
-                        font-bold
-                        tracking-tight
-                        text-slate-900
-                      "
-                    >
-                      Stay ahead of customer conversations
-                    </h2>
-
-                    <p
-                      className="
-                        mt-1
-                        text-sm
-                        text-slate-500
-                      "
-                    >
-                      Track overdue, today's and upcoming
-                      customer activities.
-                    </p>
-                  </div>
-
-                  {/* REMINDER CARDS */}
-
                   <div
                     className="
-                      grid
-                      grid-cols-3
-                      gap-2
-                      sm:gap-3
-                      lg:min-w-[300px]
+                      flex
+                      items-center
+                      justify-between
                     "
                   >
-                    {/* OVERDUE */}
+                    <FiClock
+                      size={15}
+                      className="text-amber-600"
+                    />
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveTab(
-                          "dues"
-                        )
-                      }
+                    <FiArrowUpRight
+                      size={13}
                       className="
-                        group
-                        min-w-0
-                        rounded-2xl
-                        border
-                        border-red-100
-                        bg-red-50/60
-                        p-3
-                        text-left
+                        text-amber-300
                         transition
-                        hover:border-red-200
-                        hover:bg-red-50
+                        group-hover:text-amber-600
                       "
-                    >
-                      <div
-                        className="
-                          flex
-                          items-center
-                          justify-between
-                        "
-                      >
-                        <FiAlertCircle
-                          size={15}
-                          className="text-red-500"
-                        />
-
-                        <FiArrowUpRight
-                          size={13}
-                          className="
-                            text-red-300
-                            transition
-                            group-hover:text-red-500
-                          "
-                        />
-                      </div>
-
-                      <p
-                        className="
-                          mt-3
-                          text-2xl
-                          font-bold
-                          text-red-600
-                        "
-                      >
-                        {
-                          reminderStats.overdue
-                        }
-                      </p>
-
-                      <p
-                        className="
-                          mt-0.5
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-red-500
-                        "
-                      >
-                        Overdue
-                      </p>
-                    </button>
-
-                    {/* TODAY */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveTab(
-                          "dues"
-                        )
-                      }
-                      className="
-                        group
-                        min-w-0
-                        rounded-2xl
-                        border
-                        border-amber-100
-                        bg-amber-50/60
-                        p-3
-                        text-left
-                        transition
-                        hover:border-amber-200
-                        hover:bg-amber-50
-                      "
-                    >
-                      <div
-                        className="
-                          flex
-                          items-center
-                          justify-between
-                        "
-                      >
-                        <FiClock
-                          size={15}
-                          className="text-amber-600"
-                        />
-
-                        <FiArrowUpRight
-                          size={13}
-                          className="
-                            text-amber-300
-                            transition
-                            group-hover:text-amber-600
-                          "
-                        />
-                      </div>
-
-                      <p
-                        className="
-                          mt-3
-                          text-2xl
-                          font-bold
-                          text-amber-700
-                        "
-                      >
-                        {
-                          reminderStats.today
-                        }
-                      </p>
-
-                      <p
-                        className="
-                          mt-0.5
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-amber-600
-                        "
-                      >
-                        Today
-                      </p>
-                    </button>
-
-                    {/* UPCOMING */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveTab(
-                          "dues"
-                        )
-                      }
-                      className="
-                        group
-                        min-w-0
-                        rounded-2xl
-                        border
-                        border-green-100
-                        bg-green-50/60
-                        p-3
-                        text-left
-                        transition
-                        hover:border-green-200
-                        hover:bg-green-50
-                      "
-                    >
-                      <div
-                        className="
-                          flex
-                          items-center
-                          justify-between
-                        "
-                      >
-                        <FiCalendar
-                          size={15}
-                          className="text-green-600"
-                        />
-
-                        <FiArrowUpRight
-                          size={13}
-                          className="
-                            text-green-300
-                            transition
-                            group-hover:text-green-600
-                          "
-                        />
-                      </div>
-
-                      <p
-                        className="
-                          mt-3
-                          text-2xl
-                          font-bold
-                          text-green-700
-                        "
-                      >
-                        {
-                          reminderStats.upcoming
-                        }
-                      </p>
-
-                      <p
-                        className="
-                          mt-0.5
-                          text-[10px]
-                          font-semibold
-                          uppercase
-                          tracking-wide
-                          text-green-600
-                        "
-                      >
-                        Upcoming
-                      </p>
-                    </button>
+                    />
                   </div>
-                </div>
+
+                  <p
+                    className="
+                      mt-3
+                      text-2xl
+                      font-bold
+                      text-amber-700
+                    "
+                  >
+                    {
+                      reminderStats.today
+                    }
+                  </p>
+
+                  <p
+                    className="
+                      mt-0.5
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-wide
+                      text-amber-600
+                    "
+                  >
+                    Today
+                  </p>
+                </button>
+
+                {/* UPCOMING */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab(
+                      "dues"
+                    )
+                  }
+                  className="
+                    group
+                    min-w-0
+                    rounded-2xl
+                    border
+                    border-green-100
+                    bg-green-50/60
+                    p-3
+                    text-left
+                    transition
+                    hover:border-green-200
+                    hover:bg-green-50
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                    "
+                  >
+                    <FiCalendar
+                      size={15}
+                      className="text-green-600"
+                    />
+
+                    <FiArrowUpRight
+                      size={13}
+                      className="
+                        text-green-300
+                        transition
+                        group-hover:text-green-600
+                      "
+                    />
+                  </div>
+
+                  <p
+                    className="
+                      mt-3
+                      text-2xl
+                      font-bold
+                      text-green-700
+                    "
+                  >
+                    {
+                      reminderStats.upcoming
+                    }
+                  </p>
+
+                  <p
+                    className="
+                      mt-0.5
+                      text-[10px]
+                      font-semibold
+                      uppercase
+                      tracking-wide
+                      text-green-600
+                    "
+                  >
+                    Upcoming
+                  </p>
+                </button>
               </div>
-            )}
+            </div>
           </section>
+        )}
 
-          {/* ===================================================
-              CRM STATUS
-          =================================================== */}
+        
+        {/* =====================================================
+            CRM OVERVIEW
+            EXISTING STATS PRESERVED
+        ===================================================== */}
 
-          <div
+        {showCRMOverview && (
+          <section
             className="
-              flex
-              items-center
-              gap-4
-              rounded-[28px]
+              overflow-hidden
+              rounded-[24px]
               border
               border-slate-200
               bg-white
-              px-5
-              py-5
               shadow-sm
-              lg:min-w-[250px]
             "
           >
             <div
               className="
-                flex
-                h-11
-                w-11
-                shrink-0
-                items-center
-                justify-center
-                rounded-2xl
-                bg-green-50
-                text-green-600
-              "
-            >
-              <FiCheckCircle
-                size={19}
-              />
-            </div>
-
-            <div>
-              <p
-                className="
-                  text-xs
-                  font-semibold
-                  uppercase
-                  tracking-wide
-                  text-slate-400
-                "
-              >
-                CRM Status
-              </p>
-
-              <p
-                className="
-                  mt-1
-                  text-sm
-                  font-bold
-                  text-slate-900
-                "
-              >
-                Workspace Active
-              </p>
-
-              <p
-                className="
-                  mt-0.5
-                  text-xs
-                  text-slate-400
-                "
-              >
-                {
-                  crmRecords.length
-                } records managed
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* =====================================================
-            CRM OVERVIEW
-        ===================================================== */}
-
-        <section
-          className="
-            overflow-hidden
-            rounded-[24px]
-            border
-            border-slate-200
-            bg-white
-            shadow-sm
-          "
-        >
-          {/* OVERVIEW TOGGLE */}
-
-          <button
-            type="button"
-            onClick={() =>
-              setShowCRMOverview(
-                (previous) =>
-                  !previous
-              )
-            }
-            className="
-              flex
-              w-full
-              items-center
-              justify-between
-              gap-4
-              px-5
-              py-4
-              text-left
-              transition-colors
-              hover:bg-slate-50
-              sm:px-6
-            "
-            aria-expanded={
-              showCRMOverview
-            }
-          >
-            <div
-              className="
-                flex
-                min-w-0
-                items-center
-                gap-3
-              "
-            >
-              <div
-                className="
-                  flex
-                  h-9
-                  w-9
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-xl
-                  bg-blue-50
-                  text-[#172B6B]
-                "
-              >
-                <FiCheckCircle
-                  size={16}
-                />
-              </div>
-
-              <div className="min-w-0">
-                <p
-                  className="
-                    text-sm
-                    font-bold
-                    text-slate-900
-                  "
-                >
-                  CRM Overview
-                </p>
-
-                <p
-                  className="
-                    mt-0.5
-                    truncate
-                    text-[11px]
-                    text-slate-400
-                  "
-                >
-                  {showCRMOverview
-                    ? "Performance summary and activity"
-                    : "Click to view CRM statistics"}
-                </p>
-              </div>
-            </div>
-
-            <span
-              className="
-                flex
-                h-8
-                w-8
-                shrink-0
-                items-center
-                justify-center
-                rounded-lg
-                border
-                border-slate-200
-                bg-white
-                text-slate-400
-              "
-            >
-              <FiChevronDown
-                size={16}
-                className={
-                  showCRMOverview
-                    ? "rotate-180 transition-transform duration-200"
-                    : "transition-transform duration-200"
-                }
-              />
-            </span>
-          </button>
-
-          {/* STATS */}
-
-          {showCRMOverview && (
-            <div
-              className="
-                border-t
-                border-slate-100
                 p-3
                 sm:p-4
               "
@@ -1532,8 +1132,8 @@ const CRMPage = () => {
                 }
               />
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* =====================================================
             MAIN CRM WORKSPACE
@@ -1587,10 +1187,6 @@ const CRMPage = () => {
             {activeTab ===
               "customers" && (
               <>
-                {/* =================================================
-                    DESKTOP
-                ================================================= */}
-
                 <div
                   className="
                     hidden
@@ -1599,8 +1195,6 @@ const CRMPage = () => {
                     xl:grid-cols-[360px_minmax(0,1fr)]
                   "
                 >
-                  {/* CUSTOMER LIST */}
-
                   <div className="min-w-0">
                     <CustomerList
                       search={
@@ -1621,8 +1215,6 @@ const CRMPage = () => {
                     />
                   </div>
 
-                  {/* CUSTOMER PROFILE */}
-
                   <div className="min-w-0">
                     <CustomerProfile
                       customer={
@@ -1631,15 +1223,9 @@ const CRMPage = () => {
                       orders={
                         orders
                       }
-
                       onEdit={(
                         customer
                       ) => {
-                        /*
-                         * Accounts Parties remain owned
-                         * by Accounts.
-                         */
-
                         if (
                           customer?.source ===
                           "ACCOUNTS"
@@ -1659,21 +1245,13 @@ const CRMPage = () => {
                           true
                         );
                       }}
-
                       onDelete={
                         handleDeleteCustomer
                       }
-
                       onCreateOrder={
                         handleCreateOrder
                       }
-
                       onAddNote={() => {
-                        /*
-                         * CRM notes remain attached
-                         * to CRM records for now.
-                         */
-
                         if (
                           selectedCustomer?.source ===
                           "ACCOUNTS"
@@ -1689,7 +1267,6 @@ const CRMPage = () => {
                           true
                         );
                       }}
-
                       onRecordPayment={
                         handleRecordPayment
                       }
@@ -1697,15 +1274,7 @@ const CRMPage = () => {
                   </div>
                 </div>
 
-                {/* =================================================
-                    MOBILE / TABLET
-
-                    List and profile are mutually exclusive.
-                ================================================= */}
-
                 <div className="xl:hidden">
-                  {/* CUSTOMER LIST */}
-
                   {!selectedCustomer && (
                     <div className="min-w-0">
                       <CustomerList
@@ -1728,8 +1297,6 @@ const CRMPage = () => {
                     </div>
                   )}
 
-                  {/* CUSTOMER PROFILE */}
-
                   {selectedCustomer && (
                     <div className="min-w-0">
                       <CustomerProfile
@@ -1739,7 +1306,6 @@ const CRMPage = () => {
                         orders={
                           orders
                         }
-
                         onBackToList={() => {
                           setSelectedCustomer(
                             null
@@ -1753,15 +1319,9 @@ const CRMPage = () => {
                             []
                           );
                         }}
-
                         onEdit={(
                           customer
                         ) => {
-                          /*
-                           * Accounts Parties remain owned
-                           * by Accounts.
-                           */
-
                           if (
                             customer?.source ===
                             "ACCOUNTS"
@@ -1781,21 +1341,13 @@ const CRMPage = () => {
                             true
                           );
                         }}
-
                         onDelete={
                           handleDeleteCustomer
                         }
-
                         onCreateOrder={
                           handleCreateOrder
                         }
-
                         onAddNote={() => {
-                          /*
-                           * CRM notes remain attached
-                           * to CRM records for now.
-                           */
-
                           if (
                             selectedCustomer?.source ===
                             "ACCOUNTS"
@@ -1811,7 +1363,6 @@ const CRMPage = () => {
                             true
                           );
                         }}
-
                         onRecordPayment={
                           handleRecordPayment
                         }
@@ -2072,23 +1623,8 @@ const normalizeAccountParty = (
   return {
     ...party,
 
-    /*
-     * =======================================================
-     * SOURCE / CRM TYPE
-     * =======================================================
-     *
-     * AccountParty is a PARTY in CRM,
-     * not a CRM Customer.
-     */
-
     source: "ACCOUNTS",
     crmType: "PARTY",
-
-    /*
-     * =======================================================
-     * COMMON CRM FIELDS
-     * =======================================================
-     */
 
     customerCode:
       party.partyCode ||
@@ -2142,17 +1678,6 @@ const normalizeAccountParty = (
     partyType:
       party.partyType ||
       "",
-
-    /*
-     * =======================================================
-     * SALESPERSON RELATIONSHIP
-     * =======================================================
-     *
-     * This comes directly from Accounts.
-     *
-     * Database stores IDs.
-     * CRM UI resolves/displays names.
-     */
 
     assignedSalespeople:
       Array.isArray(

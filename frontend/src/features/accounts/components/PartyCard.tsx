@@ -693,6 +693,8 @@ const PartyCard = ({
         </div>
       </div>
 
+      
+
       {/* Footer status */}
 
       <div

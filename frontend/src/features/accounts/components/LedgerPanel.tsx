@@ -1355,20 +1355,62 @@ const LedgerPanel = ({
           </section>
 
           <InfoSection
-            title="Commercial Information"
-            description="Account terms and payment details."
-          >
-            <div
-              className="
-                grid
-                grid-cols-2
-                gap-3
-                sm:grid-cols-3
-                xl:grid-cols-5
-              "
-            >
+  title="Commercial Information"
+  description="Account terms and payment details."
+>
+  {selectedParty.remarks?.trim() && (
+    <div
+      className="
+        mb-4
+        rounded-xl
+        border
+        border-slate-200
+        bg-slate-50
+        p-4
+      "
+    >
+      <p
+        className="
+          text-[9px]
+          font-semibold
+          uppercase
+          tracking-[0.08em]
+          text-slate-400
+        "
+      >
+        Ratelist
+      </p>
+
+      <p
+        className="
+          mt-1.5
+          whitespace-pre-line
+          break-words
+          text-xs
+          font-semibold
+          leading-5
+          text-slate-700
+          sm:text-sm
+          sm:leading-6
+        "
+      >
+        {selectedParty.remarks}
+      </p>
+    </div>
+  )}
+
+  <div
+    className="
+      grid
+      grid-cols-2
+      gap-3
+      sm:grid-cols-3
+      xl:grid-cols-5
+    "
+  >
               {isCustomer && (
                 <>
+                
                   <MetricCard
                     label="Packing"
                     value={Number(

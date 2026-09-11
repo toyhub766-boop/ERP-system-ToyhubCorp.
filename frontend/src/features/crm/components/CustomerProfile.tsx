@@ -1468,6 +1468,39 @@ const CustomerProfile = ({
             lg:grid-cols-5
           "
         >
+
+          {customer.source === "ACCOUNTS" &&
+  customer.remarks?.trim() && (
+    <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+      <p
+        className="
+          text-[10px]
+          font-bold
+          uppercase
+          tracking-[0.12em]
+          text-slate-400
+        "
+      >
+        Ratelist
+      </p>
+
+      <p
+        className="
+          mt-2
+          whitespace-pre-line
+          break-words
+          text-sm
+          font-semibold
+          leading-6
+          text-slate-800
+        "
+      >
+        {customer.remarks}
+      </p>
+    </div>
+  )}
+
+  
           <CommercialCard
             label="Packing Charges"
             value={`₹${formatCurrency(

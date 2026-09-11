@@ -14,7 +14,7 @@ const CRMHeader = ({
       className="
         relative
         overflow-hidden
-        rounded-3xl
+        rounded-2xl
         border
         border-slate-200
         bg-white
@@ -22,16 +22,17 @@ const CRMHeader = ({
       "
     >
       {/* Subtle decorative layer */}
+
       <div
         className="
           pointer-events-none
           absolute
           right-0
           top-0
-          h-32
-          w-32
-          translate-x-12
-          -translate-y-12
+          h-24
+          w-24
+          translate-x-8
+          -translate-y-8
           rounded-full
           bg-blue-50
           blur-2xl
@@ -42,31 +43,31 @@ const CRMHeader = ({
         className="
           relative
           flex
-          flex-col
+          items-center
+          justify-between
           gap-4
-          px-5
-          py-4
-          sm:px-6
-          sm:py-5
-          lg:flex-row
-          lg:items-center
-          lg:justify-between
+          px-4
+          py-3
+          sm:px-5
+          sm:py-3.5
         "
       >
-        {/* =====================================================
-            LEFT
-        ===================================================== */}
+        {/* LEFT */}
+
         <div className="min-w-0">
+
           {/* Breadcrumb */}
+
           <div
             className="
               flex
               items-center
-              gap-2
-              text-[11px]
+              gap-1.5
+              text-[10px]
               font-semibold
               uppercase
               tracking-[0.1em]
+              sm:text-[11px]
             "
           >
             <span className="text-[#172B6B]">
@@ -86,93 +87,101 @@ const CRMHeader = ({
             )}
           </div>
 
-          {/* Title */}
+          {/* Heading */}
+
           <div
             className="
-              mt-1.5
+              mt-0.5
               flex
               items-center
-              gap-3
+              gap-2
             "
           >
-            <div
+            <span
               className="
-                hidden
-                h-9
-                w-9
+                flex
+                h-7
+                w-7
                 shrink-0
                 items-center
                 justify-center
-                rounded-xl
-                bg-blue-50
+                rounded-lg
+                bg-[#172B6B]/10
                 text-[#172B6B]
-                sm:flex
               "
             >
-              <FiUsers size={17} />
-            </div>
+              <FiUsers
+                size={15}
+                strokeWidth={2}
+              />
+            </span>
 
-            <div className="min-w-0">
-              <h1
-                className="
-                  text-2xl
-                  font-bold
-                  leading-tight
-                  tracking-tight
-                  text-slate-900
-                  sm:text-3xl
-                "
-              >
-                Customer Relationship
-                Management
-              </h1>
-            </div>
+            <h1
+              className="
+                truncate
+                text-lg
+                font-bold
+                tracking-tight
+                text-slate-900
+                sm:text-xl
+              "
+            >
+              Customer Relationship Management
+            </h1>
           </div>
+
+          {/* Description */}
+
+          <p
+            className="
+              mt-0.5
+              hidden
+              text-xs
+              text-slate-500
+              sm:block
+            "
+          >
+            Manage customers, leads, conversations and sales activities.
+          </p>
         </div>
 
-        {/* =====================================================
-            ACTION
-        ===================================================== */}
-        <div
-          className="
-            flex
-            shrink-0
-            items-center
-          "
-        >
+        {/* RIGHT */}
+
+        <div className="flex shrink-0 items-center">
           <button
             type="button"
             onClick={onAddCustomer}
             className="
               group
               inline-flex
-              h-10
-              w-full
+              h-9
               items-center
               justify-center
-              gap-2
-              rounded-xl
+              gap-1.5
+              rounded-lg
               bg-[#172B6B]
-              px-5
-              text-sm
+              px-3.5
+              text-xs
               font-semibold
               text-white
               shadow-sm
               transition-all
               duration-200
-              hover:-translate-y-0.5
               hover:bg-[#20398F]
+              hover:-translate-y-0.5
               hover:shadow-md
               active:translate-y-0
               active:scale-[0.98]
-              sm:w-auto
+              sm:h-9.5
+              sm:px-4
+              sm:text-sm
             "
           >
             <span
               className="
                 flex
-                h-5
-                w-5
+                h-4.5
+                w-4.5
                 items-center
                 justify-center
                 rounded-md
@@ -182,7 +191,7 @@ const CRMHeader = ({
               "
             >
               <FiPlus
-                size={15}
+                size={13}
                 strokeWidth={2.5}
               />
             </span>

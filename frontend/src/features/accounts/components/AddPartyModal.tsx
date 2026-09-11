@@ -419,8 +419,8 @@ const AddPartyModal = ({
                 )
               }
               className={`flex-1 px-3 py-3 text-sm font-semibold transition ${partyType === tab.value
-                  ? "border-b-2 border-[#17357A] text-[#17357A]"
-                  : "text-slate-500 hover:text-slate-700"
+                ? "border-b-2 border-[#17357A] text-[#17357A]"
+                : "text-slate-500 hover:text-slate-700"
                 } ${editParty
                   ? "cursor-not-allowed opacity-70"
                   : ""
@@ -459,29 +459,29 @@ const AddPartyModal = ({
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
                 <div>
-  <label className={labelClass}>
-    Firm Name
-  </label>
+                  <label className={labelClass}>
+                    Firm Name
+                  </label>
 
-  <select
-    value={form.firmName}
-    onChange={(e) =>
-      updateField("firmName", e.target.value)
-    }
-    className={inputClass}
-  >
-    <option value="">Select firm</option>
-    <option value="Mehak Enterprises">
-      Mehak Enterprises
-    </option>
-    <option value="ToyHub Corp">
-      ToyHub Corp
-    </option>
-    <option value="Firm 3">
-      Firm 3
-    </option>
-  </select>
-</div>
+                  <select
+                    value={form.firmName}
+                    onChange={(e) =>
+                      updateField("firmName", e.target.value)
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">Select firm</option>
+                    <option value="Mehak Enterprises">
+                      Mehak Enterprises
+                    </option>
+                    <option value="ToyHub Corp">
+                      ToyHub Corp
+                    </option>
+                    <option value="Firm 3">
+                      Firm 3
+                    </option>
+                  </select>
+                </div>
 
                 <div>
                   <label className={labelClass}>
@@ -668,10 +668,11 @@ const AddPartyModal = ({
 
                 <div>
                   <label className={labelClass}>
-                    Remarks
+                    Ratelist
                   </label>
 
-                  <input
+                  <textarea
+                    rows={3}
                     value={form.remarks}
                     onChange={(e) =>
                       updateField(
@@ -679,9 +680,13 @@ const AddPartyModal = ({
                         e.target.value
                       )
                     }
-                    placeholder="Optional remarks"
-                    className={inputClass}
+                    placeholder="Enter final negotiated rates..."
+                    className={`${inputClass} resize-y`}
                   />
+
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Final rates negotiated with the client.
+                  </p>
                 </div>
 
               </div>

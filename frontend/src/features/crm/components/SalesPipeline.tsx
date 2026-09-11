@@ -91,16 +91,16 @@ type PipelineForm = {
 type ConversationForm = {
   note: string;
   type:
-    | "GENERAL"
-    | "PAYMENT"
-    | "MEETING"
-    | "FOLLOW_UP"
-    | "COMPLAINT"
-    | "PRODUCT";
+  | "GENERAL"
+  | "PAYMENT"
+  | "MEETING"
+  | "FOLLOW_UP"
+  | "COMPLAINT"
+  | "PRODUCT";
   priority:
-    | "LOW"
-    | "MEDIUM"
-    | "HIGH";
+  | "LOW"
+  | "MEDIUM"
+  | "HIGH";
   nextFollowUpDate: string;
   nextAction: string;
 };
@@ -110,16 +110,16 @@ type ConversationNote = {
   title?: string;
   note: string;
   type?:
-    | "GENERAL"
-    | "PAYMENT"
-    | "MEETING"
-    | "FOLLOW_UP"
-    | "COMPLAINT"
-    | "PRODUCT";
+  | "GENERAL"
+  | "PAYMENT"
+  | "MEETING"
+  | "FOLLOW_UP"
+  | "COMPLAINT"
+  | "PRODUCT";
   priority?:
-    | "LOW"
-    | "MEDIUM"
-    | "HIGH";
+  | "LOW"
+  | "MEDIUM"
+  | "HIGH";
   reminderDate?: string;
   completed?: boolean;
   addedBy?: {
@@ -502,8 +502,8 @@ const isThisWeek = (
 
   monday.setDate(
     today.getDate() -
-      day +
-      1
+    day +
+    1
   );
 
   const sunday =
@@ -660,6 +660,13 @@ const SalesPipeline = () => {
   );
 
   const [
+    openConversationFor,
+    setOpenConversationFor,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
     editingRecord,
     setEditingRecord,
   ] = useState<PipelineRecord | null>(
@@ -712,15 +719,14 @@ const SalesPipeline = () => {
       const data =
         await getSalesPipeline();
 
-      setRecords(
+      const safeData =
         Array.isArray(data)
           ? data
-          : []
-      );
+          : [];
 
-      return Array.isArray(data)
-        ? data
-        : [];
+      setRecords(safeData);
+
+      return safeData;
     } catch (error) {
       console.error(
         "Failed to load pipeline:",
@@ -756,7 +762,7 @@ const SalesPipeline = () => {
           (user: CRMUser) =>
             user.role === "CRM" &&
             user.status !==
-              "INACTIVE"
+            "INACTIVE"
         )
       );
     } catch (error) {
@@ -786,41 +792,42 @@ const SalesPipeline = () => {
     }
 
     setRecords(
-  (previous: PipelineRecord[]) =>
-      previous.map(record => {
-        if (
-          record._id !==
+      (previous: PipelineRecord[]) =>
+        previous.map(record => {
+          if (
+            record._id !==
             updatedRecord._id ||
-          record.source !==
+            record.source !==
             updatedRecord.source
-        ) {
-          return record;
-        }
+          ) {
+            return record;
+          }
 
-        return {
-          ...record,
-          ...updatedRecord,
-        };
-      })
+          return {
+            ...record,
+            ...updatedRecord,
+          };
+        })
     );
 
     setSelectedRecord(
-  (previous: PipelineRecord | null) => {
-      if (
-        !previous ||
-        previous._id !==
+      (previous: PipelineRecord | null) => {
+        if (
+          !previous ||
+          previous._id !==
           updatedRecord._id ||
-        previous.source !==
+          previous.source !==
           updatedRecord.source
-      ) {
-        return previous;
-      }
+        ) {
+          return previous;
+        }
 
-      return {
-        ...previous,
-        ...updatedRecord,
-      };
-    });
+        return {
+          ...previous,
+          ...updatedRecord,
+        };
+      }
+    );
   };
 
   /* =======================================================
@@ -883,7 +890,7 @@ const SalesPipeline = () => {
 
           if (
             recordView ===
-              "LEADS" &&
+            "LEADS" &&
             type !== "LEAD"
           ) {
             return false;
@@ -891,7 +898,7 @@ const SalesPipeline = () => {
 
           if (
             recordView ===
-              "CUSTOMERS" &&
+            "CUSTOMERS" &&
             type !== "CUSTOMER"
           ) {
             return false;
@@ -899,7 +906,7 @@ const SalesPipeline = () => {
 
           if (
             recordView ===
-              "PARTIES" &&
+            "PARTIES" &&
             type !== "PARTY"
           ) {
             return false;
@@ -932,9 +939,9 @@ const SalesPipeline = () => {
 
           if (
             stageFilter !==
-              "ALL" &&
+            "ALL" &&
             getStage(record) !==
-              stageFilter
+            stageFilter
           ) {
             return false;
           }
@@ -946,7 +953,7 @@ const SalesPipeline = () => {
 
           if (
             salespersonFilter !==
-              "ALL" &&
+            "ALL" &&
             !salespersonIds.includes(
               salespersonFilter
             )
@@ -956,7 +963,7 @@ const SalesPipeline = () => {
 
           if (
             activeSalesperson !==
-              "ALL" &&
+            "ALL" &&
             !salespersonIds.includes(
               activeSalesperson
             )
@@ -1037,13 +1044,13 @@ const SalesPipeline = () => {
       return;
     }
 
-    setRecords(previous =>
+    setRecords((previous: PipelineRecord[]) =>
       previous.map(item => {
         if (
           item._id !==
           record._id ||
           item.source !==
-            record.source
+          record.source
         ) {
           return item;
         }
@@ -1118,13 +1125,13 @@ const SalesPipeline = () => {
         error
       );
 
-      setRecords(previous =>
+      setRecords((previous: PipelineRecord[]) =>
         previous.map(item => {
           if (
             item._id !==
-              record._id ||
+            record._id ||
             item.source !==
-              record.source
+            record.source
           ) {
             return item;
           }
@@ -1160,6 +1167,16 @@ const SalesPipeline = () => {
     record: PipelineRecord
   ) => {
     setSelectedRecord(record);
+    setOpenConversationFor(null);
+  };
+
+  const openConversation = (
+    record: PipelineRecord
+  ) => {
+    setSelectedRecord(record);
+    setOpenConversationFor(
+      record._id
+    );
   };
 
   /* =======================================================
@@ -1351,6 +1368,25 @@ const SalesPipeline = () => {
                   false,
               }
             );
+
+          const freshRecords =
+            await loadPipeline(
+              false
+            );
+
+          const freshRecord =
+            freshRecords.find(
+              (item: PipelineRecord) =>
+                item._id ===
+                record._id &&
+                item.source ===
+                "ACCOUNTS"
+            );
+
+          if (freshRecord) {
+            updatedRecord =
+              freshRecord;
+          }
         } else {
           updatedRecord =
             await addCustomerNote(
@@ -1371,36 +1407,22 @@ const SalesPipeline = () => {
               }
             );
 
-          /*
-           * A conversation means the customer
-           * was contacted now.
-           *
-           * Update Last Contact and optionally
-           * Next Follow-up / Next Action.
-           */
-          updatedRecord =
-            await updateCustomerPipeline(
-              record._id,
-              {
-                lastContactDate:
-                  new Date().toISOString(),
+          await updateCustomerPipeline(
+            record._id,
+            {
+              lastContactDate:
+                new Date().toISOString(),
 
-                nextFollowUpDate:
-                  conversation.nextFollowUpDate ||
-                  undefined,
+              nextFollowUpDate:
+                conversation.nextFollowUpDate ||
+                undefined,
 
-                nextAction:
-                  conversation.nextAction.trim() ||
-                  undefined,
-              }
-            );
+              nextAction:
+                conversation.nextAction.trim() ||
+                undefined,
+            }
+          );
 
-          /*
-           * The pipeline endpoint returns the
-           * customer. Reload once silently so
-           * specialNotes and pipeline fields
-           * remain synchronized.
-           */
           const freshRecords =
             await loadPipeline(
               false
@@ -1410,15 +1432,19 @@ const SalesPipeline = () => {
             freshRecords.find(
               (item: PipelineRecord) =>
                 item._id ===
-                  record._id &&
+                record._id &&
                 item.source ===
-                  "CRM"
+                "CRM"
             );
 
           if (freshRecord) {
             updatedRecord =
               freshRecord;
           }
+        }
+
+        if (!updatedRecord) {
+          return false;
         }
 
         replaceRecord({
@@ -1448,53 +1474,58 @@ const SalesPipeline = () => {
      CONVERSATION — EDIT
   ======================================================= */
 
-const handleUpdateConversation =
-  async (
-    record: PipelineRecord,
-    noteId: string,
-    data: Partial<ConversationNote>
-  ) => {
-    try {
-      const type = getType(record);
+  const handleUpdateConversation =
+    async (
+      record: PipelineRecord,
+      noteId: string,
+      data: Partial<ConversationNote>
+    ) => {
+      try {
+        const type =
+          getType(record);
 
-      let updated;
+        let updated;
 
-      if (type === "PARTY") {
-        updated = await updatePartyNote(
-          record._id,
-          noteId,
-          data as any
+        if (
+          type === "PARTY"
+        ) {
+          updated =
+            await updatePartyNote(
+              record._id,
+              noteId,
+              data as any
+            );
+        } else {
+          updated =
+            await updateCustomerNote(
+              record._id,
+              noteId,
+              data as any
+            );
+        }
+
+        replaceRecord({
+          ...updated,
+          source:
+            type === "PARTY"
+              ? "ACCOUNTS"
+              : "CRM",
+          crmType:
+            type === "PARTY"
+              ? "PARTY"
+              : type,
+        });
+
+        return true;
+      } catch (error) {
+        console.error(
+          "Failed to update conversation:",
+          error
         );
-      } else {
-        updated = await updateCustomerNote(
-          record._id,
-          noteId,
-          data as any
-        );
+
+        return false;
       }
-
-      replaceRecord({
-        ...updated,
-        source:
-          type === "PARTY"
-            ? "ACCOUNTS"
-            : "CRM",
-        crmType:
-          type === "PARTY"
-            ? "PARTY"
-            : type,
-      });
-
-      return true;
-    } catch (error) {
-      console.error(
-        "Failed to update conversation:",
-        error
-      );
-
-      return false;
-    }
-  };
+    };
 
   /* =======================================================
      CONVERSATION — DELETE
@@ -1523,13 +1554,13 @@ const handleUpdateConversation =
           );
         }
 
-        setRecords(previous =>
+        setRecords((previous: PipelineRecord[]) =>
           previous.map(item => {
             if (
               item._id !==
-                record._id ||
+              record._id ||
               item.source !==
-                record.source
+              record.source
             ) {
               return item;
             }
@@ -1549,13 +1580,13 @@ const handleUpdateConversation =
         );
 
         setSelectedRecord(
-  (previous: PipelineRecord | null) => {
+          (previous: PipelineRecord | null) => {
             if (
               !previous ||
               previous._id !==
-                record._id ||
+              record._id ||
               previous.source !==
-                record.source
+              record.source
             ) {
               return previous;
             }
@@ -1603,11 +1634,11 @@ const handleUpdateConversation =
   const hasFilters =
     stageFilter !== "ALL" ||
     salespersonFilter !==
-      "ALL" ||
+    "ALL" ||
     nextFollowUpFilter !==
-      "ALL" ||
+    "ALL" ||
     lastContactFilter !==
-      "ALL";
+    "ALL";
 
   /* =======================================================
      LOADING
@@ -1617,6 +1648,7 @@ const handleUpdateConversation =
     return (
       <div className="flex min-h-[500px] items-center justify-center">
         <div className="text-center">
+
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#172B6B]/10 text-[#172B6B]">
             <FiTarget
               size={20}
@@ -1627,6 +1659,7 @@ const handleUpdateConversation =
           <p className="mt-4 text-sm font-bold text-slate-700">
             Loading sales pipeline...
           </p>
+
         </div>
       </div>
     );
@@ -1639,207 +1672,256 @@ const handleUpdateConversation =
   return (
     <div className="w-full space-y-5">
 
-      {/* HEADER */}
+      {/* =====================================================
+          COMPACT PIPELINE CONTROL BAR
+      ===================================================== */}
 
-      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-        <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
 
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#172B6B] text-white">
-              <FiTarget size={19} />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#172B6B]/10 text-[#172B6B]">
+              <FiTarget size={15} />
             </div>
 
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#172B6B]">
-                Sales Operations
-              </p>
-
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-bold text-slate-900 sm:text-base">
                 Sales Pipeline
               </h1>
+
+              <p className="hidden text-[10px] text-slate-400 sm:block">
+                {filteredRecords.length} matching records
+              </p>
             </div>
 
           </div>
 
-          {/* RECORD TABS */}
-
-          <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50 p-1">
-
-            <RecordTab
-              label="All"
-              count={counts.all}
-              active={
-                recordView ===
-                "ALL"
+          <button
+            type="button"
+            onClick={() =>
+              setShowFilters(
+                value => !value
+              )
+            }
+            aria-expanded={
+              showFilters
+            }
+            className={`
+              inline-flex
+              h-9
+              shrink-0
+              items-center
+              gap-2
+              rounded-lg
+              border
+              px-3
+              text-xs
+              font-bold
+              transition
+              ${showFilters ||
+                hasFilters
+                ? "border-[#172B6B] bg-[#172B6B]/5 text-[#172B6B]"
+                : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
               }
-              onClick={() =>
-                setRecordView(
-                  "ALL"
-                )
-              }
-            />
+            `}
+          >
+            <FiFilter size={14} />
 
-            <RecordTab
-              label="Leads"
-              count={counts.leads}
-              active={
-                recordView ===
-                "LEADS"
-              }
-              onClick={() =>
-                setRecordView(
-                  "LEADS"
-                )
-              }
-            />
+            <span className="hidden sm:inline">
+              Filters
+            </span>
 
-            <RecordTab
-              label="Customers"
-              count={
-                counts.customers
-              }
-              active={
-                recordView ===
-                "CUSTOMERS"
-              }
-              onClick={() =>
-                setRecordView(
-                  "CUSTOMERS"
-                )
-              }
-            />
-
-            <RecordTab
-              label="Account Parties"
-              count={
-                counts.parties
-              }
-              active={
-                recordView ===
-                "PARTIES"
-              }
-              onClick={() =>
-                setRecordView(
-                  "PARTIES"
-                )
-              }
-            />
-
-          </div>
-
-          {/* SALESPERSON TABS */}
-
-          <div>
-
-            <div className="mb-2 flex items-center gap-2">
-              <FiUsers
-                size={13}
-                className="text-slate-400"
-              />
-
-              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                Salespeople
+            {hasFilters && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#172B6B] px-1 text-[8px] text-white">
+                !
               </span>
-            </div>
+            )}
 
-            <div className="flex gap-1 overflow-x-auto">
+            <FiChevronDown
+              size={12}
+              className={`transition-transform ${showFilters
+                ? "rotate-180"
+                : ""
+                }`}
+            />
+          </button>
 
-              <SalespersonTab
-                label="All"
-                active={
-                  activeSalesperson ===
-                  "ALL"
-                }
-                onClick={() =>
-                  setActiveSalesperson(
-                    "ALL"
-                  )
-                }
-              />
+        </div>
 
-              {salespeople.map(
-                person => (
-                  <SalespersonTab
-                    key={
-                      person._id
-                    }
-                    label={
-                      person.name
+        {showFilters && (
+          <div className="border-t border-slate-100 px-4 py-4 sm:px-5">
+
+            <div className="space-y-4">
+
+              {/* RECORD TYPE */}
+
+              <div>
+
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    Records
+                  </span>
+                </div>
+
+                <div className="flex gap-1 overflow-x-auto">
+
+                  <RecordTab
+                    label="All"
+                    count={
+                      counts.all
                     }
                     active={
-                      activeSalesperson ===
-                      person._id
+                      recordView ===
+                      "ALL"
                     }
                     onClick={() =>
-                      setActiveSalesperson(
-                        person._id
+                      setRecordView(
+                        "ALL"
                       )
                     }
                   />
-                )
-              )}
 
-            </div>
+                  <RecordTab
+                    label="Leads"
+                    count={
+                      counts.leads
+                    }
+                    active={
+                      recordView ===
+                      "LEADS"
+                    }
+                    onClick={() =>
+                      setRecordView(
+                        "LEADS"
+                      )
+                    }
+                  />
 
-          </div>
+                  <RecordTab
+                    label="Customers"
+                    count={
+                      counts.customers
+                    }
+                    active={
+                      recordView ===
+                      "CUSTOMERS"
+                    }
+                    onClick={() =>
+                      setRecordView(
+                        "CUSTOMERS"
+                      )
+                    }
+                  />
 
-          {/* SEARCH */}
+                  <RecordTab
+                    label="Account Parties"
+                    count={
+                      counts.parties
+                    }
+                    active={
+                      recordView ===
+                      "PARTIES"
+                    }
+                    onClick={() =>
+                      setRecordView(
+                        "PARTIES"
+                      )
+                    }
+                  />
 
-          <div className="flex flex-col gap-2 lg:flex-row">
+                </div>
 
-            <div className="relative flex-1">
+              </div>
 
-              <FiSearch
-                size={16}
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-              />
+              {/* SALESPERSON */}
 
-              <input
-                value={search}
-                onChange={e =>
-                  setSearch(
-                    e.target.value
-                  )
-                }
-                placeholder="Search company, contact, phone, party code or salesperson..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:border-[#172B6B] focus:bg-white"
-              />
+              <div>
 
-            </div>
+                <div className="mb-2 flex items-center gap-2">
 
-            <button
-              type="button"
-              onClick={() =>
-                setShowFilters(
-                  value => !value
-                )
-              }
-              className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-4 text-xs font-bold ${
-                hasFilters
-                  ? "border-[#172B6B] bg-[#172B6B]/5 text-[#172B6B]"
-                  : "border-slate-200 bg-white text-slate-600"
-              }`}
-            >
-              <FiFilter size={15} />
+                  <FiUsers
+                    size={12}
+                    className="text-slate-400"
+                  />
 
-              Advanced Search
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    Salesperson
+                  </span>
 
-              {hasFilters && (
-                <span className="rounded-full bg-[#172B6B] px-1.5 py-0.5 text-[9px] text-white">
-                  !
-                </span>
-              )}
+                </div>
 
-            </button>
+                <div className="flex gap-1 overflow-x-auto">
 
-          </div>
+                  <SalespersonTab
+                    label="All"
+                    active={
+                      activeSalesperson ===
+                      "ALL"
+                    }
+                    onClick={() =>
+                      setActiveSalesperson(
+                        "ALL"
+                      )
+                    }
+                  />
 
-          {/* FILTERS */}
+                  {salespeople.map(
+                    person => (
+                      <SalespersonTab
+                        key={
+                          person._id
+                        }
+                        label={
+                          person.name
+                        }
+                        active={
+                          activeSalesperson ===
+                          person._id
+                        }
+                        onClick={() =>
+                          setActiveSalesperson(
+                            person._id
+                          )
+                        }
+                      />
+                    )
+                  )}
 
-          {showFilters && (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                </div>
+
+              </div>
+
+              {/* SEARCH */}
+
+              <div className="flex flex-col gap-2 lg:flex-row">
+
+                <div className="relative flex-1">
+
+                  <FiSearch
+                    size={15}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    value={
+                      search
+                    }
+                    onChange={e =>
+                      setSearch(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Search company, contact, phone, party code or salesperson..."
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-xs outline-none focus:border-[#172B6B] focus:bg-white"
+                  />
+
+                </div>
+
+              </div>
+
+              {/* ADVANCED FILTERS */}
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
@@ -1993,26 +2075,36 @@ const handleUpdateConversation =
 
               </div>
 
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={
-                    clearFilters
-                  }
-                  className="mt-3 text-xs font-bold text-[#172B6B]"
-                >
-                  Clear all filters
-                </button>
-              )}
+              <div className="flex items-center justify-between">
+
+                <span className="text-[10px] text-slate-400">
+                  {filteredRecords.length} matching records
+                </span>
+
+                {hasFilters && (
+                  <button
+                    type="button"
+                    onClick={
+                      clearFilters
+                    }
+                    className="text-xs font-bold text-[#172B6B]"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+
+              </div>
 
             </div>
-          )}
 
-        </div>
+          </div>
+        )}
 
       </section>
 
-      {/* KANBAN */}
+      {/* =====================================================
+          KANBAN
+      ===================================================== */}
 
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
 
@@ -2021,15 +2113,15 @@ const handleUpdateConversation =
           <div>
             <h2 className="text-sm font-bold text-slate-900">
               {recordView ===
-              "ALL"
+                "ALL"
                 ? "All Records"
                 : recordView ===
                   "LEADS"
-                ? "Leads"
-                : recordView ===
-                  "CUSTOMERS"
-                ? "Customers"
-                : "Account Parties"}
+                  ? "Leads"
+                  : recordView ===
+                    "CUSTOMERS"
+                    ? "Customers"
+                    : "Account Parties"}
             </h2>
 
             <p className="mt-0.5 text-xs text-slate-400">
@@ -2103,6 +2195,9 @@ const handleUpdateConversation =
                     onEdit={
                       openEdit
                     }
+                    onAddConversation={
+                      openConversation
+                    }
                   />
                 );
               }
@@ -2114,23 +2209,37 @@ const handleUpdateConversation =
 
       </section>
 
-      {/* PROFILE */}
+      {/* =====================================================
+          PROFILE
+      ===================================================== */}
 
       {selectedRecord && (
         <ProfileDrawer
           record={
             selectedRecord
           }
-          onClose={() =>
+          initialShowAddConversation={
+            openConversationFor ===
+            selectedRecord._id
+          }
+          onClose={() => {
             setSelectedRecord(
               null
-            )
-          }
+            );
+
+            setOpenConversationFor(
+              null
+            );
+          }}
           onEdit={() => {
             const record =
               selectedRecord;
 
             setSelectedRecord(
+              null
+            );
+
+            setOpenConversationFor(
               null
             );
 
@@ -2148,7 +2257,9 @@ const handleUpdateConversation =
         />
       )}
 
-      {/* EDIT MODAL */}
+      {/* =====================================================
+          EDIT MODAL
+      ===================================================== */}
 
       {showEdit &&
         editingRecord && (
@@ -2217,11 +2328,10 @@ const RecordTab = ({
   <button
     type="button"
     onClick={onClick}
-    className={`shrink-0 rounded-lg px-4 py-2.5 text-xs font-bold ${
-      active
-        ? "bg-white text-[#172B6B] shadow-sm"
-        : "text-slate-500"
-    }`}
+    className={`shrink-0 rounded-lg px-4 py-2.5 text-xs font-bold ${active
+      ? "bg-white text-[#172B6B] shadow-sm"
+      : "text-slate-500 hover:bg-white/70"
+      }`}
   >
     {label}
 
@@ -2247,11 +2357,10 @@ const SalespersonTab = ({
   <button
     type="button"
     onClick={onClick}
-    className={`shrink-0 rounded-lg px-3.5 py-2 text-xs font-semibold ${
-      active
-        ? "bg-[#172B6B] text-white"
-        : "bg-white text-slate-500"
-    }`}
+    className={`shrink-0 rounded-lg px-3.5 py-2 text-xs font-semibold ${active
+      ? "bg-[#172B6B] text-white"
+      : "bg-white text-slate-500 hover:bg-slate-50"
+      }`}
   >
     {label}
   </button>
@@ -2272,6 +2381,7 @@ const KanbanColumn = ({
   onDragEnd,
   onOpen,
   onEdit,
+  onAddConversation,
 }: {
   stage: Stage;
   records: PipelineRecord[];
@@ -2289,13 +2399,15 @@ const KanbanColumn = ({
   onEdit: (
     record: PipelineRecord
   ) => void;
+  onAddConversation: (
+    record: PipelineRecord
+  ) => void;
 }) => (
   <div
-    className={`flex w-[285px] min-w-[285px] shrink-0 flex-col overflow-hidden rounded-2xl border ${
-      dragOver
-        ? "border-[#172B6B] ring-2 ring-[#172B6B]/10"
-        : "border-slate-200"
-    }`}
+    className={`flex w-[285px] min-w-[285px] shrink-0 flex-col overflow-hidden rounded-2xl border ${dragOver
+      ? "border-[#172B6B] ring-2 ring-[#172B6B]/10"
+      : "border-slate-200"
+      }`}
     onDragOver={e => {
       e.preventDefault();
       onDragOver();
@@ -2325,11 +2437,10 @@ const KanbanColumn = ({
     </div>
 
     <div
-      className={`min-h-[220px] space-y-3 bg-slate-100 p-2.5 ${
-        dragOver
-          ? "bg-[#172B6B]/5"
-          : ""
-      }`}
+      className={`min-h-[220px] space-y-3 bg-slate-100 p-2.5 ${dragOver
+        ? "bg-[#172B6B]/5"
+        : ""
+        }`}
     >
 
       {records.map(
@@ -2353,6 +2464,11 @@ const KanbanColumn = ({
                 record
               )
             }
+            onAddConversation={() =>
+              onAddConversation(
+                record
+              )
+            }
             onDragStart={() =>
               onDragStart(
                 record
@@ -2367,11 +2483,13 @@ const KanbanColumn = ({
 
       {!records.length && (
         <div className="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/70">
+
           <span className="text-xs text-slate-400">
             {dragOver
               ? "Drop here"
               : "No records"}
           </span>
+
         </div>
       )}
 
@@ -2389,6 +2507,7 @@ const PipelineCard = ({
   dragging,
   onOpen,
   onEdit,
+  onAddConversation,
   onDragStart,
   onDragEnd,
 }: {
@@ -2396,6 +2515,7 @@ const PipelineCard = ({
   dragging: boolean;
   onOpen: () => void;
   onEdit: () => void;
+  onAddConversation: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
 }) => {
@@ -2434,11 +2554,10 @@ const PipelineCard = ({
       onDragEnd={
         onDragEnd
       }
-      className={`rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm ${
-        dragging
-          ? "cursor-grabbing opacity-40"
-          : "cursor-grab"
-      }`}
+      className={`rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm ${dragging
+        ? "cursor-grabbing opacity-40"
+        : "cursor-grab"
+        }`}
     >
 
       <button
@@ -2467,15 +2586,14 @@ const PipelineCard = ({
           </div>
 
           <span
-            className={`shrink-0 rounded-md px-2 py-1 text-[9px] font-bold uppercase ${
-              type ===
+            className={`shrink-0 rounded-md px-2 py-1 text-[9px] font-bold uppercase ${type ===
               "LEAD"
-                ? "bg-blue-50 text-blue-700"
-                : type ===
-                  "PARTY"
+              ? "bg-blue-50 text-blue-700"
+              : type ===
+                "PARTY"
                 ? "bg-amber-50 text-amber-700"
                 : "bg-slate-100 text-slate-600"
-            }`}
+              }`}
           >
             {type}
           </span>
@@ -2533,8 +2651,8 @@ const PipelineCard = ({
               <p className="mt-0.5 text-[10px] font-semibold text-slate-600">
                 {record.lastContactDate
                   ? formatDate(
-                      record.lastContactDate
-                    )
+                    record.lastContactDate
+                  )
                   : "Not contacted"}
               </p>
 
@@ -2546,13 +2664,12 @@ const PipelineCard = ({
 
             <FiCalendar
               size={12}
-              className={`mt-0.5 shrink-0 ${
-                overdue
-                  ? "text-red-500"
-                  : today
+              className={`mt-0.5 shrink-0 ${overdue
+                ? "text-red-500"
+                : today
                   ? "text-amber-500"
                   : "text-slate-400"
-              }`}
+                }`}
             />
 
             <div className="min-w-0">
@@ -2564,18 +2681,17 @@ const PipelineCard = ({
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
 
                 <span
-                  className={`text-[10px] ${
-                    overdue
-                      ? "font-bold text-red-600"
-                      : today
+                  className={`text-[10px] ${overdue
+                    ? "font-bold text-red-600"
+                    : today
                       ? "font-bold text-amber-600"
                       : "font-semibold text-slate-600"
-                  }`}
+                    }`}
                 >
                   {record.nextFollowUpDate
                     ? formatDate(
-                        record.nextFollowUpDate
-                      )
+                      record.nextFollowUpDate
+                    )
                     : "Not set"}
                 </span>
 
@@ -2623,7 +2739,7 @@ const PipelineCard = ({
 
             {conversationCount} conversation
             {conversationCount !==
-            1
+              1
               ? "s"
               : ""}
 
@@ -2632,14 +2748,63 @@ const PipelineCard = ({
 
       </button>
 
-      <div className="mt-2 flex justify-end">
+      {/* CARD ACTIONS */}
+
+      <div className="mt-2 flex items-center justify-end gap-1">
+
+        {/* ADD CONVERSATION */}
 
         <button
           type="button"
-          onClick={
-            onEdit
-          }
-          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 hover:bg-slate-50 hover:text-[#172B6B]"
+          onClick={event => {
+            event.stopPropagation();
+            onAddConversation();
+          }}
+          className="
+            inline-flex
+            h-7
+            w-7
+            items-center
+            justify-center
+            rounded-lg
+            border
+            border-[#172B6B]/15
+            bg-[#172B6B]/5
+            text-[#172B6B]
+            transition
+            hover:bg-[#172B6B]
+            hover:text-white
+          "
+          title="Add Conversation"
+          aria-label="Add Conversation"
+        >
+          <FiPlus
+            size={13}
+            strokeWidth={2.5}
+          />
+        </button>
+
+        {/* MANAGE */}
+
+        <button
+          type="button"
+          onClick={event => {
+            event.stopPropagation();
+            onEdit();
+          }}
+          className="
+            inline-flex
+            items-center
+            gap-1.5
+            rounded-lg
+            px-2.5
+            py-1.5
+            text-[10px]
+            font-semibold
+            text-slate-400
+            hover:bg-slate-50
+            hover:text-[#172B6B]
+          "
         >
           <FiEdit3
             size={11}
@@ -2660,6 +2825,7 @@ const PipelineCard = ({
 
 const ProfileDrawer = ({
   record,
+  initialShowAddConversation = false,
   onClose,
   onEdit,
   onAddConversation,
@@ -2667,6 +2833,7 @@ const ProfileDrawer = ({
   onDeleteConversation,
 }: {
   record: PipelineRecord;
+  initialShowAddConversation?: boolean;
   onClose: () => void;
   onEdit: () => void;
   onAddConversation: (
@@ -2702,7 +2869,9 @@ const ProfileDrawer = ({
   const [
     showAddConversation,
     setShowAddConversation,
-  ] = useState(false);
+  ] = useState(
+    initialShowAddConversation
+  );
 
   const [
     editingNoteId,
@@ -2734,6 +2903,15 @@ const ProfileDrawer = ({
   ] = useState<string | null>(
     null
   );
+
+  useEffect(() => {
+    setShowAddConversation(
+      initialShowAddConversation
+    );
+  }, [
+    initialShowAddConversation,
+    record?._id,
+  ]);
 
   const resetConversationForm =
     () => {
@@ -2955,7 +3133,7 @@ const ProfileDrawer = ({
 
           <div className="space-y-5">
 
-            {/* SALES INFO */}
+            {/* SALES INFORMATION */}
 
             <ProfileSection
               title="Sales Information"
@@ -2965,23 +3143,18 @@ const ProfileDrawer = ({
                 />
               }
             >
-
               <div className="grid gap-3 sm:grid-cols-2">
 
                 <InfoBox
                   label="Stage"
-                  value={getStageLabel(
-                    stage
-                  )}
+                  value={getStageLabel(stage)}
                 />
 
                 <InfoBox
                   label="Salesperson"
                   value={
                     names.length
-                      ? names.join(
-                          ", "
-                        )
+                      ? names.join(", ")
                       : "Unassigned"
                   }
                 />
@@ -3002,9 +3175,7 @@ const ProfileDrawer = ({
 
                 <InfoBox
                   label="Next Action"
-                  value={
-                    record.nextAction
-                  }
+                  value={record.nextAction}
                 />
 
                 <InfoBox
@@ -3016,12 +3187,105 @@ const ProfileDrawer = ({
                 />
 
               </div>
+            </ProfileSection>
+
+            {/* CUSTOMER PROFILE */}
+
+            <ProfileSection
+              title="Customer Profile"
+              icon={
+                <FiUser
+                  size={14}
+                />
+              }
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+
+                <InfoBox
+                  label="Company"
+                  value={
+                    record.companyName ||
+                    record.firmName
+                  }
+                />
+
+                <InfoBox
+                  label="Contact Person"
+                  value={
+                    record.contactPerson
+                  }
+                />
+
+                <InfoBox
+                  label="Phone"
+                  value={
+                    record.phone
+                  }
+                />
+
+                <InfoBox
+                  label="Email"
+                  value={
+                    record.email
+                  }
+                />
+
+                <InfoBox
+                  label="Customer Code"
+                  value={
+                    record.customerCode ||
+                    record.partyCode
+                  }
+                />
+
+                <InfoBox
+                  label="Type"
+                  value={
+                    type
+                  }
+                />
+
+                <InfoBox
+                  label="Address"
+                  value={
+                    record.address ||
+                    record.customerDetails?.address ||
+                    record.billingAddress
+                  }
+                />
+
+                <InfoBox
+                  label="City"
+                  value={
+                    record.city ||
+                    record.customerDetails?.city
+                  }
+                />
+
+              </div>
+
+              {(record.remarks ||
+                record.customerDetails?.remarks) && (
+                  <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                      Ratelist / Commercial Notes
+                    </p>
+
+                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">
+                      {record.remarks ||
+                        record.customerDetails?.remarks}
+                    </p>
+
+                  </div>
+                )}
 
             </ProfileSection>
 
             {/* ADD CONVERSATION */}
 
             {showAddConversation && (
+
               <section className="rounded-2xl border border-[#172B6B]/15 bg-[#172B6B]/[0.025] p-4">
 
                 <div className="flex items-center justify-between">
@@ -3067,7 +3331,7 @@ const ProfileDrawer = ({
                       }
                       onChange={e =>
                         setConversationForm(
-                          previous => ({
+                          (previous: ConversationForm) => ({
                             ...previous,
                             note:
                               e.target.value,
@@ -3090,7 +3354,7 @@ const ProfileDrawer = ({
                       }
                       onChange={value =>
                         setConversationForm(
-                          previous => ({
+                          (previous: ConversationForm) => ({
                             ...previous,
                             type:
                               value as ConversationForm["type"],
@@ -3144,7 +3408,7 @@ const ProfileDrawer = ({
                       }
                       onChange={value =>
                         setConversationForm(
-                          previous => ({
+                          (previous: ConversationForm) => ({
                             ...previous,
                             priority:
                               value as ConversationForm["priority"],
@@ -3175,57 +3439,53 @@ const ProfileDrawer = ({
 
                   </div>
 
-                  {/* CUSTOMER ONLY:
-                      AccountParty currently does not
-                      have CRM follow-up date fields. */}
-
                   {type !==
                     "PARTY" && (
-                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-3 sm:grid-cols-2">
 
-                      <DateField
-                        label="Next Follow-up"
-                        value={
-                          conversationForm.nextFollowUpDate
-                        }
-                        onChange={value =>
-                          setConversationForm(
-                            previous => ({
-                              ...previous,
-                              nextFollowUpDate:
-                                value,
-                            })
-                          )
-                        }
-                      />
-
-                      <div>
-
-                        <label className="mb-2 block text-xs font-semibold text-slate-700">
-                          Next Action
-                        </label>
-
-                        <input
+                        <DateField
+                          label="Next Follow-up"
                           value={
-                            conversationForm.nextAction
+                            conversationForm.nextFollowUpDate
                           }
-                          onChange={e =>
+                          onChange={value =>
                             setConversationForm(
-                              previous => ({
+                              (previous: ConversationForm) => ({
                                 ...previous,
-                                nextAction:
-                                  e.target.value,
+                                nextFollowUpDate:
+                                  value,
                               })
                             )
                           }
-                          placeholder="Call, send catalogue, quotation..."
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none focus:border-[#172B6B]"
                         />
 
-                      </div>
+                        <div>
 
-                    </div>
-                  )}
+                          <label className="mb-2 block text-xs font-semibold text-slate-700">
+                            Next Action
+                          </label>
+
+                          <input
+                            value={
+                              conversationForm.nextAction
+                            }
+                            onChange={e =>
+                              setConversationForm(
+                                (previous: ConversationForm) => ({
+                                  ...previous,
+                                  nextAction:
+                                    e.target.value,
+                                })
+                              )
+                            }
+                            placeholder="Call, send catalogue, quotation..."
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none focus:border-[#172B6B]"
+                          />
+
+                        </div>
+
+                      </div>
+                    )}
 
                   <div className="flex justify-end gap-2">
 
@@ -3272,11 +3532,10 @@ const ProfileDrawer = ({
             {/* CONVERSATION HISTORY */}
 
             <ProfileSection
-              title={`Conversation History${
-                notes.length
-                  ? ` (${notes.length})`
-                  : ""
-              }`}
+              title={`Conversation History${notes.length
+                ? ` (${notes.length})`
+                : ""
+                }`}
               icon={
                 <FiMessageSquare
                   size={14}
@@ -3294,9 +3553,9 @@ const ProfileDrawer = ({
                     ) => {
                       const author =
                         typeof note.addedBy ===
-                        "object"
+                          "object"
                           ? note.addedBy
-                              ?.name
+                            ?.name
                           : undefined;
 
                       const isEditing =
@@ -3319,6 +3578,7 @@ const ProfileDrawer = ({
                               <div className="flex flex-wrap items-center gap-2">
 
                                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
+
                                   <FiUser
                                     size={11}
                                     className="text-slate-400"
@@ -3326,6 +3586,7 @@ const ProfileDrawer = ({
 
                                   {author ||
                                     "Salesperson"}
+
                                 </span>
 
                                 {note.type && (
@@ -3338,14 +3599,13 @@ const ProfileDrawer = ({
 
                                 {note.priority &&
                                   note.priority !==
-                                    "MEDIUM" && (
+                                  "MEDIUM" && (
                                     <span
-                                      className={`rounded-md px-2 py-1 text-[8px] font-bold uppercase ${
-                                        note.priority ===
+                                      className={`rounded-md px-2 py-1 text-[8px] font-bold uppercase ${note.priority ===
                                         "HIGH"
-                                          ? "bg-red-50 text-red-600"
-                                          : "bg-slate-100 text-slate-500"
-                                      }`}
+                                        ? "bg-red-50 text-red-600"
+                                        : "bg-slate-100 text-slate-500"
+                                        }`}
                                     >
                                       {
                                         note.priority
@@ -3464,6 +3724,7 @@ const ProfileDrawer = ({
 
                           {note.reminderDate && (
                             <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-slate-400">
+
                               <FiCalendar
                                 size={11}
                               />
@@ -3473,6 +3734,7 @@ const ProfileDrawer = ({
                               {formatDate(
                                 note.reminderDate
                               )}
+
                             </div>
                           )}
 
@@ -3525,7 +3787,7 @@ const ProfileDrawer = ({
               {Array.isArray(
                 record.stageHistory
               ) &&
-              record.stageHistory.length ? (
+                record.stageHistory.length ? (
                 <div className="space-y-2">
 
                   {[
@@ -3647,7 +3909,7 @@ const EditModal = ({
     value: string
   ) => {
     setForm(
-      previous => ({
+      (previous: PipelineForm) => ({
         ...previous,
         [field]: value,
       })
@@ -3657,7 +3919,7 @@ const EditModal = ({
   const toggleSalesperson =
     (id: string) => {
       setForm(
-        previous => {
+        (previous: PipelineForm) => {
           const exists =
             previous.assignedSalespeople.includes(
               id
@@ -3668,14 +3930,14 @@ const EditModal = ({
             assignedSalespeople:
               exists
                 ? previous.assignedSalespeople.filter(
-                    item =>
-                      item !==
-                      id
-                  )
+                  item =>
+                    item !==
+                    id
+                )
                 : [
-                    ...previous.assignedSalespeople,
-                    id,
-                  ],
+                  ...previous.assignedSalespeople,
+                  id,
+                ],
           };
         }
       );
@@ -3748,12 +4010,11 @@ const EditModal = ({
                           stage.id
                         )
                       }
-                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold ${
-                        form.stage ===
+                      className={`rounded-xl border px-3 py-2.5 text-xs font-semibold ${form.stage ===
                         stage.id
-                          ? "border-[#172B6B] bg-[#172B6B]/5 text-[#172B6B]"
-                          : "border-slate-200 text-slate-500"
-                      }`}
+                        ? "border-[#172B6B] bg-[#172B6B]/5 text-[#172B6B]"
+                        : "border-slate-200 text-slate-500"
+                        }`}
                     >
                       {
                         stage.label
@@ -3811,11 +4072,10 @@ const EditModal = ({
 
                   <FiChevronDown
                     size={15}
-                    className={`text-slate-400 ${
-                      dropdownOpen
-                        ? "rotate-180"
-                        : ""
-                    }`}
+                    className={`text-slate-400 ${dropdownOpen
+                      ? "rotate-180"
+                      : ""
+                      }`}
                   />
 
                 </button>
@@ -3851,11 +4111,10 @@ const EditModal = ({
                             </span>
 
                             <span
-                              className={`flex h-5 w-5 items-center justify-center rounded-md border ${
-                                selected
-                                  ? "border-[#172B6B] bg-[#172B6B] text-white"
-                                  : "border-slate-300"
-                              }`}
+                              className={`flex h-5 w-5 items-center justify-center rounded-md border ${selected
+                                ? "border-[#172B6B] bg-[#172B6B] text-white"
+                                : "border-slate-300"
+                                }`}
                             >
                               {selected && (
                                 <FiCheck

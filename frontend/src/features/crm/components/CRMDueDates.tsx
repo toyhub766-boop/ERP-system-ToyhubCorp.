@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useMemo,
   useState,
@@ -6,10 +7,13 @@ import {
 
 import {
   FiAlertCircle,
+  FiArrowDownLeft,
+  FiArrowUpRight,
   FiCalendar,
   FiChevronDown,
   FiClock,
   FiFilter,
+  FiRefreshCw,
   FiSearch,
   FiUsers,
   FiX,
@@ -20,13 +24,19 @@ import {
   updateCRMDueDate,
 } from "../services/crmDue.service";
 
+import {
+  getPartyLedger,
+} from "../../accounts/services/accountTransaction.service";
+
 type DueStatus =
   | "OVERDUE"
   | "DUE_TODAY"
   | "UPCOMING"
   | "NO_DUE_DATE";
 
-type StatusFilter = "ALL" | DueStatus;
+type StatusFilter =
+  | "ALL"
+  | DueStatus;
 
 type BalanceFilter =
   | "ALL"
@@ -50,14 +60,28 @@ interface Salesperson {
 
 interface CRMParty {
   _id: string;
-  companyName?: string;
-  contactPerson?: string;
-  phone?: string;
-  currentBalance?: number;
-  paymentTerms?: number;
+  companyName: string;
+  contactPerson: string;
+  phone: string;
+  currentBalance: number;
+  paymentTerms: number;
   dueDate?: string | null;
-  partyType?: string;
+  partyType: string;
   assignedSalespeople?: Salesperson[];
+}
+
+interface LedgerTransaction {
+  _id?: string;
+  date?: string;
+  transactionType?: string;
+  amount?: number;
+  paymentMethod?: string;
+  remarks?: string;
+  balanceAfterTransaction?: number;
+  createdBy?: {
+    _id?: string;
+    name?: string;
+  } | null;
 }
 
 const CRMDueDates = () => {
@@ -66,6 +90,9 @@ const CRMDueDates = () => {
 
   const [search, setSearch] =
     useState("");
+
+  const [loading, setLoading] =
+    useState(true);
 
   /* =========================================================
      FILTERS
@@ -86,11 +113,8 @@ const CRMDueDates = () => {
   const [showFilters, setShowFilters] =
     useState(false);
 
-  const [loading, setLoading] =
-    useState(true);
-
   /* =========================================================
-     INLINE EDITING
+     DUE DATE EDITING
   ========================================================= */
 
   const [editingPartyId, setEditingPartyId] =
@@ -103,7 +127,25 @@ const CRMDueDates = () => {
     useState(false);
 
   /* =========================================================
-     LOAD DATA
+     LEDGER
+  ========================================================= */
+
+  const [expandedPartyId, setExpandedPartyId] =
+    useState<string | null>(null);
+
+  const [ledgerLoadingId, setLedgerLoadingId] =
+    useState<string | null>(null);
+
+  const [ledgerByParty, setLedgerByParty] =
+    useState<
+      Record<
+        string,
+        LedgerTransaction[]
+      >
+    >({});
+
+  /* =========================================================
+     LOAD DUE DATES
   ========================================================= */
 
   const loadDueDates = async () => {
@@ -123,6 +165,8 @@ const CRMDueDates = () => {
         "Failed to load CRM due dates:",
         error
       );
+
+      setParties([]);
     } finally {
       setLoading(false);
     }
@@ -130,6 +174,23 @@ const CRMDueDates = () => {
 
   useEffect(() => {
     loadDueDates();
+  }, []);
+
+  /* =========================================================
+     TODAY
+  ========================================================= */
+
+  const today = useMemo(() => {
+    const date = new Date();
+
+    date.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    return date;
   }, []);
 
   /* =========================================================
@@ -191,26 +252,46 @@ const CRMDueDates = () => {
     );
   };
 
-  /* =========================================================
-     TODAY
-  ========================================================= */
+  const formatTransactionDate = (
+    value?: string
+  ) => {
+    if (!value) {
+      return "--";
+    }
 
-  const today = useMemo(() => {
     const date =
-      new Date();
+      new Date(value);
 
-    date.setHours(
-      0,
-      0,
-      0,
-      0
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "--";
+    }
+
+    return date.toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
     );
+  };
 
-    return date;
-  }, []);
+  const formatAmount = (
+    value?: number
+  ) => {
+    return Math.abs(
+      Number(value || 0)
+    ).toLocaleString(
+      "en-IN"
+    );
+  };
 
   /* =========================================================
-     STATUS
+     DUE STATUS
   ========================================================= */
 
   const getDueStatus = (
@@ -222,6 +303,14 @@ const CRMDueDates = () => {
 
     const date =
       new Date(dueDate);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "NO_DUE_DATE";
+    }
 
     date.setHours(
       0,
@@ -244,55 +333,89 @@ const CRMDueDates = () => {
     return "UPCOMING";
   };
 
+  const getStatusConfig = (
+    status: DueStatus
+  ) => {
+    switch (status) {
+      case "OVERDUE":
+        return {
+          label: "Overdue",
+          dot: "bg-red-500",
+          badge:
+            "border-red-100 bg-red-50 text-red-700",
+          icon: FiAlertCircle,
+        };
+
+      case "DUE_TODAY":
+        return {
+          label: "Due Today",
+          dot: "bg-amber-500",
+          badge:
+            "border-amber-100 bg-amber-50 text-amber-700",
+          icon: FiCalendar,
+        };
+
+      case "UPCOMING":
+        return {
+          label: "Upcoming",
+          dot: "bg-emerald-500",
+          badge:
+            "border-emerald-100 bg-emerald-50 text-emerald-700",
+          icon: FiClock,
+        };
+
+      default:
+        return {
+          label: "No Due Date",
+          dot: "bg-slate-400",
+          badge:
+            "border-slate-200 bg-slate-50 text-slate-600",
+          icon: FiCalendar,
+        };
+    }
+  };
+
   /* =========================================================
-     AVAILABLE SALESPERSONS
+     SALESPERSONS
   ========================================================= */
 
-  const salespeople =
-    useMemo(() => {
-      const map =
-        new Map<
-          string,
-          Salesperson
-        >();
+  const salespeople = useMemo(() => {
+    const map =
+      new Map<
+        string,
+        Salesperson
+      >();
 
-      parties.forEach(
-        (party) => {
-          if (
-            !Array.isArray(
-              party.assignedSalespeople
-            )
-          ) {
-            return;
-          }
-
-          party.assignedSalespeople.forEach(
-            (person) => {
-              if (
-                !person?._id ||
-                !person?.name
-              ) {
-                return;
-              }
-
+    parties.forEach(
+      (party) => {
+        (
+          party.assignedSalespeople ||
+          []
+        ).forEach(
+          (person) => {
+            if (
+              person._id &&
+              person.name
+            ) {
               map.set(
                 person._id,
                 person
               );
             }
-          );
-        }
-      );
+          }
+        );
+      }
+    );
 
-      return Array.from(
-        map.values()
-      ).sort(
-        (a, b) =>
-          a.name.localeCompare(
-            b.name
-          )
-      );
-    }, [parties]);
+    return Array.from(
+      map.values()
+    ).sort(
+      (a, b) =>
+        a.name.localeCompare(
+          b.name
+        )
+    );
+  }, [parties]);
 
   /* =========================================================
      ACTIVE FILTER COUNT
@@ -348,87 +471,7 @@ const CRMDueDates = () => {
   };
 
   /* =========================================================
-     INLINE EDIT START
-  ========================================================= */
-
-  const startDueDateEdit = (
-    party: CRMParty
-  ) => {
-    setEditingPartyId(
-      party._id
-    );
-
-    setDueDateInput(
-      formatInputDate(
-        party.dueDate
-      )
-    );
-  };
-
-  /* =========================================================
-     CANCEL INLINE EDIT
-  ========================================================= */
-
-  const cancelDueDateEdit = () => {
-    setEditingPartyId(null);
-    setDueDateInput("");
-  };
-
-  /* =========================================================
-     SAVE INLINE DUE DATE
-  ========================================================= */
-
-  const saveDueDate = async (
-    partyId: string
-  ) => {
-    try {
-      setSavingDueDate(true);
-
-      const updatedParty =
-        await updateCRMDueDate(
-          partyId,
-          dueDateInput || null
-        );
-
-      const updatedDueDate =
-        updatedParty
-          ?.customerDetails
-          ?.dueDate ||
-        null;
-
-      setParties(
-        (current) =>
-          current.map(
-            (party) =>
-              party._id ===
-              partyId
-                ? {
-                    ...party,
-                    dueDate:
-                      updatedDueDate,
-                  }
-                : party
-          )
-      );
-
-      setEditingPartyId(null);
-      setDueDateInput("");
-    } catch (error) {
-      console.error(
-        "Failed to update CRM due date:",
-        error
-      );
-
-      alert(
-        "Failed to update due date."
-      );
-    } finally {
-      setSavingDueDate(false);
-    }
-  };
-
-  /* =========================================================
-     FILTER
+     FILTER PARTIES
   ========================================================= */
 
   const filteredParties =
@@ -440,25 +483,24 @@ const CRMDueDates = () => {
 
       return parties.filter(
         (party) => {
-          /* SEARCH */
+          const searchText =
+            [
+              party.companyName,
+              party.contactPerson,
+              party.phone,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
 
-          const matchesSearch =
-            !query ||
-            party.companyName
-              ?.toLowerCase()
-              .includes(query) ||
-            party.contactPerson
-              ?.toLowerCase()
-              .includes(query) ||
-            party.phone
-              ?.toLowerCase()
-              .includes(query);
-
-          if (!matchesSearch) {
+          if (
+            query &&
+            !searchText.includes(
+              query
+            )
+          ) {
             return false;
           }
-
-          /* STATUS */
 
           const status =
             getDueStatus(
@@ -474,24 +516,23 @@ const CRMDueDates = () => {
             return false;
           }
 
-          /* SALESPERSON */
-
           if (
             salespersonFilter !==
             "ALL"
           ) {
             const assigned =
-              Array.isArray(
-                party.assignedSalespeople
-              )
-                ? party.assignedSalespeople
-                : [];
+              party.assignedSalespeople ||
+              [];
 
             const matchesSalesperson =
               assigned.some(
                 (person) =>
-                  person._id ===
-                  salespersonFilter
+                  String(
+                    person._id
+                  ) ===
+                  String(
+                    salespersonFilter
+                  )
               );
 
             if (
@@ -500,8 +541,6 @@ const CRMDueDates = () => {
               return false;
             }
           }
-
-          /* BALANCE */
 
           const balance =
             Number(
@@ -525,55 +564,53 @@ const CRMDueDates = () => {
             return false;
           }
 
-          /* PAYMENT TERMS */
-
           const terms =
             Number(
               party.paymentTerms ||
                 0
             );
 
-          if (
-            paymentTermsFilter ===
-              "ZERO" &&
-            terms !== 0
+          switch (
+            paymentTermsFilter
           ) {
-            return false;
-          }
+            case "ZERO":
+              if (terms !== 0) {
+                return false;
+              }
+              break;
 
-          if (
-            paymentTermsFilter ===
-              "1_15" &&
-            (terms < 1 ||
-              terms > 15)
-          ) {
-            return false;
-          }
+            case "1_15":
+              if (
+                terms < 1 ||
+                terms > 15
+              ) {
+                return false;
+              }
+              break;
 
-          if (
-            paymentTermsFilter ===
-              "16_30" &&
-            (terms < 16 ||
-              terms > 30)
-          ) {
-            return false;
-          }
+            case "16_30":
+              if (
+                terms < 16 ||
+                terms > 30
+              ) {
+                return false;
+              }
+              break;
 
-          if (
-            paymentTermsFilter ===
-              "31_60" &&
-            (terms < 31 ||
-              terms > 60)
-          ) {
-            return false;
-          }
+            case "31_60":
+              if (
+                terms < 31 ||
+                terms > 60
+              ) {
+                return false;
+              }
+              break;
 
-          if (
-            paymentTermsFilter ===
-              "60_PLUS" &&
-            terms <= 60
-          ) {
-            return false;
+            case "60_PLUS":
+              if (terms <= 60) {
+                return false;
+              }
+              break;
           }
 
           return true;
@@ -590,99 +627,219 @@ const CRMDueDates = () => {
     ]);
 
   /* =========================================================
-     STATUS GROUPS
+     SUMMARY
   ========================================================= */
 
-  const overdue =
-    filteredParties.filter(
-      (party) =>
-        getDueStatus(
-          party.dueDate
-        ) === "OVERDUE"
+  const summary = useMemo(() => {
+    let overdue = 0;
+    let dueToday = 0;
+    let upcoming = 0;
+    let outstanding = 0;
+
+    filteredParties.forEach(
+      (party) => {
+        const status =
+          getDueStatus(
+            party.dueDate
+          );
+
+        if (
+          status === "OVERDUE"
+        ) {
+          overdue++;
+        }
+
+        if (
+          status ===
+          "DUE_TODAY"
+        ) {
+          dueToday++;
+        }
+
+        if (
+          status === "UPCOMING"
+        ) {
+          upcoming++;
+        }
+
+        outstanding += Math.max(
+          Number(
+            party.currentBalance ||
+              0
+          ),
+          0
+        );
+      }
     );
 
-  const dueToday =
-    filteredParties.filter(
-      (party) =>
-        getDueStatus(
-          party.dueDate
-        ) === "DUE_TODAY"
-    );
-
-  const upcoming =
-    filteredParties.filter(
-      (party) =>
-        getDueStatus(
-          party.dueDate
-        ) === "UPCOMING"
-    );
-
-  const noDueDate =
-    filteredParties.filter(
-      (party) =>
-        getDueStatus(
-          party.dueDate
-        ) === "NO_DUE_DATE"
-    );
+    return {
+      total:
+        filteredParties.length,
+      overdue,
+      dueToday,
+      upcoming,
+      outstanding,
+    };
+  }, [
+    filteredParties,
+    today,
+  ]);
 
   /* =========================================================
-     AMOUNT
+     CHANGE DUE DATE
   ========================================================= */
 
-  const formatAmount = (
-    value: number
+  const startDueDateEdit = (
+    party: CRMParty
   ) => {
-    return Math.abs(
-      Number(value || 0)
-    ).toLocaleString(
-      "en-IN"
+    setEditingPartyId(
+      party._id
+    );
+
+    setDueDateInput(
+      formatInputDate(
+        party.dueDate
+      )
     );
   };
 
+  const cancelDueDateEdit = () => {
+    setEditingPartyId(null);
+    setDueDateInput("");
+  };
+
+  const saveDueDate = async (
+    partyId: string
+  ) => {
+    try {
+      setSavingDueDate(true);
+
+      const updatedParty =
+        await updateCRMDueDate(
+          partyId,
+          dueDateInput || null
+        );
+
+      const updatedDueDate =
+  (
+    updatedParty?.customerDetails?.dueDate ??
+    updatedParty?.dueDate ??
+    dueDateInput
+  ) || null;
+
+      setParties(
+        (
+          current: CRMParty[]
+        ) =>
+          current.map(
+            (party) =>
+              party._id ===
+              partyId
+                ? {
+                    ...party,
+                    dueDate:
+                      updatedDueDate,
+                  }
+                : party
+          )
+      );
+
+      setEditingPartyId(null);
+      setDueDateInput("");
+    } catch (error) {
+      console.error(
+        "Failed to update CRM due date:",
+        error
+      );
+
+      window.alert(
+        "Failed to update due date."
+      );
+    } finally {
+      setSavingDueDate(false);
+    }
+  };
+
   /* =========================================================
-     STATUS CONFIG
+     LEDGER
   ========================================================= */
 
-  const getStatusConfig = (
-    status: DueStatus
+  const loadPartyLedger = async (
+    partyId: string
   ) => {
-    switch (status) {
-      case "OVERDUE":
-        return {
-          label: "Overdue",
-          dot: "bg-red-500",
-          badge:
-            "bg-red-50 text-red-700 border-red-100",
-          icon: FiAlertCircle,
-        };
-
-      case "DUE_TODAY":
-        return {
-          label: "Due Today",
-          dot: "bg-amber-500",
-          badge:
-            "bg-amber-50 text-amber-700 border-amber-100",
-          icon: FiCalendar,
-        };
-
-      case "UPCOMING":
-        return {
-          label: "Upcoming",
-          dot: "bg-emerald-500",
-          badge:
-            "bg-emerald-50 text-emerald-700 border-emerald-100",
-          icon: FiClock,
-        };
-
-      default:
-        return {
-          label: "No Due Date",
-          dot: "bg-slate-400",
-          badge:
-            "bg-slate-50 text-slate-600 border-slate-200",
-          icon: FiCalendar,
-        };
+    if (
+      Object.prototype.hasOwnProperty.call(
+        ledgerByParty,
+        partyId
+      )
+    ) {
+      return;
     }
+
+    try {
+      setLedgerLoadingId(
+        partyId
+      );
+
+      const data =
+        await getPartyLedger(
+          partyId
+        );
+
+      setLedgerByParty(
+        (
+          current: Record<
+            string,
+            LedgerTransaction[]
+          >
+        ) => ({
+          ...current,
+          [partyId]:
+            Array.isArray(data)
+              ? data
+              : [],
+        })
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load party ledger:",
+        error
+      );
+
+      setLedgerByParty(
+        (
+          current: Record<
+            string,
+            LedgerTransaction[]
+          >
+        ) => ({
+          ...current,
+          [partyId]: [],
+        })
+      );
+    } finally {
+      setLedgerLoadingId(null);
+    }
+  };
+
+  const toggleLedger = async (
+    partyId: string
+  ) => {
+    if (
+      expandedPartyId ===
+      partyId
+    ) {
+      setExpandedPartyId(null);
+      return;
+    }
+
+    setExpandedPartyId(
+      partyId
+    );
+
+    await loadPartyLedger(
+      partyId
+    );
   };
 
   /* =========================================================
@@ -690,31 +847,28 @@ const CRMDueDates = () => {
   ========================================================= */
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      {/* HEADER */}
 
       <section
         className="
           flex
           flex-col
-          gap-5
+          gap-4
           lg:flex-row
           lg:items-end
           lg:justify-between
         "
       >
         <div>
-
           <div
             className="
-              mb-3
+              mb-2
               flex
               items-center
               gap-2
-              text-xs
+              text-[11px]
               font-semibold
               uppercase
               tracking-[0.12em]
@@ -734,16 +888,30 @@ const CRMDueDates = () => {
 
           <h1
             className="
-              text-md
+              text-2xl
               font-bold
               tracking-tight
               text-slate-900
-              sm:text-2xl
+              sm:text-3xl
             "
           >
             Due Dates
           </h1>
 
+          <p
+            className="
+              mt-1
+              max-w-2xl
+              text-sm
+              leading-5
+              text-slate-500
+            "
+          >
+            Monitor customer payment
+            deadlines, outstanding
+            balances and collection
+            dates.
+          </p>
         </div>
 
         <div
@@ -756,8 +924,8 @@ const CRMDueDates = () => {
             border
             border-slate-200
             bg-white
-            px-3.5
-            py-2.5
+            px-3
+            py-2
             text-xs
             font-medium
             text-slate-500
@@ -765,22 +933,169 @@ const CRMDueDates = () => {
           "
         >
           <FiUsers
-            size={15}
+            size={14}
             className="text-[#172B6B]"
           />
 
-          {filteredParties.length}
+          {summary.total}
+
           {" "}
+
           customer
-          {filteredParties.length !== 1
+          {summary.total !== 1
             ? "s"
             : ""}
         </div>
       </section>
 
-      {/* =====================================================
-          SEARCH + FILTERS
-      ===================================================== */}
+      {/* SUMMARY */}
+
+      <section
+        className="
+          grid
+          grid-cols-2
+          gap-3
+          lg:grid-cols-4
+        "
+      >
+        <div
+          className="
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            p-4
+            shadow-sm
+          "
+        >
+          <p
+            className="
+              text-[11px]
+              font-medium
+              uppercase
+              tracking-wide
+              text-slate-400
+            "
+          >
+            Outstanding
+          </p>
+
+          <p
+            className="
+              mt-1
+              text-xl
+              font-bold
+              text-slate-900
+            "
+          >
+            ₹
+            {formatAmount(
+              summary.outstanding
+            )}
+          </p>
+        </div>
+
+        <div
+          className="
+            rounded-2xl
+            border
+            border-red-100
+            bg-red-50/50
+            p-4
+          "
+        >
+          <p
+            className="
+              text-[11px]
+              font-medium
+              uppercase
+              tracking-wide
+              text-red-500
+            "
+          >
+            Overdue
+          </p>
+
+          <p
+            className="
+              mt-1
+              text-xl
+              font-bold
+              text-red-700
+            "
+          >
+            {summary.overdue}
+          </p>
+        </div>
+
+        <div
+          className="
+            rounded-2xl
+            border
+            border-amber-100
+            bg-amber-50/50
+            p-4
+          "
+        >
+          <p
+            className="
+              text-[11px]
+              font-medium
+              uppercase
+              tracking-wide
+              text-amber-600
+            "
+          >
+            Due Today
+          </p>
+
+          <p
+            className="
+              mt-1
+              text-xl
+              font-bold
+              text-amber-700
+            "
+          >
+            {summary.dueToday}
+          </p>
+        </div>
+
+        <div
+          className="
+            rounded-2xl
+            border
+            border-emerald-100
+            bg-emerald-50/50
+            p-4
+          "
+        >
+          <p
+            className="
+              text-[11px]
+              font-medium
+              uppercase
+              tracking-wide
+              text-emerald-600
+            "
+          >
+            Upcoming
+          </p>
+
+          <p
+            className="
+              mt-1
+              text-xl
+              font-bold
+              text-emerald-700
+            "
+          >
+            {summary.upcoming}
+          </p>
+        </div>
+      </section>
+
+      {/* SEARCH + FILTER */}
 
       <section
         className="
@@ -790,30 +1105,28 @@ const CRMDueDates = () => {
           bg-white
           p-3
           shadow-sm
-          sm:p-4
         "
       >
-
         <div
           className="
             flex
             flex-col
-            gap-3
-            lg:flex-row
-            lg:items-center
+            gap-2
+            sm:flex-row
           "
         >
-
-          {/* SEARCH */}
-
-          <div className="relative max-w-xl flex-1">
-
+          <div
+            className="
+              relative
+              min-w-0
+              flex-1
+            "
+          >
             <FiSearch
-              size={18}
+              size={16}
               className="
-                pointer-events-none
                 absolute
-                left-4
+                left-3.5
                 top-1/2
                 -translate-y-1/2
                 text-slate-400
@@ -821,10 +1134,13 @@ const CRMDueDates = () => {
             />
 
             <input
+              type="text"
               value={search}
-              onChange={(e) =>
+              onChange={(
+                event
+              ) =>
                 setSearch(
-                  e.target.value
+                  event.target.value
                 )
               }
               placeholder="Search customer, contact or phone..."
@@ -835,17 +1151,16 @@ const CRMDueDates = () => {
                 border
                 border-slate-200
                 bg-slate-50
-                pl-11
+                pl-10
                 pr-10
                 text-sm
                 text-slate-800
                 outline-none
-                transition-all
-                placeholder:text-slate-400
+                transition
                 focus:border-[#172B6B]
                 focus:bg-white
-                focus:ring-4
-                focus:ring-blue-50
+                focus:ring-2
+                focus:ring-[#172B6B]/10
               "
             />
 
@@ -860,32 +1175,29 @@ const CRMDueDates = () => {
                   right-3
                   top-1/2
                   flex
-                  h-7
-                  w-7
+                  h-6
+                  w-6
                   -translate-y-1/2
                   items-center
                   justify-center
                   rounded-lg
                   text-slate-400
-                  transition
                   hover:bg-slate-100
                   hover:text-slate-700
                 "
               >
-                <FiX size={15} />
+                <FiX size={14} />
               </button>
             )}
-
           </div>
-
-          {/* FILTER BUTTON */}
 
           <button
             type="button"
             onClick={() =>
               setShowFilters(
-                (current) =>
-                  !current
+                (
+                  current: boolean
+                ) => !current
               )
             }
             className={`
@@ -902,22 +1214,16 @@ const CRMDueDates = () => {
               transition
               ${
                 showFilters ||
-                activeFilterCount > 0
-                  ? `
-                    border-[#172B6B]
-                    bg-blue-50
-                    text-[#172B6B]
-                  `
-                  : `
-                    border-slate-200
-                    bg-white
-                    text-slate-600
-                    hover:bg-slate-50
-                  `
+                activeFilterCount >
+                  0
+                  ? "border-[#172B6B] bg-blue-50 text-[#172B6B]"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }
             `}
           >
-            <FiFilter size={16} />
+            <FiFilter
+              size={16}
+            />
 
             Filters
 
@@ -954,614 +1260,296 @@ const CRMDueDates = () => {
               `}
             />
           </button>
-
         </div>
-
-        {/* ===================================================
-            QUICK STATUS FILTERS
-        =================================================== */}
-
-        <div
-          className="
-            mt-4
-            flex
-            gap-2
-            overflow-x-auto
-            pb-1
-          "
-        >
-
-          {[
-            {
-              value: "ALL",
-              label: "All",
-            },
-            {
-              value: "OVERDUE",
-              label: "Overdue",
-            },
-            {
-              value: "DUE_TODAY",
-              label: "Due Today",
-            },
-            {
-              value: "UPCOMING",
-              label: "Upcoming",
-            },
-            {
-              value: "NO_DUE_DATE",
-              label: "No Due Date",
-            },
-          ].map(
-            (option) => {
-              const active =
-                statusFilter ===
-                option.value;
-
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() =>
-                    setStatusFilter(
-                      option.value as StatusFilter
-                    )
-                  }
-                  className={`
-                    inline-flex
-                    shrink-0
-                    items-center
-                    gap-2
-                    rounded-lg
-                    border
-                    px-3
-                    py-2
-                    text-xs
-                    font-semibold
-                    transition
-                    ${
-                      active
-                        ? `
-                          border-[#172B6B]
-                          bg-[#172B6B]
-                          text-white
-                        `
-                        : `
-                          border-slate-200
-                          bg-white
-                          text-slate-500
-                          hover:bg-slate-50
-                        `
-                    }
-                  `}
-                >
-                  {option.label}
-
-                  {option.value !==
-                    "ALL" && (
-                    <span
-                      className={`
-                        rounded-md
-                        px-1.5
-                        py-0.5
-                        text-[10px]
-                        ${
-                          active
-                            ? "bg-white/15 text-white"
-                            : "bg-slate-100 text-slate-500"
-                        }
-                      `}
-                    >
-                      {
-                        option.value ===
-                        "OVERDUE"
-                          ? overdue.length
-                          : option.value ===
-                              "DUE_TODAY"
-                            ? dueToday.length
-                            : option.value ===
-                                "UPCOMING"
-                              ? upcoming.length
-                              : noDueDate.length
-                      }
-                    </span>
-                  )}
-                </button>
-              );
-            }
-          )}
-
-        </div>
-
-        {/* ===================================================
-            ADVANCED FILTERS
-        =================================================== */}
 
         {showFilters && (
           <div
             className="
-              mt-4
+              mt-3
+              grid
+              gap-3
               border-t
               border-slate-100
-              pt-4
+              pt-3
+              sm:grid-cols-2
+              lg:grid-cols-4
             "
           >
+            <div>
+              <label
+                className="
+                  mb-1.5
+                  block
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Due Status
+              </label>
 
-            <div
-              className="
-                grid
-                grid-cols-1
-                gap-4
-                md:grid-cols-3
-              "
-            >
+              <select
+                value={statusFilter}
+                onChange={(
+                  event
+                ) =>
+                  setStatusFilter(
+                    event.target
+                      .value as StatusFilter
+                  )
+                }
+                className="
+                  h-10
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-3
+                  text-sm
+                  text-slate-700
+                  outline-none
+                  focus:border-[#172B6B]
+                "
+              >
+                <option value="ALL">
+                  All Statuses
+                </option>
 
-              {/* SALESPERSON */}
+                <option value="OVERDUE">
+                  Overdue
+                </option>
 
-              <div>
-                <label
-                  className="
-                    mb-2
-                    block
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-wide
-                    text-slate-400
-                  "
-                >
-                  Salesperson
-                </label>
+                <option value="DUE_TODAY">
+                  Due Today
+                </option>
 
-                <div className="relative">
-                  <select
-                    value={
-                      salespersonFilter
-                    }
-                    onChange={(e) =>
-                      setSalespersonFilter(
-                        e.target.value
-                      )
-                    }
-                    className="
-                      h-10
-                      w-full
-                      appearance-none
-                      rounded-xl
-                      border
-                      border-slate-200
-                      bg-white
-                      px-3
-                      pr-9
-                      text-sm
-                      text-slate-700
-                      outline-none
-                      focus:border-[#172B6B]
-                      focus:ring-2
-                      focus:ring-blue-50
-                    "
-                  >
-                    <option value="ALL">
-                      All Salespeople
-                    </option>
+                <option value="UPCOMING">
+                  Upcoming
+                </option>
 
-                    {salespeople.map(
-                      (person) => (
-                        <option
-                          key={
-                            person._id
-                          }
-                          value={
-                            person._id
-                          }
-                        >
-                          {person.name}
-                        </option>
-                      )
-                    )}
-                  </select>
-
-                  <FiChevronDown
-                    size={15}
-                    className="
-                      pointer-events-none
-                      absolute
-                      right-3
-                      top-1/2
-                      -translate-y-1/2
-                      text-slate-400
-                    "
-                  />
-                </div>
-              </div>
-
-              {/* BALANCE */}
-
-              <div>
-                <label
-                  className="
-                    mb-2
-                    block
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-wide
-                    text-slate-400
-                  "
-                >
-                  Balance
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={
-                      balanceFilter
-                    }
-                    onChange={(e) =>
-                      setBalanceFilter(
-                        e.target.value as BalanceFilter
-                      )
-                    }
-                    className="
-                      h-10
-                      w-full
-                      appearance-none
-                      rounded-xl
-                      border
-                      border-slate-200
-                      bg-white
-                      px-3
-                      pr-9
-                      text-sm
-                      text-slate-700
-                      outline-none
-                      focus:border-[#172B6B]
-                      focus:ring-2
-                      focus:ring-blue-50
-                    "
-                  >
-                    <option value="ALL">
-                      Any Balance
-                    </option>
-
-                    <option value="OUTSTANDING">
-                      Outstanding
-                    </option>
-
-                    <option value="NO_OUTSTANDING">
-                      No Outstanding
-                    </option>
-                  </select>
-
-                  <FiChevronDown
-                    size={15}
-                    className="
-                      pointer-events-none
-                      absolute
-                      right-3
-                      top-1/2
-                      -translate-y-1/2
-                      text-slate-400
-                    "
-                  />
-                </div>
-              </div>
-
-              {/* PAYMENT TERMS */}
-
-              <div>
-                <label
-                  className="
-                    mb-2
-                    block
-                    text-[10px]
-                    font-bold
-                    uppercase
-                    tracking-wide
-                    text-slate-400
-                  "
-                >
-                  Payment Terms
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={
-                      paymentTermsFilter
-                    }
-                    onChange={(e) =>
-                      setPaymentTermsFilter(
-                        e.target.value as PaymentTermsFilter
-                      )
-                    }
-                    className="
-                      h-10
-                      w-full
-                      appearance-none
-                      rounded-xl
-                      border
-                      border-slate-200
-                      bg-white
-                      px-3
-                      pr-9
-                      text-sm
-                      text-slate-700
-                      outline-none
-                      focus:border-[#172B6B]
-                      focus:ring-2
-                      focus:ring-blue-50
-                    "
-                  >
-                    <option value="ALL">
-                      Any Payment Terms
-                    </option>
-
-                    <option value="ZERO">
-                      0 days
-                    </option>
-
-                    <option value="1_15">
-                      1–15 days
-                    </option>
-
-                    <option value="16_30">
-                      16–30 days
-                    </option>
-
-                    <option value="31_60">
-                      31–60 days
-                    </option>
-
-                    <option value="60_PLUS">
-                      60+ days
-                    </option>
-                  </select>
-
-                  <FiChevronDown
-                    size={15}
-                    className="
-                      pointer-events-none
-                      absolute
-                      right-3
-                      top-1/2
-                      -translate-y-1/2
-                      text-slate-400
-                    "
-                  />
-                </div>
-              </div>
-
+                <option value="NO_DUE_DATE">
+                  No Due Date
+                </option>
+              </select>
             </div>
 
-            {/* FILTER FOOTER */}
+            <div>
+              <label
+                className="
+                  mb-1.5
+                  block
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Salesperson
+              </label>
 
-            <div
-              className="
-                mt-4
-                flex
-                flex-col
-                gap-3
-                border-t
-                border-slate-100
-                pt-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-              "
-            >
+              <select
+                value={
+                  salespersonFilter
+                }
+                onChange={(
+                  event
+                ) =>
+                  setSalespersonFilter(
+                    event.target.value
+                  )
+                }
+                className="
+                  h-10
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-3
+                  text-sm
+                  text-slate-700
+                  outline-none
+                  focus:border-[#172B6B]
+                "
+              >
+                <option value="ALL">
+                  All Salespeople
+                </option>
 
-              <p className="text-xs text-slate-400">
-                Showing{" "}
-                <span className="font-semibold text-slate-600">
-                  {filteredParties.length}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold text-slate-600">
-                  {parties.length}
-                </span>{" "}
-                customers
-              </p>
+                {salespeople.map(
+                  (
+                    person
+                  ) => (
+                    <option
+                      key={
+                        person._id
+                      }
+                      value={
+                        person._id
+                      }
+                    >
+                      {person.name}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
 
-              {activeFilterCount >
-                0 && (
+            <div>
+              <label
+                className="
+                  mb-1.5
+                  block
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Balance
+              </label>
+
+              <select
+                value={
+                  balanceFilter
+                }
+                onChange={(
+                  event
+                ) =>
+                  setBalanceFilter(
+                    event.target
+                      .value as BalanceFilter
+                  )
+                }
+                className="
+                  h-10
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-3
+                  text-sm
+                  text-slate-700
+                  outline-none
+                  focus:border-[#172B6B]
+                "
+              >
+                <option value="ALL">
+                  All Balances
+                </option>
+
+                <option value="OUTSTANDING">
+                  Outstanding
+                </option>
+
+                <option value="NO_OUTSTANDING">
+                  No Outstanding
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                className="
+                  mb-1.5
+                  block
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-wide
+                  text-slate-400
+                "
+              >
+                Payment Terms
+              </label>
+
+              <select
+                value={
+                  paymentTermsFilter
+                }
+                onChange={(
+                  event
+                ) =>
+                  setPaymentTermsFilter(
+                    event.target
+                      .value as PaymentTermsFilter
+                  )
+                }
+                className="
+                  h-10
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-3
+                  text-sm
+                  text-slate-700
+                  outline-none
+                  focus:border-[#172B6B]
+                "
+              >
+                <option value="ALL">
+                  All Terms
+                </option>
+
+                <option value="ZERO">
+                  No Terms
+                </option>
+
+                <option value="1_15">
+                  1–15 Days
+                </option>
+
+                <option value="16_30">
+                  16–30 Days
+                </option>
+
+                <option value="31_60">
+                  31–60 Days
+                </option>
+
+                <option value="60_PLUS">
+                  60+ Days
+                </option>
+              </select>
+            </div>
+
+            {activeFilterCount >
+              0 && (
+              <div
+                className="
+                  sm:col-span-2
+                  lg:col-span-4
+                "
+              >
                 <button
                   type="button"
                   onClick={
                     clearFilters
                   }
                   className="
-                    inline-flex
-                    items-center
-                    gap-2
                     text-xs
                     font-semibold
                     text-[#172B6B]
                     hover:underline
                   "
                 >
-                  <FiX size={13} />
-                  Clear Filters
+                  Clear all filters
                 </button>
-              )}
-
-            </div>
-
+              </div>
+            )}
           </div>
         )}
-
       </section>
 
-      {/* =====================================================
-          STAT CARDS
-      ===================================================== */}
-
-      <section
-        className="
-          grid
-          grid-cols-1
-          gap-3
-          sm:grid-cols-2
-          xl:grid-cols-4
-        "
-      >
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-red-100
-            bg-white
-            p-5
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              flex
-              h-10
-              w-10
-              items-center
-              justify-center
-              rounded-xl
-              bg-red-50
-              text-red-600
-            "
-          >
-            <FiAlertCircle size={18} />
-          </div>
-
-          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Overdue
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-red-600">
-            {overdue.length}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Requires attention
-          </p>
-        </div>
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-amber-100
-            bg-white
-            p-5
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              flex
-              h-10
-              w-10
-              items-center
-              justify-center
-              rounded-xl
-              bg-amber-50
-              text-amber-600
-            "
-          >
-            <FiCalendar size={18} />
-          </div>
-
-          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Due Today
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-amber-600">
-            {dueToday.length}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Due before end of day
-          </p>
-        </div>
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-emerald-100
-            bg-white
-            p-5
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              flex
-              h-10
-              w-10
-              items-center
-              justify-center
-              rounded-xl
-              bg-emerald-50
-              text-emerald-600
-            "
-          >
-            <FiClock size={18} />
-          </div>
-
-          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Upcoming
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-emerald-600">
-            {upcoming.length}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Future payment dates
-          </p>
-        </div>
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            p-5
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              flex
-              h-10
-              w-10
-              items-center
-              justify-center
-              rounded-xl
-              bg-slate-100
-              text-slate-500
-            "
-          >
-            <FiCalendar size={18} />
-          </div>
-
-          <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            No Due Date
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-800">
-            {noDueDate.length}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Payment terms not configured
-          </p>
-        </div>
-
-      </section>
-
-      {/* =====================================================
-          TABLE
-      ===================================================== */}
+      {/* TABLE */}
 
       <section
         className="
@@ -1573,131 +1561,156 @@ const CRMDueDates = () => {
           shadow-sm
         "
       >
-
-        <div
-          className="
-            flex
-            flex-col
-            gap-2
-            border-b
-            border-slate-100
-            px-5
-            py-4
-            sm:flex-row
-            sm:items-center
-            sm:justify-between
-          "
-        >
-          <div>
-            <h2 className="text-sm font-bold text-slate-900">
-              Customer Payment Schedule
-            </h2>
-
-            <p className="mt-0.5 text-xs text-slate-400">
-              Outstanding balances and payment deadlines
-            </p>
-          </div>
-
-          <div className="text-xs font-medium text-slate-400">
-            {filteredParties.length}
-            {" "}
-            record
-            {filteredParties.length !== 1
-              ? "s"
-              : ""}
-          </div>
-        </div>
-
         <div className="overflow-x-auto">
-
-          <table
-            className="
-              min-w-[1100px]
-              w-full
-            "
-          >
-
+          <table className="w-full min-w-[1100px]">
             <thead>
               <tr
                 className="
                   border-b
-                  border-slate-100
-                  bg-slate-50/70
-                  text-left
+                  border-slate-200
+                  bg-slate-50/80
                 "
               >
-                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                <th
+                  className="
+                    px-5
+                    py-3.5
+                    text-left
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wider
+                    text-slate-400
+                  "
+                >
                   Customer
                 </th>
 
-                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
-                  Contact
-                </th>
-
-                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                <th
+                  className="
+                    px-5
+                    py-3.5
+                    text-left
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wider
+                    text-slate-400
+                  "
+                >
                   Outstanding
                 </th>
 
-                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                <th
+                  className="
+                    px-5
+                    py-3.5
+                    text-left
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wider
+                    text-slate-400
+                  "
+                >
                   Payment Terms
                 </th>
 
-                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                <th
+                  className="
+                    px-5
+                    py-3.5
+                    text-left
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wider
+                    text-slate-400
+                  "
+                >
                   Due Date
                 </th>
 
-                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                <th
+                  className="
+                    px-5
+                    py-3.5
+                    text-left
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wider
+                    text-slate-400
+                  "
+                >
                   Status
+                </th>
+
+                <th
+                  className="
+                    px-5
+                    py-3.5
+                    text-right
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-wider
+                    text-slate-400
+                  "
+                >
+                  Actions
                 </th>
               </tr>
             </thead>
 
             <tbody>
-
               {loading ? (
-                Array.from({
-                  length: 5,
-                }).map((_, index) => (
-                  <tr
-                    key={index}
-                    className="border-b border-slate-100"
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="
+                      px-5
+                      py-16
+                      text-center
+                    "
                   >
-                    {Array.from({
-                      length: 6,
-                    }).map(
-                      (_, cellIndex) => (
-                        <td
-                          key={cellIndex}
-                          className="px-5 py-5"
-                        >
-                          <div
-                            className="
-                              h-4
-                              w-24
-                              animate-pulse
-                              rounded-md
-                              bg-slate-100
-                            "
-                          />
-                        </td>
-                      )
-                    )}
-                  </tr>
-                ))
+                    <FiRefreshCw
+                      size={20}
+                      className="
+                        mx-auto
+                        animate-spin
+                        text-[#172B6B]
+                      "
+                    />
+
+                    <p
+                      className="
+                        mt-3
+                        text-sm
+                        font-semibold
+                        text-slate-600
+                      "
+                    >
+                      Loading due dates...
+                    </p>
+                  </td>
+                </tr>
               ) : filteredParties.length ===
                 0 ? (
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-16"
+                    className="
+                      px-5
+                      py-16
+                      text-center
+                    "
                   >
                     <div
                       className="
                         flex
                         flex-col
                         items-center
-                        justify-center
-                        text-center
                       "
                     >
                       <div
@@ -1712,18 +1725,33 @@ const CRMDueDates = () => {
                           text-slate-400
                         "
                       >
-                        <FiSearch size={20} />
+                        <FiSearch
+                          size={20}
+                        />
                       </div>
 
-                      <h3 className="mt-4 text-sm font-semibold text-slate-800">
+                      <h3
+                        className="
+                          mt-4
+                          text-sm
+                          font-semibold
+                          text-slate-800
+                        "
+                      >
                         No customers found
                       </h3>
 
-                      <p className="mt-1 max-w-sm text-xs leading-5 text-slate-400">
-                        Try changing your search
-                        or filters, or add customer
-                        payment information through
-                        Accounts.
+                      <p
+                        className="
+                          mt-1
+                          max-w-sm
+                          text-xs
+                          leading-5
+                          text-slate-400
+                        "
+                      >
+                        Try changing your
+                        search or filters.
                       </p>
 
                       {(search ||
@@ -1737,9 +1765,6 @@ const CRMDueDates = () => {
                           }}
                           className="
                             mt-4
-                            inline-flex
-                            items-center
-                            gap-2
                             rounded-lg
                             bg-[#172B6B]
                             px-3
@@ -1747,10 +1772,11 @@ const CRMDueDates = () => {
                             text-xs
                             font-semibold
                             text-white
+                            hover:bg-[#10295D]
                           "
                         >
-                          <FiX size={13} />
-                          Clear Search & Filters
+                          Clear search
+                          & filters
                         </button>
                       )}
                     </div>
@@ -1759,15 +1785,9 @@ const CRMDueDates = () => {
               ) : (
                 filteredParties.map(
                   (party) => {
-                    const dueDate =
-                      party.dueDate;
-
-                    const paymentTerms =
-                      party.paymentTerms;
-
                     const status =
                       getDueStatus(
-                        dueDate
+                        party.dueDate
                       );
 
                     const statusConfig =
@@ -1782,241 +1802,152 @@ const CRMDueDates = () => {
                       editingPartyId ===
                       party._id;
 
+                    const isExpanded =
+                      expandedPartyId ===
+                      party._id;
+
+                    const ledger =
+                      ledgerByParty[
+                        party._id
+                      ] || [];
+
+                    const isLedgerLoading =
+                      ledgerLoadingId ===
+                      party._id;
+
                     return (
-                      <tr
-                        key={party._id}
-                        className="
-                          group
-                          border-b
-                          border-slate-100
-                          last:border-0
-                          transition-colors
-                          hover:bg-slate-50/70
-                        "
+                      <Fragment
+                        key={
+                          party._id
+                        }
                       >
+                        {/* CUSTOMER ROW */}
 
-                        {/* CUSTOMER */}
+                        <tr
+                          className="
+                            border-b
+                            border-slate-100
+                            transition-colors
+                            hover:bg-slate-50/60
+                          "
+                        >
+                          {/* CUSTOMER */}
 
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="
+                                  flex
+                                  h-9
+                                  w-9
+                                  shrink-0
+                                  items-center
+                                  justify-center
+                                  rounded-xl
+                                  bg-[#172B6B]/10
+                                  text-sm
+                                  font-bold
+                                  text-[#172B6B]
+                                "
+                              >
+                                {(
+                                  party.companyName ||
+                                  "C"
+                                )
+                                  .charAt(
+                                    0
+                                  )
+                                  .toUpperCase()}
+                              </div>
 
-                            <div
-                              className="
-                                flex
-                                h-9
-                                w-9
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-xl
-                                bg-blue-50
-                                text-xs
+                              <div className="min-w-0">
+                                <p
+                                  className="
+                                    truncate
+                                    text-sm
+                                    font-semibold
+                                    text-slate-800
+                                  "
+                                >
+                                  {
+                                    party.companyName
+                                  }
+                                </p>
+
+                                <p
+                                  className="
+                                    mt-0.5
+                                    truncate
+                                    text-xs
+                                    text-slate-400
+                                  "
+                                >
+                                  {party.contactPerson ||
+                                    party.phone ||
+                                    "--"}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* OUTSTANDING */}
+
+                          <td className="px-5 py-4">
+                            <span
+                              className={`
+                                text-sm
                                 font-bold
-                                text-[#172B6B]
-                              "
+                                ${
+                                  Number(
+                                    party.currentBalance ||
+                                      0
+                                  ) >
+                                  0
+                                    ? "text-red-600"
+                                    : "text-emerald-600"
+                                }
+                              `}
                             >
-                              {party.companyName
-                                ?.charAt(0)
-                                ?.toUpperCase() ||
-                                "C"}
-                            </div>
+                              ₹
+                              {formatAmount(
+                                party.currentBalance
+                              )}
+                            </span>
+                          </td>
 
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-800">
-                                {party.companyName ||
-                                  "Unnamed Customer"}
-                              </p>
+                          {/* TERMS */}
 
-                              <p className="mt-0.5 truncate text-[11px] text-slate-400">
-                                Customer account
-                              </p>
-                            </div>
-
-                          </div>
-                        </td>
-
-                        {/* CONTACT */}
-
-                        <td className="px-5 py-4">
-                          <p className="text-sm font-medium text-slate-700">
-                            {party.contactPerson ||
-                              "—"}
-                          </p>
-
-                          <p className="mt-0.5 text-[11px] text-slate-400">
-                            {party.phone ||
-                              "No phone"}
-                          </p>
-                        </td>
-
-                        {/* OUTSTANDING */}
-
-                        <td className="px-5 py-4">
-                          <p className="text-sm font-bold text-slate-900">
-                            ₹
-                            {formatAmount(
-                              party.currentBalance ||
-                                0
-                            )}
-                          </p>
-
-                          <p className="mt-0.5 text-[10px] text-slate-400">
-                            Outstanding balance
-                          </p>
-                        </td>
-
-                        {/* PAYMENT TERMS */}
-
-                        <td className="px-5 py-4">
-                          {paymentTerms ? (
+                          <td className="px-5 py-4">
                             <span
                               className="
-                                inline-flex
-                                items-center
-                                rounded-lg
-                                border
-                                border-slate-200
-                                bg-slate-50
-                                px-2.5
-                                py-1.5
-                                text-xs
-                                font-semibold
+                                text-sm
+                                font-medium
                                 text-slate-600
                               "
                             >
-                              {paymentTerms} days
+                              {Number(
+                                party.paymentTerms ||
+                                  0
+                              ) > 0
+                                ? `${Number(
+                                    party.paymentTerms ||
+                                      0
+                                  )} days`
+                                : "--"}
                             </span>
-                          ) : (
-                            <span className="text-xs text-slate-400">
-                              Not set
-                            </span>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* DUE DATE */}
+                          {/* DUE DATE
+                              DISPLAY ONLY
+                          */}
 
-                        <td className="px-5 py-4">
-
-                          {isEditing ? (
+                          <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
-
-                              <input
-                                type="date"
-                                value={
-                                  dueDateInput
-                                }
-                                onChange={(e) =>
-                                  setDueDateInput(
-                                    e.target.value
-                                  )
-                                }
-                                autoFocus
-                                className="
-                                  h-9
-                                  w-[150px]
-                                  rounded-lg
-                                  border
-                                  border-slate-300
-                                  bg-white
-                                  px-2.5
-                                  text-sm
-                                  font-medium
-                                  text-slate-700
-                                  outline-none
-                                  focus:border-[#172B6B]
-                                  focus:ring-2
-                                  focus:ring-blue-100
-                                "
-                              />
-
-                              <button
-                                type="button"
-                                disabled={
-                                  savingDueDate
-                                }
-                                onClick={() =>
-                                  saveDueDate(
-                                    party._id
-                                  )
-                                }
-                                className="
-                                  h-9
-                                  rounded-lg
-                                  bg-[#172B6B]
-                                  px-3
-                                  text-xs
-                                  font-semibold
-                                  text-white
-                                  transition
-                                  hover:bg-[#223a88]
-                                  disabled:cursor-not-allowed
-                                  disabled:opacity-50
-                                "
-                              >
-                                {savingDueDate
-                                  ? "Saving..."
-                                  : "Save"}
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={
-                                  savingDueDate
-                                }
-                                onClick={
-                                  cancelDueDateEdit
-                                }
-                                className="
-                                  h-9
-                                  rounded-lg
-                                  border
-                                  border-slate-200
-                                  bg-white
-                                  px-3
-                                  text-xs
-                                  font-semibold
-                                  text-slate-600
-                                  transition
-                                  hover:bg-slate-50
-                                  disabled:opacity-50
-                                "
-                              >
-                                Cancel
-                              </button>
-
-                            </div>
-                          ) : (
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                startDueDateEdit(
-                                  party
-                                )
-                              }
-                              className="
-                                group
-                                flex
-                                items-center
-                                gap-2
-                                rounded-lg
-                                border
-                                border-transparent
-                                px-2
-                                py-1.5
-                                text-left
-                                transition
-                                hover:border-slate-200
-                                hover:bg-slate-50
-                              "
-                            >
-
                               <FiCalendar
                                 size={14}
                                 className="
                                   shrink-0
                                   text-slate-400
-                                  group-hover:text-[#172B6B]
                                 "
                               />
 
@@ -2028,81 +1959,682 @@ const CRMDueDates = () => {
                                 "
                               >
                                 {formatDate(
-                                  dueDate
+                                  party.dueDate
                                 )}
                               </span>
+                            </div>
+                          </td>
 
-                              <span
-                                className="
-                                  ml-1
-                                  text-[10px]
-                                  font-semibold
-                                  text-[#172B6B]
-                                  opacity-0
-                                  transition
-                                  group-hover:opacity-100
-                                "
-                              >
-                                Edit
-                              </span>
+                          {/* STATUS */}
 
-                            </button>
-
-                          )}
-
-                        </td>
-
-                        {/* STATUS */}
-
-                        <td className="px-5 py-4">
-
-                          <span
-                            className={`
-                              inline-flex
-                              items-center
-                              gap-2
-                              rounded-full
-                              border
-                              px-3
-                              py-1.5
-                              text-[11px]
-                              font-bold
-                              ${statusConfig.badge}
-                            `}
-                          >
+                          <td className="px-5 py-4">
                             <span
                               className={`
-                                h-1.5
-                                w-1.5
+                                inline-flex
+                                items-center
+                                gap-2
                                 rounded-full
-                                ${statusConfig.dot}
+                                border
+                                px-3
+                                py-1.5
+                                text-[11px]
+                                font-bold
+                                ${statusConfig.badge}
                               `}
-                            />
+                            >
+                              <span
+                                className={`
+                                  h-1.5
+                                  w-1.5
+                                  rounded-full
+                                  ${statusConfig.dot}
+                                `}
+                              />
 
-                            <StatusIcon
-                              size={12}
-                            />
+                              <StatusIcon
+                                size={12}
+                              />
 
-                            {statusConfig.label}
-                          </span>
+                              {
+                                statusConfig.label
+                              }
+                            </span>
+                          </td>
 
-                        </td>
+                          {/* ACTIONS */}
 
-                      </tr>
+                          <td className="px-5 py-4">
+                            {isEditing ? (
+                              <div
+                                className="
+                                  flex
+                                  items-center
+                                  justify-end
+                                  gap-2
+                                "
+                              >
+                                <input
+                                  type="date"
+                                  value={
+                                    dueDateInput
+                                  }
+                                  onChange={(
+                                    event
+                                  ) =>
+                                    setDueDateInput(
+                                      event
+                                        .target
+                                        .value
+                                    )
+                                  }
+                                  className="
+                                    h-9
+                                    rounded-lg
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    px-2.5
+                                    text-xs
+                                    text-slate-700
+                                    outline-none
+                                    focus:border-[#172B6B]
+                                    focus:ring-2
+                                    focus:ring-[#172B6B]/10
+                                  "
+                                />
+
+                                <button
+                                  type="button"
+                                  disabled={
+                                    savingDueDate
+                                  }
+                                  onClick={() =>
+                                    saveDueDate(
+                                      party._id
+                                    )
+                                  }
+                                  className="
+                                    h-9
+                                    rounded-lg
+                                    bg-[#172B6B]
+                                    px-3
+                                    text-xs
+                                    font-semibold
+                                    text-white
+                                    transition
+                                    hover:bg-[#10295D]
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-50
+                                  "
+                                >
+                                  {savingDueDate
+                                    ? "Saving..."
+                                    : "Save"}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={
+                                    savingDueDate
+                                  }
+                                  onClick={
+                                    cancelDueDateEdit
+                                  }
+                                  className="
+                                    h-9
+                                    rounded-lg
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    px-3
+                                    text-xs
+                                    font-semibold
+                                    text-slate-600
+                                    transition
+                                    hover:bg-slate-50
+                                    disabled:opacity-50
+                                  "
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                className="
+                                  flex
+                                  items-center
+                                  justify-end
+                                  gap-2
+                                "
+                              >
+                                {/* CHANGE DUE DATE */}
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    startDueDateEdit(
+                                      party
+                                    )
+                                  }
+                                  className="
+                                    inline-flex
+                                    h-9
+                                    items-center
+                                    gap-1.5
+                                    rounded-lg
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    px-3
+                                    text-xs
+                                    font-semibold
+                                    text-slate-600
+                                    transition
+                                    hover:border-[#172B6B]/30
+                                    hover:bg-blue-50
+                                    hover:text-[#172B6B]
+                                  "
+                                  title="Change Due Date"
+                                >
+                                  <FiCalendar
+                                    size={14}
+                                  />
+
+                                  Change Due Date
+                                </button>
+
+                                {/* VIEW LEDGER */}
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    toggleLedger(
+                                      party._id
+                                    )
+                                  }
+                                  className="
+                                    inline-flex
+                                    h-9
+                                    items-center
+                                    gap-1.5
+                                    rounded-lg
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    px-3
+                                    text-xs
+                                    font-semibold
+                                    text-slate-600
+                                    transition
+                                    hover:border-slate-300
+                                    hover:bg-slate-50
+                                    hover:text-slate-800
+                                  "
+                                >
+                                  {isExpanded
+                                    ? "Hide Ledger"
+                                    : "View Ledger"}
+
+                                  <FiChevronDown
+                                    size={14}
+                                    className={`
+                                      transition-transform
+                                      ${
+                                        isExpanded
+                                          ? "rotate-180"
+                                          : ""
+                                      }
+                                    `}
+                                  />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+
+                        {/* =================================================
+                            READ-ONLY LEDGER ROW
+                        ================================================= */}
+
+                        {isExpanded && (
+                          <tr
+                            className="
+                              border-b
+                              border-slate-200
+                              bg-slate-50/40
+                            "
+                          >
+                            <td
+                              colSpan={6}
+                              className="p-0"
+                            >
+                              <div className="px-5 py-4">
+                                <div
+                                  className="
+                                    overflow-hidden
+                                    rounded-xl
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                  "
+                                >
+                                  {/* LEDGER HEADER */}
+
+                                  <div
+                                    className="
+                                      flex
+                                      flex-col
+                                      gap-2
+                                      border-b
+                                      border-slate-100
+                                      px-4
+                                      py-3
+                                      sm:flex-row
+                                      sm:items-center
+                                      sm:justify-between
+                                    "
+                                  >
+                                    <div>
+                                      <p
+                                        className="
+                                          text-sm
+                                          font-bold
+                                          text-slate-800
+                                        "
+                                      >
+                                        Transaction
+                                        History
+                                      </p>
+
+                                      <p
+                                        className="
+                                          mt-0.5
+                                          text-[11px]
+                                          text-slate-400
+                                        "
+                                      >
+                                        Read-only
+                                        account
+                                        ledger for{" "}
+                                        {
+                                          party.companyName
+                                        }
+                                      </p>
+                                    </div>
+
+                                    <span
+                                      className="
+                                        inline-flex
+                                        w-fit
+                                        items-center
+                                        rounded-full
+                                        border
+                                        border-slate-200
+                                        bg-slate-50
+                                        px-2.5
+                                        py-1
+                                        text-[10px]
+                                        font-semibold
+                                        text-slate-500
+                                      "
+                                    >
+                                      Accounts
+                                      Source
+                                    </span>
+                                  </div>
+
+                                  {/* LEDGER CONTENT */}
+
+                                  <div
+                                    className="
+                                      max-h-[420px]
+                                      overflow-y-auto
+                                    "
+                                  >
+                                    {isLedgerLoading ? (
+                                      <div
+                                        className="
+                                          flex
+                                          min-h-[180px]
+                                          items-center
+                                          justify-center
+                                        "
+                                      >
+                                        <div className="text-center">
+                                          <FiRefreshCw
+                                            size={18}
+                                            className="
+                                              mx-auto
+                                              animate-spin
+                                              text-[#172B6B]
+                                            "
+                                          />
+
+                                          <p
+                                            className="
+                                              mt-2
+                                              text-xs
+                                              font-semibold
+                                              text-slate-600
+                                            "
+                                          >
+                                            Loading
+                                            transactions...
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ) : ledger.length ===
+                                      0 ? (
+                                      <div
+                                        className="
+                                          flex
+                                          min-h-[180px]
+                                          items-center
+                                          justify-center
+                                          px-6
+                                          text-center
+                                        "
+                                      >
+                                        <div>
+                                          <div
+                                            className="
+                                              mx-auto
+                                              flex
+                                              h-10
+                                              w-10
+                                              items-center
+                                              justify-center
+                                              rounded-xl
+                                              bg-slate-100
+                                              text-slate-400
+                                            "
+                                          >
+                                            <FiCalendar
+                                              size={17}
+                                            />
+                                          </div>
+
+                                          <p
+                                            className="
+                                              mt-3
+                                              text-xs
+                                              font-semibold
+                                              text-slate-600
+                                            "
+                                          >
+                                            No transactions
+                                            found
+                                          </p>
+
+                                          <p
+                                            className="
+                                              mt-1
+                                              text-[11px]
+                                              text-slate-400
+                                            "
+                                          >
+                                            No account
+                                            transactions
+                                            are available
+                                            for this
+                                            customer.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="divide-y divide-slate-100">
+                                        {ledger.map(
+                                          (
+                                            transaction,
+                                            index
+                                          ) => {
+                                            const isMoneyIn =
+                                              String(
+                                                transaction.transactionType ||
+                                                  ""
+                                              ).toUpperCase() ===
+                                              "MONEY_IN";
+
+                                            return (
+                                              <div
+                                                key={
+                                                  transaction._id ||
+                                                  `${party._id}-${index}`
+                                                }
+                                                className="
+                                                  grid
+                                                  gap-3
+                                                  px-4
+                                                  py-3.5
+                                                  sm:grid-cols-[120px_1fr_130px_150px]
+                                                  sm:items-center
+                                                "
+                                              >
+                                                {/* DATE */}
+
+                                                <div>
+                                                  <p
+                                                    className="
+                                                      text-[10px]
+                                                      font-semibold
+                                                      uppercase
+                                                      tracking-wide
+                                                      text-slate-400
+                                                    "
+                                                  >
+                                                    Date
+                                                  </p>
+
+                                                  <p
+                                                    className="
+                                                      mt-1
+                                                      text-xs
+                                                      font-medium
+                                                      text-slate-700
+                                                    "
+                                                  >
+                                                    {formatTransactionDate(
+                                                      transaction.date
+                                                    )}
+                                                  </p>
+                                                </div>
+
+                                                {/* TYPE + REMARKS */}
+
+                                                <div className="min-w-0">
+                                                  <div className="flex items-center gap-2">
+                                                    <span
+                                                      className={`
+                                                        inline-flex
+                                                        h-7
+                                                        w-7
+                                                        shrink-0
+                                                        items-center
+                                                        justify-center
+                                                        rounded-lg
+                                                        ${
+                                                          isMoneyIn
+                                                            ? "bg-emerald-50 text-emerald-600"
+                                                            : "bg-red-50 text-red-600"
+                                                        }
+                                                      `}
+                                                    >
+                                                      {isMoneyIn ? (
+                                                        <FiArrowDownLeft
+                                                          size={
+                                                            14
+                                                          }
+                                                        />
+                                                      ) : (
+                                                        <FiArrowUpRight
+                                                          size={
+                                                            14
+                                                          }
+                                                        />
+                                                      )}
+                                                    </span>
+
+                                                    <span
+                                                      className={`
+                                                        text-xs
+                                                        font-semibold
+                                                        ${
+                                                          isMoneyIn
+                                                            ? "text-emerald-700"
+                                                            : "text-red-700"
+                                                        }
+                                                      `}
+                                                    >
+                                                      {isMoneyIn
+                                                        ? "Money In"
+                                                        : "Money Out"}
+                                                    </span>
+                                                  </div>
+
+                                                  <p
+                                                    className="
+                                                      mt-1
+                                                      truncate
+                                                      text-[11px]
+                                                      text-slate-400
+                                                    "
+                                                  >
+                                                    {transaction.remarks ||
+                                                      transaction.paymentMethod ||
+                                                      "--"}
+                                                  </p>
+                                                </div>
+
+                                                {/* AMOUNT */}
+
+                                                <div>
+                                                  <p
+                                                    className="
+                                                      text-[10px]
+                                                      font-semibold
+                                                      uppercase
+                                                      tracking-wide
+                                                      text-slate-400
+                                                    "
+                                                  >
+                                                    Amount
+                                                  </p>
+
+                                                  <p
+                                                    className={`
+                                                      mt-1
+                                                      text-sm
+                                                      font-bold
+                                                      ${
+                                                        isMoneyIn
+                                                          ? "text-emerald-600"
+                                                          : "text-red-600"
+                                                      }
+                                                    `}
+                                                  >
+                                                    {isMoneyIn
+                                                      ? "+"
+                                                      : "-"}
+                                                    ₹
+                                                    {formatAmount(
+                                                      transaction.amount
+                                                    )}
+                                                  </p>
+                                                </div>
+
+                                                {/* BALANCE */}
+
+                                                <div className="sm:text-right">
+                                                  <p
+                                                    className="
+                                                      text-[10px]
+                                                      font-semibold
+                                                      uppercase
+                                                      tracking-wide
+                                                      text-slate-400
+                                                    "
+                                                  >
+                                                    Balance
+                                                    After
+                                                  </p>
+
+                                                  <p
+                                                    className="
+                                                      mt-1
+                                                      text-sm
+                                                      font-bold
+                                                      text-slate-800
+                                                    "
+                                                  >
+                                                    ₹
+                                                    {formatAmount(
+                                                      transaction.balanceAfterTransaction
+                                                    )}
+                                                  </p>
+
+                                                  {transaction.paymentMethod && (
+                                                    <p
+                                                      className="
+                                                        mt-0.5
+                                                        text-[10px]
+                                                        text-slate-400
+                                                      "
+                                                    >
+                                                      {
+                                                        transaction.paymentMethod
+                                                      }
+                                                    </p>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            );
+                                          }
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* LEDGER FOOTER */}
+
+                                  <div
+                                    className="
+                                      border-t
+                                      border-slate-100
+                                      bg-slate-50/60
+                                      px-4
+                                      py-2.5
+                                    "
+                                  >
+                                    <p
+                                      className="
+                                        text-[10px]
+                                        text-slate-400
+                                      "
+                                    >
+                                      Transaction
+                                      history is
+                                      read-only in
+                                      CRM. Manage
+                                      transactions
+                                      through
+                                      Accounts.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     );
                   }
                 )
               )}
-
             </tbody>
-
           </table>
-
         </div>
 
-        {/* ===================================================
-            FOOTER
-        =================================================== */}
+        {/* FOOTER */}
 
         {!loading &&
           filteredParties.length >
@@ -2122,12 +2654,26 @@ const CRMDueDates = () => {
                 sm:justify-between
               "
             >
-              <p className="text-[11px] text-slate-400">
-                Due dates are managed directly
-                from CRM and saved to Accounts.
+              <p
+                className="
+                  text-[11px]
+                  text-slate-400
+                "
+              >
+                CRM provides a read-only
+                view of account transactions.
+                Due dates can still be
+                changed directly from the
+                customer row.
               </p>
 
-              <p className="text-[11px] font-medium text-slate-400">
+              <p
+                className="
+                  text-[11px]
+                  font-medium
+                  text-slate-400
+                "
+              >
                 {filteredParties.length}
                 {" "}
                 customer
@@ -2138,9 +2684,7 @@ const CRMDueDates = () => {
               </p>
             </div>
           )}
-
       </section>
-
     </div>
   );
 };

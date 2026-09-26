@@ -1,24 +1,58 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, {
+  Document,
+  Schema,
+} from "mongoose";
+
+// ============================================================
+// ORDER ITEM
+// ============================================================
 
 export interface IOrderItem {
   catalogueProduct: mongoose.Types.ObjectId;
+
+  // Snapshot of Catalogue data at order time
   name: string;
   modelNumber?: string;
   marka?: string;
   image?: string;
-  productType: "TRADING" | "MANUFACTURING";
+
+  productType:
+    | "TRADING"
+    | "MANUFACTURING";
+
+  // Optional because manufacturing products
+  // may exist without a BOM.
   bom?: mongoose.Types.ObjectId | null;
+
+  // Snapshot of catalogue MOQ
   moq: number;
+
   quantity: number;
+
   unitPrice: number;
+
   totalPrice: number;
 }
 
+// ============================================================
+// ORDER
+// ============================================================
+
 export interface IOrder extends Document {
   customer: mongoose.Types.ObjectId;
+
+  /** Parent CRM order when this order was created as a refill. */
+  refillOf?: mongoose.Types.ObjectId | null;
+
+  /** Production execution record created from this CRM order. */
+  production?: mongoose.Types.ObjectId | null;
+
   orderNumber: string;
+
   items: IOrderItem[];
+
   totalAmount: number;
+
   status:
     | "Pending"
     | "Confirmed"
@@ -29,14 +63,16 @@ export interface IOrder extends Document {
     | "Dispatched"
     | "Delivered"
     | "Cancelled";
-  notes?: string;
 
-  // Linked Production execution record.
-  production?: mongoose.Types.ObjectId | null;
+  notes?: string;
 
   createdAt: Date;
   updatedAt: Date;
 }
+
+// ============================================================
+// ORDER ITEM SCHEMA
+// ============================================================
 
 const OrderItemSchema = new Schema<IOrderItem>(
   {
@@ -45,6 +81,10 @@ const OrderItemSchema = new Schema<IOrderItem>(
       ref: "Catalogue",
       required: true,
     },
+
+    // --------------------------------------------------------
+    // CATALOGUE SNAPSHOT
+    // --------------------------------------------------------
 
     name: {
       type: String,
@@ -71,15 +111,26 @@ const OrderItemSchema = new Schema<IOrderItem>(
 
     productType: {
       type: String,
-      enum: ["TRADING", "MANUFACTURING"],
+      enum: [
+        "TRADING",
+        "MANUFACTURING",
+      ],
       required: true,
     },
+
+    // --------------------------------------------------------
+    // OPTIONAL BOM
+    // --------------------------------------------------------
 
     bom: {
       type: Schema.Types.ObjectId,
       ref: "BOM",
       default: null,
     },
+
+    // --------------------------------------------------------
+    // ORDERING
+    // --------------------------------------------------------
 
     moq: {
       type: Number,
@@ -110,6 +161,10 @@ const OrderItemSchema = new Schema<IOrderItem>(
   }
 );
 
+// ============================================================
+// ORDER SCHEMA
+// ============================================================
+
 const OrderSchema = new Schema<IOrder>(
   {
     customer: {
@@ -118,20 +173,37 @@ const OrderSchema = new Schema<IOrder>(
       required: true,
     },
 
+    refillOf: {
+      type: Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
+      index: true,
+    },
+
+    production: {
+      type: Schema.Types.ObjectId,
+      ref: "Production",
+      default: null,
+      index: true,
+    },
+
     orderNumber: {
       type: String,
       required: true,
       unique: true,
-      trim: true,
     },
 
     items: {
       type: [OrderItemSchema],
       required: true,
       validate: {
-        validator: (value: IOrderItem[]) =>
-          Array.isArray(value) && value.length > 0,
-        message: "At least one order item is required.",
+        validator: (
+          value: IOrderItem[]
+        ) =>
+          Array.isArray(value) &&
+          value.length > 0,
+        message:
+          "At least one order item is required.",
       },
     },
 
@@ -163,18 +235,17 @@ const OrderSchema = new Schema<IOrder>(
       default: "",
       trim: true,
     },
-
-    production: {
-      type: Schema.Types.ObjectId,
-      ref: "Production",
-      default: null,
-    },
   },
   {
     timestamps: true,
   }
 );
 
-const Order = mongoose.model<IOrder>("Order", OrderSchema);
+// ============================================================
+// MODEL
+// ============================================================
 
-export default Order;
+export default mongoose.model<IOrder>(
+  "Order",
+  OrderSchema
+);

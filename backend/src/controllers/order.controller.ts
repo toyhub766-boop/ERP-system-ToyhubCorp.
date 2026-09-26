@@ -6,6 +6,7 @@ import Catalogue from "../models/Catalogue";
 import AccountParty from "../models/AccountParty";
 import Production from "../models/Production";
 import MaterialConsumption from "../models/MaterialConsumption";
+import Dispatch from "../models/Dispatch";
 import {
   createProductionFromOrderInternal,
 } from "./production.controller";
@@ -42,6 +43,10 @@ const populateOrder = (query: any) => {
   return query
     .populate("production")
     .populate("customer")
+    .populate({
+      path: "refillOf",
+      select: "orderNumber customer status createdAt",
+    })
     .populate({
       path: "items.catalogueProduct",
       select:
@@ -182,6 +187,7 @@ export const createOrder = async (
       customer,
       items,
       notes,
+      refillOf,
     } = req.body;
 
     // --------------------------------------------------------
@@ -213,6 +219,113 @@ export const createOrder = async (
         message:
           "Selected party is not a customer.",
       });
+    }
+
+    // --------------------------------------------------------
+    // REFILL PARENT VALIDATION
+    // --------------------------------------------------------
+
+    let parentOrder: any = null;
+
+    if (refillOf) {
+      parentOrder = await Order.findById(refillOf);
+
+      if (!parentOrder) {
+        return res.status(404).json({
+          message: "Original order for refill was not found.",
+        });
+      }
+
+      if (String(parentOrder.customer) !== String(accountParty._id)) {
+        return res.status(400).json({
+          message: "Refill customer must match the original order customer.",
+        });
+      }
+    }
+
+    const refillAvailableByProduct = new Map<string, number>();
+
+    if (parentOrder) {
+      const productions = await Production.find({
+        crmOrder: parentOrder._id,
+      }).select("_id items");
+
+      const dispatchedByProduct = new Map<string, number>();
+
+      for (const production of productions) {
+        const productionItems: any[] = Array.isArray(production.items)
+          ? (production.items as any[])
+          : [];
+
+        const itemIds = productionItems
+          .map((item: any) => item?._id)
+          .filter(Boolean);
+
+        if (!itemIds.length) continue;
+
+        const dispatches = await Dispatch.find({
+          production: production._id,
+          productionItem: { $in: itemIds },
+          status: { $in: ["Dispatched", "Delivered"] },
+        }).select("productionItem quantity");
+
+        const itemToCatalogue = new Map<string, string>();
+
+        for (const item of productionItems) {
+          const catalogueId = item?.catalogueProduct
+            ? String(item.catalogueProduct)
+            : "";
+          const productionItemId = item?._id
+            ? String(item._id)
+            : "";
+
+          if (catalogueId && productionItemId) {
+            itemToCatalogue.set(productionItemId, catalogueId);
+          }
+        }
+
+        for (const dispatch of dispatches) {
+          const catalogueId = itemToCatalogue.get(
+            String(dispatch.productionItem),
+          );
+          if (!catalogueId) continue;
+
+          dispatchedByProduct.set(
+            catalogueId,
+            (dispatchedByProduct.get(catalogueId) || 0) +
+              Number(dispatch.quantity || 0),
+          );
+        }
+      }
+
+      const previousRefills = await Order.find({
+        refillOf: parentOrder._id,
+      }).select("items");
+
+      const alreadyRefilledByProduct = new Map<string, number>();
+
+      for (const refillOrder of previousRefills) {
+        for (const refillItem of refillOrder.items || []) {
+          const catalogueId = String(refillItem.catalogueProduct);
+          alreadyRefilledByProduct.set(
+            catalogueId,
+            (alreadyRefilledByProduct.get(catalogueId) || 0) +
+              Number(refillItem.quantity || 0),
+          );
+        }
+      }
+
+      for (const parentItem of parentOrder.items || []) {
+        const catalogueId = String(parentItem.catalogueProduct);
+        const ordered = Number(parentItem.quantity || 0);
+        const dispatched = Number(dispatchedByProduct.get(catalogueId) || 0);
+        const alreadyRefilled = Number(alreadyRefilledByProduct.get(catalogueId) || 0);
+
+        refillAvailableByProduct.set(
+          catalogueId,
+          Math.max(0, ordered - dispatched - alreadyRefilled),
+        );
+      }
     }
 
     // --------------------------------------------------------
@@ -293,18 +406,38 @@ export const createOrder = async (
       const moq =
         Number(catalogue.moq) || 1;
 
-      if (quantity < moq) {
-        return res.status(400).json({
-          message:
-            `"${catalogue.name}" has a minimum order quantity of ${moq}.`,
-        });
-      }
+      if (parentOrder) {
+        const availableForRefill = Number(
+          refillAvailableByProduct.get(String(catalogue._id)) || 0,
+        );
 
-      if (quantity % moq !== 0) {
-        return res.status(400).json({
-          message:
-            `Quantity for "${catalogue.name}" must be a multiple of ${moq}.`,
-        });
+        if (availableForRefill <= 0) {
+          return res.status(400).json({
+            message:
+              `No remaining refill quantity is available for "${catalogue.name}".`,
+          });
+        }
+
+        if (quantity > availableForRefill) {
+          return res.status(400).json({
+            message:
+              `Only ${availableForRefill} unit(s) remain available for refill for "${catalogue.name}".`,
+          });
+        }
+      } else {
+        if (quantity < moq) {
+          return res.status(400).json({
+            message:
+              `"${catalogue.name}" has a minimum order quantity of ${moq}.`,
+          });
+        }
+
+        if (quantity % moq !== 0) {
+          return res.status(400).json({
+            message:
+              `Quantity for "${catalogue.name}" must be a multiple of ${moq}.`,
+          });
+        }
       }
 
       // ------------------------------------------------------
@@ -384,6 +517,8 @@ export const createOrder = async (
     const order = await Order.create({
       customer:
         accountParty._id,
+
+      refillOf: parentOrder?._id || null,
 
       orderNumber,
 

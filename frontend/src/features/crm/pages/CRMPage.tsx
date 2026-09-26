@@ -27,6 +27,10 @@ import {
   getProductions,
 } from "../../production/services/production.services";
 
+import {
+  getDispatches,
+} from "../../dispatch/services/dispatch.service";
+
 import CRMHeader from "../components/CRMHeader";
 import CRMStats from "../components/CRMStats";
 import CRMTabs from "../components/CRMTabs";
@@ -127,6 +131,35 @@ const CRMPage = () => {
 
   const [crmOrders, setCrmOrders] =
     useState<any[]>([]);
+
+  const [dispatches, setDispatches] =
+    useState<any[]>([]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | REFILL ORDER
+  |--------------------------------------------------------------------------
+  */
+
+  const [showRefillModal, setShowRefillModal] =
+    useState(false);
+
+  const [refillCustomerId, setRefillCustomerId] =
+    useState<string | undefined>(undefined);
+
+  const [refillItems, setRefillItems] =
+    useState<
+      Array<{
+        catalogueProduct: string;
+        quantity: number;
+      }>
+    >([]);
+
+  const [refillSourceOrderNumber, setRefillSourceOrderNumber] =
+    useState<string | undefined>(undefined);
+
+  const [refillOf, setRefillOf] =
+    useState<string | undefined>(undefined);
 
   /*
   |--------------------------------------------------------------------------
@@ -332,6 +365,27 @@ const CRMPage = () => {
       }
     };
 
+  const loadDispatches =
+    async () => {
+      try {
+        const data =
+          await getDispatches();
+
+        setDispatches(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load dispatch records:",
+          error
+        );
+
+        setDispatches([]);
+      }
+    };
+
   /*
   |--------------------------------------------------------------------------
   | INITIAL LOAD
@@ -343,6 +397,7 @@ const CRMPage = () => {
     loadAccountParties();
     loadProductionOrders();
     loadCRMOrders();
+    loadDispatches();
   }, []);
 
   /*
@@ -711,6 +766,123 @@ const CRMPage = () => {
       throw error;
     }
   };
+
+  const handleRefillOrder = (
+    order: any,
+    remainingItems: Array<{
+      catalogueProduct: string;
+      quantity: number;
+    }>,
+  ) => {
+    if (!order?._id || !remainingItems.length) {
+      return;
+    }
+
+    const customerId =
+      order?.customer?._id ||
+      order?.customer;
+
+    if (!customerId) {
+      window.alert(
+        "This order does not have a valid customer.",
+      );
+      return;
+    }
+
+    /*
+     * A refill is a child CRM order linked by refillOf.
+     * Never calculate the next refill from dispatches alone.
+     * Subtract quantities already created by previous refill children.
+     * This makes the lifecycle recursive and prevents the parent order
+     * from offering the same refill quantity repeatedly.
+     */
+    const parentId = String(order._id);
+
+    const previousRefills = crmOrders.filter(
+      (candidate: any) =>
+        String(
+          candidate?.refillOf?._id ||
+            candidate?.refillOf ||
+            "",
+        ) === parentId,
+    );
+
+    const alreadyRefilledByProduct = new Map<
+      string,
+      number
+    >();
+
+    previousRefills.forEach((refill: any) => {
+      const refillItems = Array.isArray(
+        refill?.items
+      )
+        ? refill.items
+        : [];
+
+      refillItems.forEach((item: any) => {
+        const catalogueId = String(
+          item?.catalogueProduct?._id ||
+            item?.catalogueProduct ||
+            "",
+        );
+
+        if (!catalogueId) return;
+
+        alreadyRefilledByProduct.set(
+          catalogueId,
+          (alreadyRefilledByProduct.get(
+            catalogueId,
+          ) || 0) + Number(item?.quantity || 0),
+        );
+      });
+    });
+
+    const effectiveRemainingItems =
+      remainingItems
+        .map((item) => {
+          const catalogueId = String(
+            item.catalogueProduct,
+          );
+
+          const alreadyRefilled =
+            Number(
+              alreadyRefilledByProduct.get(
+                catalogueId,
+              ) || 0,
+            );
+
+          return {
+            catalogueProduct: catalogueId,
+            quantity: Math.max(
+              0,
+              Number(item.quantity || 0) -
+                alreadyRefilled,
+            ),
+          };
+        })
+        .filter((item) => item.quantity > 0);
+
+    if (!effectiveRemainingItems.length) {
+      window.alert(
+        "The remaining quantity for this order has already been created as a refill order.",
+      );
+      return;
+    }
+
+    setRefillCustomerId(String(customerId));
+    setRefillItems(effectiveRemainingItems);
+    setRefillSourceOrderNumber(
+      order?.orderNumber || undefined,
+    );
+    setRefillOf(parentId);
+    setShowRefillModal(true);
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | DELETE CRM ORDER
+  |--------------------------------------------------------------------------
+  */
 
   const handleDeleteCRMOrder =
     async (
@@ -1313,15 +1485,20 @@ const CRMPage = () => {
               <div className="space-y-5">
                 <div className="flex justify-end">
                   <OrderCreateModal
-                    onCreated={
-                      loadCRMOrders
-                    }
+                    onCreated={async () => {
+                      await Promise.all([
+                        loadCRMOrders(),
+                        loadProductionOrders(),
+                        loadDispatches(),
+                      ]);
+                    }}
                   />
                 </div>
 
                 <OrdersTable
                   orders={crmOrders}
                   productionOrders={orders}
+                  dispatches={dispatches}
                   onConfirm={handleConfirmCRMOrder}
                   onSendToProduction={
                     handleSendOrderToProduction
@@ -1335,6 +1512,7 @@ const CRMPage = () => {
                   onBulkDelete={
                     handleBulkDeleteCRMOrders
                   }
+                  onRefill={handleRefillOrder}
                 />
               </div>
             )}
@@ -1382,6 +1560,39 @@ const CRMPage = () => {
           onCreated={async () => {
             await loadCRMOrders();
             setShowOrderModal(false);
+          }}
+        />
+
+        {/* REFILL CRM ORDER */}
+
+        <OrderCreateModal
+          open={showRefillModal}
+          initialCustomerId={refillCustomerId}
+          refillMode
+          refillItems={refillItems}
+          refillOf={refillOf}
+          refillSourceOrderNumber={
+            refillSourceOrderNumber
+          }
+          onClose={() => {
+            setShowRefillModal(false);
+            setRefillCustomerId(undefined);
+            setRefillItems([]);
+            setRefillSourceOrderNumber(undefined);
+            setRefillOf(undefined);
+          }}
+          onCreated={async () => {
+            await Promise.all([
+              loadCRMOrders(),
+              loadProductionOrders(),
+              loadDispatches(),
+            ]);
+
+            setShowRefillModal(false);
+            setRefillCustomerId(undefined);
+            setRefillItems([]);
+            setRefillSourceOrderNumber(undefined);
+            setRefillOf(undefined);
           }}
         />
 

@@ -38,10 +38,21 @@ interface OrderItem {
 }
 
 interface Props {
-  /** Optional external control, used from Customer Profile. */
+  /** Optional external control, used from Customer Profile / refill workflow. */
   open?: boolean;
   /** Preselects the customer when opened from a customer profile. */
   initialCustomerId?: string;
+  /** Refill mode creates an order linked to the original CRM order. */
+  refillMode?: boolean;
+  /** Exact quantities remaining from the original order. */
+  refillItems?: Array<{
+    catalogueProduct: string;
+    quantity: number;
+  }>;
+  /** Original order ID for backend linkage. */
+  refillOf?: string;
+  /** Original order number for display. */
+  refillSourceOrderNumber?: string;
   /** Called after the CRM order has been created successfully. */
   onCreated?: () => void | Promise<void>;
   /** Called when an externally controlled modal is closed. */
@@ -61,6 +72,10 @@ const formatCurrency = (value: number) =>
 const OrderCreateModal = ({
   open: controlledOpen,
   initialCustomerId,
+  refillMode = false,
+  refillItems = [],
+  refillOf,
+  refillSourceOrderNumber,
   onCreated,
   onClose,
 }: Props) => {
@@ -120,6 +135,13 @@ const OrderCreateModal = ({
             )
           : []
       );
+
+      return Array.isArray(catalogueData)
+        ? catalogueData.filter(
+            (product: CatalogueProduct) =>
+              product.isActive !== false
+          )
+        : [];
     } catch (err: any) {
       console.error(err);
 
@@ -127,17 +149,88 @@ const OrderCreateModal = ({
         err?.response?.data?.message ||
           "Failed to load customers and catalogue."
       );
+
+      return [];
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (open) {
-      loadData();
+    if (!open) return;
+
+    let cancelled = false;
+
+    const initialize = async () => {
       setCustomerId(initialCustomerId || "");
-    }
-  }, [open, initialCustomerId]);
+      setProductId("");
+      setProductSearch("");
+      setError("");
+
+      const loadedCatalogues = await loadData();
+
+      if (cancelled) return;
+
+      if (refillMode) {
+        const safeRefillItems = Array.isArray(refillItems)
+          ? refillItems
+          : [];
+
+        const refillOrderItems: OrderItem[] =
+          safeRefillItems
+            .map((refillItem) => {
+              const product = loadedCatalogues.find(
+                (catalogue) =>
+                  String(catalogue._id) ===
+                  String(refillItem.catalogueProduct)
+              );
+
+              const refillQuantity = Math.floor(
+                Number(refillItem.quantity) || 0
+              );
+
+              if (!product || refillQuantity <= 0) {
+                return null;
+              }
+
+              return {
+                product,
+                quantity: refillQuantity,
+              };
+            })
+            .filter(
+              (item): item is OrderItem =>
+                item !== null
+            );
+
+        setItems(refillOrderItems);
+
+        if (refillOrderItems.length === 1) {
+          setProductId("");
+          setQuantity(
+            refillOrderItems[0].quantity
+          );
+        } else {
+          setQuantity(1);
+        }
+      } else {
+        setItems([]);
+        setQuantity(1);
+      }
+    };
+
+    void initialize();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    initialCustomerId,
+    refillMode,
+    refillOf,
+    refillItems,
+  ]);
 
   const filteredCustomers = useMemo(() => {
     const query =
@@ -230,14 +323,49 @@ const OrderCreateModal = ({
       return;
     }
 
-    if (qty < moq) {
+    if (refillMode) {
+      const allowedRefillItem =
+        refillItems.find(
+          (item) =>
+            String(item.catalogueProduct) ===
+            String(selectedProduct._id)
+        );
+
+      if (!allowedRefillItem) {
+        setError(
+          "Only products with a remaining balance from the original order can be refilled."
+        );
+        return;
+      }
+
+      const currentQuantity =
+        items.find(
+          (item) =>
+            String(item.product._id) ===
+            String(selectedProduct._id)
+        )?.quantity || 0;
+
+      if (
+        currentQuantity + qty >
+        Number(allowedRefillItem.quantity)
+      ) {
+        setError(
+          `Only ${Number(
+            allowedRefillItem.quantity
+          )} unit(s) are available for this refill.`
+        );
+        return;
+      }
+    }
+
+    if (!refillMode && qty < moq) {
       setError(
         `${selectedProduct.name} requires a minimum quantity of ${moq}.`
       );
       return;
     }
 
-    if (qty % moq !== 0) {
+    if (!refillMode && qty % moq !== 0) {
       setError(
         `${selectedProduct.name} quantity must be a multiple of ${moq}.`
       );
@@ -291,14 +419,42 @@ const OrderCreateModal = ({
       : 0;
 
     setItems((current) =>
-      current.map((item) =>
-        item.product._id === id
-          ? {
+      current.map((item) => {
+        if (item.product._id !== id) {
+          return item;
+        }
+
+        if (refillMode) {
+          const allowed =
+            refillItems.find(
+              (refillItem) =>
+                String(
+                  refillItem.catalogueProduct
+                ) === String(id)
+            )?.quantity;
+
+          if (
+            allowed !== undefined &&
+            safeValue > Number(allowed)
+          ) {
+            setError(
+              `Only ${Number(
+                allowed
+              )} unit(s) are available for this refill.`
+            );
+
+            return {
               ...item,
-              quantity: safeValue,
-            }
-          : item
-      )
+              quantity: Number(allowed),
+            };
+          }
+        }
+
+        return {
+          ...item,
+          quantity: safeValue,
+        };
+      })
     );
   };
 
@@ -316,14 +472,14 @@ const OrderCreateModal = ({
     }
 
     for (const item of items) {
-      const moq =
-        Number(item.product.moq) || 1;
+      const moq = Number(item.product.moq) || 1;
 
-      if (
-        !Number.isInteger(item.quantity) ||
-        item.quantity < moq ||
-        item.quantity % moq !== 0
-      ) {
+      if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+        setError(`${item.product.name} quantity must be a positive integer.`);
+        return;
+      }
+
+      if (!refillMode && (item.quantity < moq || item.quantity % moq !== 0)) {
         setError(
           `${item.product.name} quantity must be a multiple of ${moq}.`
         );
@@ -331,17 +487,31 @@ const OrderCreateModal = ({
       }
     }
 
+    if (refillMode && !refillOf) {
+      setError(
+        "The original order could not be identified for this refill."
+      );
+      return;
+    }
+
     try {
       setSaving(true);
 
       await createOrder({
         customer: customerId,
+        refillOf: refillMode ? refillOf : undefined,
         items: items.map((item) => ({
-          catalogueProduct:
-            item.product._id,
+          catalogueProduct: item.product._id,
           quantity: item.quantity,
         })),
-        notes: notes.trim(),
+        notes: [
+          refillMode
+            ? `Refill order${refillSourceOrderNumber ? ` for ${refillSourceOrderNumber}` : ""}`
+            : "",
+          notes.trim(),
+        ]
+          .filter(Boolean)
+          .join("\n"),
       });
 
       await onCreated?.();
@@ -378,12 +548,20 @@ const OrderCreateModal = ({
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Create Order
+                  {refillMode ? "Create Refill Order" : "Create Order"}
                 </h2>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Create a customer order from the catalogue.
+                  {refillMode
+                    ? "Create a new CRM order linked to the original order for its remaining balance."
+                    : "Create a customer order from the catalogue."}
                 </p>
+
+                {refillMode && refillSourceOrderNumber && (
+                  <p className="mt-1 text-xs font-medium text-amber-700">
+                    Refilling: {refillSourceOrderNumber}
+                  </p>
+                )}
               </div>
 
               <button
@@ -453,12 +631,13 @@ const OrderCreateModal = ({
                     </select>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                    <div className="mb-4">
-                      <h3 className="text-sm font-bold text-slate-900">
-                        Add Products
-                      </h3>
-                    </div>
+                  {!refillMode && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                      <div className="mb-4">
+                        <h3 className="text-sm font-bold text-slate-900">
+                          Add Products
+                        </h3>
+                      </div>
 
                     <div className="grid gap-3 md:grid-cols-[1fr_140px_auto]">
                       <div>
@@ -469,7 +648,11 @@ const OrderCreateModal = ({
                               e.target.value
                             )
                           }
-                          placeholder="Search catalogue..."
+                          placeholder={
+                            refillMode
+                              ? "Search remaining products..."
+                              : "Search catalogue..."
+                          }
                           className="mb-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none"
                         />
 
@@ -526,16 +709,16 @@ const OrderCreateModal = ({
 
                         <input
                           type="number"
-                          min={
+                          min={refillMode ? 1 : (
                             Number(
                               selectedProduct?.moq
                             ) || 1
-                          }
-                          step={
+                          )}
+                          step={refillMode ? 1 : (
                             Number(
                               selectedProduct?.moq
                             ) || 1
-                          }
+                          )}
                           value={quantity}
                           onChange={(e) =>
                             setQuantity(
@@ -559,6 +742,7 @@ const OrderCreateModal = ({
                       </div>
                     </div>
                   </div>
+                  )}
 
                   <div>
                     <div className="mb-3 flex items-center justify-between">
@@ -618,18 +802,18 @@ const OrderCreateModal = ({
 
                               <input
                                 type="number"
-                                min={
+                                min={refillMode ? 1 : (
                                   Number(
                                     item.product
                                       .moq
                                   ) || 1
-                                }
-                                step={
+                                )}
+                                step={refillMode ? 1 : (
                                   Number(
                                     item.product
                                       .moq
                                   ) || 1
-                                }
+                                )}
                                 value={
                                   item.quantity
                                 }
@@ -735,6 +919,8 @@ const OrderCreateModal = ({
                 >
                   {saving
                     ? "Creating..."
+                    : refillMode
+                    ? "Create Refill Order"
                     : "Create Order"}
                 </button>
               </div>

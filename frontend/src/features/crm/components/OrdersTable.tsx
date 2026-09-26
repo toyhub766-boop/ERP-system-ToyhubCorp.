@@ -23,11 +23,19 @@ import {
 interface Props {
   orders: any[];
   productionOrders?: any[];
+  dispatches?: any[];
   onEdit: (order: any) => void;
   onDelete: (order: any) => void;
   onConfirm?: (order: any) => void;
   onSendToProduction?: (order: any) => void;
   onBulkDelete?: (orders: any[]) => void;
+  onRefill?: (
+    order: any,
+    remainingItems: Array<{
+      catalogueProduct: string;
+      quantity: number;
+    }>,
+  ) => void;
 }
 
 const formatDate = (value?: string) => {
@@ -164,6 +172,115 @@ const getReadyQuantity = (item: any) => {
     Math.max(0, Number(item?.readyForDispatchQuantity || 0))
   );
 };
+
+const getCatalogueProductId = (item: any) => {
+  const value =
+    item?.catalogueProduct?._id ||
+    item?.catalogueProduct ||
+    item?.product?._id ||
+    item?.product;
+
+  return value ? String(value) : "";
+};
+
+const getProductionItemId = (item: any) =>
+  item?._id ? String(item._id) : "";
+
+const getDispatchedQuantity = (
+  productionId: string,
+  productionItemId: string,
+  dispatches: any[] = [],
+) => {
+  if (!productionId || !productionItemId) return 0;
+
+  return dispatches
+    .filter((dispatch: any) => {
+      const dispatchProduction = String(
+        dispatch?.production?._id ||
+          dispatch?.production ||
+          "",
+      );
+
+      const dispatchItem = String(
+        dispatch?.productionItem?._id ||
+          dispatch?.productionItem ||
+          "",
+      );
+
+      const status = String(
+        dispatch?.status || "",
+      ).toLowerCase();
+
+      return (
+        dispatchProduction === productionId &&
+        dispatchItem === productionItemId &&
+        ["dispatched", "delivered"].includes(status)
+      );
+    })
+    .reduce(
+      (sum: number, dispatch: any) =>
+        sum + Math.max(0, Number(dispatch?.quantity || 0)),
+      0,
+    );
+};
+
+const getOrderDispatchSummary = (
+  order: any,
+  productionOrders: any[] = [],
+  dispatches: any[] = [],
+) => {
+  const products = getTrackingProducts(order, productionOrders);
+  const ordered = products.reduce(
+    (sum: number, item: any) => sum + getQuantity(item),
+    0,
+  );
+
+  const productionId = String(
+    order?.production?._id ||
+      order?.production ||
+      getLinkedProduction(order, productionOrders)?._id ||
+      "",
+  );
+
+  const dispatched = products.reduce(
+    (sum: number, item: any) =>
+      sum +
+      getDispatchedQuantity(
+        productionId,
+        getProductionItemId(item),
+        dispatches,
+      ),
+    0,
+  );
+
+  return {
+    ordered,
+    dispatched: Math.min(dispatched, ordered),
+    remaining: Math.max(0, ordered - dispatched),
+  };
+};
+
+// const getRefillRemainingQuantity = (
+//   order: any,
+//   item: any,
+//   dispatches: any[] = [],
+// ) => {
+//   const ordered = getQuantity(item);
+//   const productionId = String(
+//     getLinkedProduction(order, [])?._id ||
+//       order?.production?._id ||
+//       order?.production ||
+//       "",
+//   );
+
+//   const dispatched = getDispatchedQuantity(
+//     productionId,
+//     getProductionItemId(item),
+//     dispatches,
+//   );
+
+//   return Math.max(0, ordered - dispatched);
+// };
 
 const getRemainingQuantity = (item: any) => {
   return Math.max(getQuantity(item) - getAvailableQuantity(item), 0);
@@ -513,11 +630,13 @@ const getTimeline = (order: any, productionOrders: any[] = []) => {
 const OrdersTable = ({
   orders,
   productionOrders = [],
+  dispatches = [],
   onEdit,
   onDelete,
   onConfirm,
   onSendToProduction,
   onBulkDelete,
+  onRefill,
 }: Props) => {
   const [expandedOrder, setExpandedOrder] =
     useState<string | null>(null);
@@ -680,6 +799,94 @@ const OrdersTable = ({
     Boolean(search) ||
     statusFilter !== "all" ||
     clientFilter !== "all";
+
+  const getOrderRefillItems = (order: any) => {
+    const products = getTrackingProducts(
+      order,
+      productionOrders,
+    );
+
+    const productionId = String(
+      order?.production?._id ||
+        order?.production ||
+        getLinkedProduction(order, productionOrders)?._id ||
+        "",
+    );
+
+    if (!productionId) return [];
+
+    const childRefills = orders.filter(
+      (candidate: any) =>
+        String(
+          candidate?.refillOf?._id ||
+            candidate?.refillOf ||
+            "",
+        ) === String(order?._id || ""),
+    );
+
+    const refillCreatedByProduct = new Map<string, number>();
+
+    childRefills.forEach((child: any) => {
+      (child?.items || []).forEach((childItem: any) => {
+        const catalogueId = String(
+          childItem?.catalogueProduct?._id ||
+            childItem?.catalogueProduct ||
+            "",
+        );
+
+        if (!catalogueId) return;
+
+        refillCreatedByProduct.set(
+          catalogueId,
+          (refillCreatedByProduct.get(catalogueId) || 0) +
+            Math.max(0, Number(childItem?.quantity || 0)),
+        );
+      });
+    });
+
+    const refillItems = products
+      .map((item: any) => {
+        const catalogueProduct = getCatalogueProductId(item);
+        const ordered = getQuantity(item);
+        const dispatched = getDispatchedQuantity(
+          productionId,
+          getProductionItemId(item),
+          dispatches,
+        );
+        const alreadyRefilled =
+          refillCreatedByProduct.get(catalogueProduct) || 0;
+
+        return {
+          catalogueProduct,
+          quantity: Math.max(
+            0,
+            ordered - dispatched - alreadyRefilled,
+          ),
+        };
+      })
+      .filter(
+        (item: { catalogueProduct: string; quantity: number }) =>
+          Boolean(item.catalogueProduct) && item.quantity > 0,
+      );
+
+    // A refill is offered only when there is an actual dispatched quantity
+    // and an outstanding quantity that has not already been allocated to a
+    // child/refill order.
+    const totalDispatched = products.reduce(
+      (sum: number, item: any) =>
+        sum +
+        getDispatchedQuantity(
+          productionId,
+          getProductionItemId(item),
+          dispatches,
+        ),
+      0,
+    );
+
+    if (totalDispatched <= 0 || !refillItems.length) return [];
+
+    return refillItems;
+  };
 
   const selectedOrders = filteredOrders.filter((order) =>
     selectedOrderIds.includes(String(order?._id))
@@ -1434,6 +1641,35 @@ const OrdersTable = ({
                       productionOrders
                     );
 
+                  const orderProductionId = String(
+                    order?.production?._id ||
+                      order?.production ||
+                      ""
+                  );
+
+                  const orderDispatches = dispatches
+                    .filter((dispatch: any) => {
+                      const dispatchProductionId = String(
+                        dispatch?.production?._id ||
+                          dispatch?.production ||
+                          ""
+                      );
+
+                      return (
+                        Boolean(orderProductionId) &&
+                        dispatchProductionId === orderProductionId
+                      );
+                    })
+                    .sort(
+                      (a: any, b: any) =>
+                        new Date(
+                          b?.dispatchedAt || b?.createdAt || 0
+                        ).getTime() -
+                        new Date(
+                          a?.dispatchedAt || a?.createdAt || 0
+                        ).getTime()
+                    );
+
                   const status =
                     getStatusConfig(
                       order?.status
@@ -1671,14 +1907,36 @@ const OrdersTable = ({
                           </div>
 
                           <div className="px-4 py-5">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[11px] font-bold text-slate-700">
-                                {progress.available} / {progress.total} available
-                              </span>
-                              <span className="text-[10px] font-semibold text-amber-600">
-                                {progress.remaining} remaining
-                              </span>
-                            </div>
+                            {(() => {
+                              const dispatchBalance =
+                                getOrderDispatchSummary(
+                                  order,
+                                  productionOrders,
+                                  dispatches,
+                                );
+
+                              return (
+                                <>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-[11px] font-bold text-slate-700">
+                                      {progress.available} / {progress.total} available
+                                    </span>
+                                    <span className="text-[10px] font-semibold text-amber-600">
+                                      {dispatchBalance.remaining} remaining to dispatch
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-1 flex items-center justify-between text-[9px]">
+                                    <span className="text-slate-400">
+                                      Dispatched <strong className="text-slate-600">{dispatchBalance.dispatched}</strong>
+                                    </span>
+                                    <span className="text-slate-400">
+                                      Ordered <strong className="text-slate-600">{dispatchBalance.ordered}</strong>
+                                    </span>
+                                  </div>
+                                </>
+                              );
+                            })()}
 
                             <div
                               className="
@@ -1810,6 +2068,24 @@ const OrdersTable = ({
                                 >
                                   <FiTruck size={13} />
                                   <span>Send to Production</span>
+                                </button>
+                              )}
+
+                            {onRefill &&
+                              getOrderRefillItems(order).length > 0 && (
+                                <button
+                                  type="button"
+                                  title="Create refill order for remaining balance"
+                                  onClick={() =>
+                                    onRefill(
+                                      order,
+                                      getOrderRefillItems(order),
+                                    )
+                                  }
+                                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-[10px] font-bold text-amber-700 transition hover:bg-amber-100 hover:text-amber-800"
+                                >
+                                  <FiRefreshCw size={13} />
+                                  <span>Refill</span>
                                 </button>
                               )}
 
@@ -2782,6 +3058,97 @@ const OrdersTable = ({
                                     p-5
                                   "
                                 >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <FiTruck
+                                          size={14}
+                                          className="text-[#172B6B]"
+                                        />
+                                        <h3 className="text-sm font-bold text-slate-900">
+                                          Dispatch History
+                                        </h3>
+                                      </div>
+                                      <p className="mt-1 text-[11px] text-slate-400">
+                                        Every partial dispatch made against this order.
+                                      </p>
+                                    </div>
+
+                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold text-slate-500">
+                                      {orderDispatches.length} dispatch{orderDispatches.length === 1 ? "" : "es"}
+                                    </span>
+                                  </div>
+
+                                  {orderDispatches.length === 0 ? (
+                                    <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-[11px] text-slate-400">
+                                      No dispatches recorded yet.
+                                    </div>
+                                  ) : (
+                                    <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+                                      <div className="grid grid-cols-[80px_minmax(110px,1fr)_90px_100px] gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                        <span>Dispatch</span>
+                                        <span>Destination</span>
+                                        <span>Quantity</span>
+                                        <span>Status</span>
+                                      </div>
+
+                                      {orderDispatches.map((dispatch: any, index: number) => (
+                                        <div
+                                          key={String(dispatch?._id || `${orderId}-dispatch-${index}`)}
+                                          className="grid grid-cols-[80px_minmax(110px,1fr)_90px_100px] items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0"
+                                        >
+                                          <div>
+                                            <p className="text-[10px] font-bold text-slate-700">
+                                              #{orderDispatches.length - index}
+                                            </p>
+                                            <p className="mt-0.5 text-[9px] text-slate-400">
+                                              {formatDateTime(
+                                                dispatch?.dispatchedAt ||
+                                                  dispatch?.createdAt
+                                              )}
+                                            </p>
+                                          </div>
+
+                                          <div className="min-w-0">
+                                            <p className="truncate text-[10px] font-semibold text-slate-700">
+                                              {dispatch?.destination || "—"}
+                                            </p>
+                                            {dispatch?.vehicleNumber && (
+                                              <p className="mt-0.5 text-[9px] text-slate-400">
+                                                Vehicle: {dispatch.vehicleNumber}
+                                              </p>
+                                            )}
+                                          </div>
+
+                                          <p className="text-[11px] font-bold text-slate-800">
+                                            {Number(dispatch?.quantity || 0).toLocaleString("en-IN")}
+                                          </p>
+
+                                          <span className={`w-fit rounded-full border px-2 py-1 text-[9px] font-bold ${
+                                            String(dispatch?.status || "Pending").toLowerCase() === "delivered"
+                                              ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                                              : String(dispatch?.status || "Pending").toLowerCase() === "dispatched"
+                                              ? "border-blue-100 bg-blue-50 text-blue-700"
+                                              : "border-amber-100 bg-amber-50 text-amber-700"
+                                          }`}>
+                                            {dispatch?.status || "Pending"}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div
+                                  className="
+                                    mt-4
+                                    rounded-2xl
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    p-5
+                                  "
+                                >
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <p
@@ -2878,25 +3245,6 @@ const OrdersTable = ({
                                         width: `${progress.percentage}%`,
                                       }}
                                     />
-                                  </div>
-
-                                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                    <div className="rounded-lg bg-slate-50 px-2.5 py-2">
-                                      <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Ordered</p>
-                                      <p className="mt-0.5 text-xs font-bold text-slate-700">{progress.total}</p>
-                                    </div>
-                                    <div className="rounded-lg bg-slate-50 px-2.5 py-2">
-                                      <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Produced</p>
-                                      <p className="mt-0.5 text-xs font-bold text-slate-700">{progress.produced}</p>
-                                    </div>
-                                    <div className="rounded-lg bg-blue-50 px-2.5 py-2">
-                                      <p className="text-[8px] font-bold uppercase tracking-wider text-blue-500">Existing Stock</p>
-                                      <p className="mt-0.5 text-xs font-bold text-blue-700">{progress.existingStock}</p>
-                                    </div>
-                                    <div className="rounded-lg bg-amber-50 px-2.5 py-2">
-                                      <p className="text-[8px] font-bold uppercase tracking-wider text-amber-600">Remaining</p>
-                                      <p className="mt-0.5 text-xs font-bold text-amber-700">{progress.remaining}</p>
-                                    </div>
                                   </div>
 
                                   <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">

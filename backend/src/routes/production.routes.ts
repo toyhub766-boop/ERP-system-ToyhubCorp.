@@ -6,6 +6,7 @@ import upload from "../middlewares/upload.middleware";
 
 import {
   createProduction,
+  createProductionFromOrder,
   getProductions,
   getProductionById,
   updateProduction,
@@ -49,6 +50,13 @@ router.post(
   "/calculate",
   authMiddleware,
   calculateProduction
+);
+
+router.post(
+  "/from-order/:orderId",
+  authMiddleware,
+  roleMiddleware(["FOUNDER", "CRM"]),
+  createProductionFromOrder
 );
 
 router.get(

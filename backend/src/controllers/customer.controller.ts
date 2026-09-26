@@ -87,141 +87,236 @@ export const createCustomer = async (
   res: Response
 ) => {
   try {
-    const count =
-      await Customer.countDocuments();
-
     const initialStage =
       req.body.stage || "LEAD";
 
-    const customer =
-      await Customer.create({
-        customerCode:
-          `CUST-${String(
-            count + 1
-          ).padStart(3, "0")}`,
+    /*
+     * Find the highest existing numeric customer code.
+     *
+     * We do NOT use countDocuments() because deleted
+     * customers can create gaps in the sequence.
+     *
+     * Example:
+     * CUST-047
+     * CUST-048
+     * CUST-050
+     *
+     * Next should be CUST-051, not CUST-050.
+     */
 
-        companyName:
-          req.body.companyName,
-
-        contactPerson:
-          req.body.contactPerson,
-
-        phone:
-          req.body.phone,
-
-        email:
-          req.body.email || "",
-
-        address:
-          req.body.address || "",
-
-        city:
-          req.body.city || "",
-
-        state:
-          req.body.state || "",
-
-        pincode:
-          req.body.pincode || "",
-
-        gstNumber:
-          req.body.gstNumber || "",
-
-        billingName:
-          req.body.billingName || "",
-
-        station:
-          req.body.station || "",
-
-        packingCharges:
-          Number(
-            req.body.packingCharges || 0
-          ),
-
-        transportCharges:
-          Number(
-            req.body.transportCharges || 0
-          ),
-
-        paymentTerms:
-          Number(
-            req.body.paymentTerms || 0
-          ),
-
-        stage:
-          initialStage,
-
-        category:
-          req.body.category ||
-          "OTHER",
-
-        assignedSalesperson:
-          req.body.assignedSalesperson ||
-          "",
-
-        lastContactDate:
-          req.body.lastContactDate ||
-          null,
-
-        nextFollowUpDate:
-          req.body.nextFollowUpDate ||
-          null,
-
-        nextAction:
-          req.body.nextAction || "",
-
-        negotiationNotes:
-          req.body.negotiationNotes ||
-          "",
-
-        stageHistory: [
-          {
-            stage: initialStage,
-            changedAt: new Date(),
-            note:
-              "Lead created",
+    const existingCustomers =
+      await Customer.find(
+        {
+          customerCode: {
+            $regex: /^CUST-\d+$/,
           },
-        ],
+        },
+        {
+          customerCode: 1,
+        }
+      ).lean();
 
-        reminderDate:
-          req.body.reminderDate ||
-          null,
+    let highestNumber = 0;
 
-        reminderSet:
-          req.body.reminderSet ||
-          false,
+    for (const customer of existingCustomers) {
+      const match =
+        customer.customerCode.match(
+          /^CUST-(\d+)$/
+        );
 
-        specialNotes:
-          req.body.specialNotes ||
-          [],
+      if (match) {
+        const number = Number(match[1]);
 
-        partyType:
-          req.body.partyType ||
-          "CUSTOMER",
+        if (number > highestNumber) {
+          highestNumber = number;
+        }
+      }
+    }
 
-        openingBalance:
-          Number(
-            req.body.openingBalance || 0
-          ),
+    /*
+     * Start with the next available number.
+     */
+    let nextNumber = highestNumber + 1;
 
-        currentBalance:
-          Number(
-            req.body.currentBalance || 0
-          ),
+    let customer;
 
-        status:
-          req.body.status ||
-          "Active",
+    /*
+     * Retry if another request happens to create
+     * the same code at the exact same time.
+     */
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const customerCode =
+        `CUST-${String(nextNumber).padStart(3, "0")}`;
+
+      try {
+        customer =
+          await Customer.create({
+            customerCode,
+
+            companyName:
+              req.body.companyName,
+
+            contactPerson:
+              req.body.contactPerson,
+
+            phone:
+              req.body.phone,
+
+            email:
+              req.body.email || "",
+
+            address:
+              req.body.address || "",
+
+            city:
+              req.body.city || "",
+
+            state:
+              req.body.state || "",
+
+            pincode:
+              req.body.pincode || "",
+
+            gstNumber:
+              req.body.gstNumber || "",
+
+            billingName:
+              req.body.billingName || "",
+
+            station:
+              req.body.station || "",
+
+            packingCharges:
+              Number(
+                req.body.packingCharges || 0
+              ),
+
+            transportCharges:
+              Number(
+                req.body.transportCharges || 0
+              ),
+
+            paymentTerms:
+              Number(
+                req.body.paymentTerms || 0
+              ),
+
+            stage:
+              initialStage,
+
+            category:
+              req.body.category ||
+              "OTHER",
+
+            assignedSalesperson:
+              req.body.assignedSalesperson ||
+              "",
+
+            assignedSalespeople:
+              Array.isArray(
+                req.body.assignedSalespeople
+              )
+                ? req.body.assignedSalespeople
+                : [],
+
+            lastContactDate:
+              req.body.lastContactDate ||
+              null,
+
+            nextFollowUpDate:
+              req.body.nextFollowUpDate ||
+              null,
+
+            nextAction:
+              req.body.nextAction || "",
+
+            negotiationNotes:
+              req.body.negotiationNotes ||
+              "",
+
+            stageHistory: [
+              {
+                stage: initialStage,
+                changedAt: new Date(),
+                note: "Lead created",
+              },
+            ],
+
+            reminderDate:
+              req.body.reminderDate ||
+              null,
+
+            reminderSet:
+              req.body.reminderSet ||
+              false,
+
+            specialNotes:
+              req.body.specialNotes ||
+              [],
+
+            partyType:
+              req.body.partyType ||
+              "CUSTOMER",
+
+            openingBalance:
+              Number(
+                req.body.openingBalance || 0
+              ),
+
+            currentBalance:
+              Number(
+                req.body.currentBalance || 0
+              ),
+
+            status:
+              req.body.status ||
+              "Active",
+          });
+
+        /*
+         * Successfully created.
+         */
+        break;
+      } catch (error: any) {
+        /*
+         * Duplicate customerCode.
+         *
+         * Move to the next number and retry.
+         */
+        if (
+          error?.code === 11000 &&
+          error?.keyPattern?.customerCode
+        ) {
+          nextNumber++;
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    /*
+     * Safety check in case all retry attempts failed.
+     */
+    if (!customer) {
+      return res.status(500).json({
+        message:
+          "Unable to generate a unique customer code. Please try again.",
       });
+    }
 
     return res.status(201).json(
       customer
     );
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error(
+      "CREATE CUSTOMER ERROR:",
+      error
+    );
 
     return res.status(500).json({
       message:
+        error?.message ||
         "Failed to create customer",
     });
   }

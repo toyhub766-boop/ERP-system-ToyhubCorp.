@@ -10,6 +10,7 @@ import {
   FiFileText,
   FiImage,
   FiX,
+  FiPercent,
 } from "react-icons/fi";
 
 import jsPDF from "jspdf";
@@ -17,6 +18,7 @@ import jsPDF from "jspdf";
 import {
   getCatalogues,
   deleteCatalogue,
+  increaseCataloguePrice,
 } from "../services/catalogue.service";
 
 import CatalogueModal from "./CatalogueModal";
@@ -230,6 +232,54 @@ const Catalogue = () => {
     );
 
     setShowModal(true);
+  };
+
+  // =========================================================
+  // INCREASE PRICE
+  // =========================================================
+
+  const handleIncreasePrice = async (
+    catalogue: CatalogueProduct
+  ) => {
+    if (catalogue.price === undefined || catalogue.price === null) {
+      window.alert("This product does not have a price.");
+      return;
+    }
+
+    const value = window.prompt(
+      `Increase price of "${catalogue.name}" by what percentage?`,
+      "10"
+    );
+
+    if (value === null) return;
+
+    const percentage = Number(value);
+
+    if (!Number.isFinite(percentage) || percentage <= 0) {
+      window.alert("Enter a valid percentage greater than 0.");
+      return;
+    }
+
+    const newPrice = Number(
+      (catalogue.price * (1 + percentage / 100)).toFixed(2)
+    );
+
+    const confirmed = window.confirm(
+      `Increase price from ${catalogue.price} to ${newPrice} (${percentage}% increase)?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await increaseCataloguePrice(catalogue._id, percentage);
+      await loadCatalogues();
+    } catch (error: any) {
+      console.error("Failed to increase catalogue price:", error);
+      window.alert(
+        error?.response?.data?.message ||
+          "Failed to increase catalogue price."
+      );
+    }
   };
 
   // =========================================================
@@ -1857,6 +1907,33 @@ const Catalogue = () => {
                           />
 
                           Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleIncreasePrice(
+                              item
+                            )
+                          }
+                          className="
+                            flex
+                            h-8
+                            items-center
+                            justify-center
+                            rounded-lg
+                            border
+                            border-slate-200
+                            px-2.5
+                            text-xs
+                            font-semibold
+                            text-slate-700
+                            transition
+                            hover:bg-slate-50
+                          "
+                          title="Increase price"
+                        >
+                          <FiPercent size={13} />
                         </button>
 
                         <button

@@ -19,40 +19,48 @@ const getStockStatus = (
   return "Healthy";
 };
 
+// ============================================================
+// GET ALL PRODUCTS
+// ============================================================
 
 export const getProducts = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
+    let products: any[] = [];
 
-let products: any[] = [];
+    // FOUNDER → all products
     if (req.user?.role === "FOUNDER") {
       products = await Product.find()
         .populate("category", "name")
         .populate("warehouse", "name")
         .sort({ createdAt: -1 });
-    } else if (req.user?.role === "INVENTORY") {
+    }
+
+    // INVENTORY → products belonging to their warehouses
+    else if (req.user?.role === "INVENTORY") {
       const warehouses = await Warehouse.find({
-  managers: req.user.userId,
-}).select("_id");
+        managers: req.user.userId,
+      }).select("_id");
 
-
-      const warehouseIds = warehouses.map((w) => w._id);
-
+      const warehouseIds = warehouses.map(
+        (warehouse) => warehouse._id
+      );
 
       products = await Product.find({
-        warehouse: { $in: warehouseIds },
+        warehouse: {
+          $in: warehouseIds,
+        },
       })
         .populate("category", "name")
         .populate("warehouse", "name")
         .sort({ createdAt: -1 });
-
     }
 
     return res.json(products);
   } catch (error) {
-    console.error(error);
+    console.error("GET PRODUCTS ERROR:", error);
 
     return res.status(500).json({
       message: "Failed to fetch products",
@@ -60,38 +68,46 @@ let products: any[] = [];
   }
 };
 
+// ============================================================
+// CREATE PRODUCT
+// ============================================================
+
 export const createProduct = async (
   req: Request,
   res: Response
 ) => {
   try {
-
-
     const status = getStockStatus(
-  Number(req.body.currentStock),
-  Number(req.body.minimumStock)
-);
+      Number(req.body.currentStock),
+      Number(req.body.minimumStock)
+    );
 
-const file = (req as any).file;
+    const file = (req as any).file;
 
-const product = await Product.create({
-  ...req.body,
-  image: file ? file.path : "",
-  status,
-});
+    const product = await Product.create({
+      ...req.body,
+      image: file ? file.path : "",
+      status,
+    });
 
-res.status(201).json(product);
+    return res.status(201).json(product);
   } catch (error: any) {
-  console.error("CREATE PRODUCT ERROR:");
-  console.error(error);
-  console.error(error?.message);
-  console.error(error?.errors);
+    console.error("CREATE PRODUCT ERROR:");
+    console.error(error);
+    console.error(error?.message);
+    console.error(error?.errors);
 
-  return res.status(500).json({
-    message: error?.message || "Failed to create product",
-  });
-}
+    return res.status(500).json({
+      message:
+        error?.message ||
+        "Failed to create product",
+    });
+  }
 };
+
+// ============================================================
+// UPDATE PRODUCT
+// ============================================================
 
 export const updateProduct = async (
   req: Request,
@@ -103,34 +119,39 @@ export const updateProduct = async (
       Number(req.body.minimumStock)
     );
 
-      const updateData: any = {
-  ...req.body,
-  status,
-};
+    const updateData: any = {
+      ...req.body,
+      status,
+    };
 
-const file = (req as any).file;
+    const file = (req as any).file;
 
-if (file) {
-  updateData.image = file.path;
-}
+    if (file) {
+      updateData.image = file.path;
+    }
 
-const product = await Product.findByIdAndUpdate(
-  req.params.id,
-  updateData,
-  {
-    new: true,
-  }
-);
+    const product =
+      await Product.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        {
+          new: true,
+        }
+      );
 
-    res.json(product);
+    return res.json(product);
   } catch (error) {
-    console.error(error);
+    console.error("UPDATE PRODUCT ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to update product",
     });
   }
 };
+
+// ============================================================
+// DELETE PRODUCT
+// ============================================================
 
 export const deleteProduct = async (
   req: Request,
@@ -153,24 +174,31 @@ export const deleteProduct = async (
       req.params.id
     );
 
-    res.json({
+    return res.json({
       message: "Product deleted",
     });
-  } catch {
-    res.status(500).json({
+  } catch (error) {
+    console.error("DELETE PRODUCT ERROR:", error);
+
+    return res.status(500).json({
       message: "Failed to delete product",
     });
   }
 };
+
+// ============================================================
+// GET PRODUCT BY ID
+// ============================================================
 
 export const getProductById = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate("category", "name")
-      .populate("warehouse", "name");
+    const product =
+      await Product.findById(req.params.id)
+        .populate("category", "name")
+        .populate("warehouse", "name");
 
     if (!product) {
       return res.status(404).json({
@@ -178,11 +206,11 @@ export const getProductById = async (
       });
     }
 
-    res.json(product);
+    return res.json(product);
   } catch (error) {
-    console.error(error);
+    console.error("GET PRODUCT ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to fetch product",
     });
   }

@@ -22,8 +22,12 @@ import {
 
 interface Props {
   orders: any[];
+  productionOrders?: any[];
   onEdit: (order: any) => void;
   onDelete: (order: any) => void;
+  onConfirm?: (order: any) => void;
+  onSendToProduction?: (order: any) => void;
+  onBulkDelete?: (orders: any[]) => void;
 }
 
 const formatDate = (value?: string) => {
@@ -132,26 +136,75 @@ const getQuantity = (item: any) => {
 };
 
 const getActualQuantity = (item: any) => {
-  return Number(item?.actualQuantity || 0);
+  const ordered = getQuantity(item);
+  return Math.min(ordered, Math.max(0, Number(item?.actualQuantity || 0)));
+};
+
+const getExistingStockQuantity = (item: any) => {
+  const ordered = getQuantity(item);
+  const actual = getActualQuantity(item);
+
+  return Math.min(
+    Math.max(0, ordered - actual),
+    Math.max(0, Number(item?.existingStockQuantity || 0))
+  );
+};
+
+const getAvailableQuantity = (item: any) => {
+  const ordered = getQuantity(item);
+  const actual = getActualQuantity(item);
+  const existingStock = getExistingStockQuantity(item);
+
+  return Math.min(ordered, actual + existingStock);
+};
+
+const getReadyQuantity = (item: any) => {
+  return Math.min(
+    getAvailableQuantity(item),
+    Math.max(0, Number(item?.readyForDispatchQuantity || 0))
+  );
 };
 
 const getRemainingQuantity = (item: any) => {
-  const quantity = getQuantity(item);
-  const actual = getActualQuantity(item);
-
-  return Math.max(quantity - actual, 0);
+  return Math.max(getQuantity(item) - getAvailableQuantity(item), 0);
 };
 
 const getProgressPercentage = (item: any) => {
   const quantity = getQuantity(item);
-  const actual = getActualQuantity(item);
+  const available = getAvailableQuantity(item);
 
   if (!quantity) return 0;
 
   return Math.min(
-    Math.round((actual / quantity) * 100),
+    Math.round((available / quantity) * 100),
     100
   );
+};
+
+const getLinkedProduction = (order: any, productionOrders: any[] = []) => {
+  const orderId = String(order?._id || "");
+  const productionId = String(
+    order?.production?._id || order?.production || ""
+  );
+
+  return productionOrders.find((production: any) => {
+    const crmOrderId = String(
+      production?.crmOrder?._id || production?.crmOrder || ""
+    );
+
+    return (orderId && crmOrderId === orderId) ||
+      (productionId && String(production?._id || "") === productionId);
+  }) || null;
+};
+
+const getTrackingProducts = (order: any, productionOrders: any[] = []) => {
+  const production = getLinkedProduction(order, productionOrders);
+
+  if (Array.isArray(production?.items) && production.items.length) {
+    return production.items;
+  }
+
+  return getProducts(order);
 };
 
 const getStatusConfig = (status?: string) => {
@@ -160,75 +213,85 @@ const getStatusConfig = (status?: string) => {
     .toLowerCase()
     .replace(/_/g, " ");
 
-  if (normalized.includes("complete")) {
+  if (normalized === "delivered") {
     return {
-      label: "Completed",
+      label: "Delivered",
       icon: FiCheckCircle,
       dot: "bg-emerald-500",
-      badge:
-        "border-emerald-100 bg-emerald-50 text-emerald-700",
+      badge: "border-emerald-100 bg-emerald-50 text-emerald-700",
     };
   }
 
-  if (
-    normalized.includes("dispatch") ||
-    normalized.includes("ready")
-  ) {
+  if (normalized === "dispatched") {
+    return {
+      label: "Dispatched",
+      icon: FiTruck,
+      dot: "bg-emerald-500",
+      badge: "border-emerald-100 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (normalized === "partially dispatched") {
+    return {
+      label: "Partially Dispatched",
+      icon: FiTruck,
+      dot: "bg-amber-500",
+      badge: "border-amber-100 bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (normalized === "ready for dispatch") {
     return {
       label: "Ready for Dispatch",
       icon: FiTruck,
       dot: "bg-indigo-500",
-      badge:
-        "border-indigo-100 bg-indigo-50 text-indigo-700",
+      badge: "border-indigo-100 bg-indigo-50 text-indigo-700",
     };
   }
 
-  if (
-    normalized.includes("progress") ||
-    normalized.includes("production") ||
-    normalized.includes("processing")
-  ) {
+  if (normalized === "partially produced") {
+    return {
+      label: "Partially Produced",
+      icon: FiPackage,
+      dot: "bg-violet-500",
+      badge: "border-violet-100 bg-violet-50 text-violet-700",
+    };
+  }
+
+  if (normalized === "in production") {
     return {
       label: "In Production",
       icon: FiPackage,
       dot: "bg-violet-500",
-      badge:
-        "border-violet-100 bg-violet-50 text-violet-700",
+      badge: "border-violet-100 bg-violet-50 text-violet-700",
     };
   }
 
-  if (normalized.includes("cancel")) {
+  if (normalized === "confirmed") {
+    return {
+      label: "Confirmed",
+      icon: FiCheck,
+      dot: "bg-blue-500",
+      badge: "border-blue-100 bg-blue-50 text-blue-700",
+    };
+  }
+
+  if (normalized === "cancelled") {
     return {
       label: "Cancelled",
       icon: FiX,
       dot: "bg-red-500",
-      badge:
-        "border-red-100 bg-red-50 text-red-700",
-    };
-  }
-
-  if (
-    normalized.includes("pending") ||
-    normalized.includes("waiting")
-  ) {
-    return {
-      label: "Pending",
-      icon: FiClock,
-      dot: "bg-amber-500",
-      badge:
-        "border-amber-100 bg-amber-50 text-amber-700",
+      badge: "border-red-100 bg-red-50 text-red-700",
     };
   }
 
   return {
     label: status || "Pending",
     icon: FiClock,
-    dot: "bg-slate-400",
-    badge:
-      "border-slate-200 bg-slate-50 text-slate-600",
+    dot: "bg-amber-500",
+    badge: "border-amber-100 bg-amber-50 text-amber-700",
   };
 };
-
 const getChecklistState = (item: any) => {
   const preparing = Boolean(
     item?.checklist?.preparing
@@ -257,8 +320,8 @@ const getChecklistState = (item: any) => {
   return "Not Started";
 };
 
-const getOrderProgress = (order: any) => {
-  const products = getProducts(order);
+const getOrderProgress = (order: any, productionOrders: any[] = []) => {
+  const products = getTrackingProducts(order, productionOrders);
 
   if (!products.length) {
     return {
@@ -275,35 +338,48 @@ const getOrderProgress = (order: any) => {
     0
   );
 
-  const completed = products.reduce(
+  const produced = products.reduce(
     (sum: number, item: any) =>
       sum + getActualQuantity(item),
     0
   );
 
-  const remaining = Math.max(
-    total - completed,
+  const existingStock = products.reduce(
+    (sum: number, item: any) =>
+      sum + getExistingStockQuantity(item),
     0
   );
 
+  const available = products.reduce(
+    (sum: number, item: any) =>
+      sum + getAvailableQuantity(item),
+    0
+  );
+
+  const ready = products.reduce(
+    (sum: number, item: any) =>
+      sum + getReadyQuantity(item),
+    0
+  );
+
+  const remaining = Math.max(total - available, 0);
+
   const percentage = total
-    ? Math.min(
-        Math.round(
-          (completed / total) * 100
-        ),
-        100
-      )
+    ? Math.min(Math.round((available / total) * 100), 100)
     : 0;
 
   return {
-    completed,
+    produced,
+    existingStock,
+    available,
+    ready,
     total,
     remaining,
     percentage,
   };
 };
 
-const getTimeline = (order: any) => {
+const getTimeline = (order: any, productionOrders: any[] = []) => {
   const timeline: Array<{
     title: string;
     description: string;
@@ -330,7 +406,7 @@ const getTimeline = (order: any) => {
     .toLowerCase()
     .replace(/_/g, " ");
 
-  const products = getProducts(order);
+  const products = getTrackingProducts(order, productionOrders);
 
   const hasPreparing = products.some(
     (item: any) =>
@@ -354,17 +430,17 @@ const getTimeline = (order: any) => {
   const isCompleted = products.length
     ? products.every(
         (item: any) =>
-          Boolean(item?.completed)
+          getAvailableQuantity(item) >= getQuantity(item)
       )
-    : status.includes("complete");
+    : ["dispatched", "delivered"].some((value) =>
+        status.includes(value)
+      );
 
   const isReadyForDispatch =
     Boolean(order?.readyForDispatch) ||
     products.some(
       (item: any) =>
-        Boolean(
-          item?.readyForDispatch
-        )
+        getReadyQuantity(item) > 0
     );
 
   timeline.push({
@@ -398,10 +474,10 @@ const getTimeline = (order: any) => {
   });
 
   timeline.push({
-    title: "Production Completed",
+    title: "Order Fulfilment Complete",
     description: isCompleted
-      ? "All production quantities have been completed."
-      : "Waiting for production completion.",
+      ? "The full ordered quantity is now available through production and/or existing stock."
+      : "Some quantity is still outstanding on this order.",
     date: isCompleted
       ? order?.updatedAt
       : undefined,
@@ -436,11 +512,18 @@ const getTimeline = (order: any) => {
 
 const OrdersTable = ({
   orders,
+  productionOrders = [],
   onEdit,
   onDelete,
+  onConfirm,
+  onSendToProduction,
+  onBulkDelete,
 }: Props) => {
   const [expandedOrder, setExpandedOrder] =
     useState<string | null>(null);
+
+  const [selectedOrderIds, setSelectedOrderIds] =
+    useState<string[]>([]);
 
   const [showFilters, setShowFilters] =
     useState(false);
@@ -464,7 +547,7 @@ const OrdersTable = ({
     return Array.from(
       new Set(names)
     ).sort();
-  }, [orders]);
+  }, [orders, productionOrders]);
 
   const filteredOrders = useMemo(() => {
     const query = search
@@ -521,11 +604,11 @@ const OrdersTable = ({
 
     orders.forEach((order) => {
       const progress =
-        getOrderProgress(order);
+        getOrderProgress(order, productionOrders);
 
       totalQuantity += progress.total;
       completedQuantity +=
-        progress.completed;
+        progress.available;
       remainingQuantity +=
         progress.remaining;
     });
@@ -576,7 +659,7 @@ const OrdersTable = ({
       completedQuantity,
       remainingQuantity,
     };
-  }, [orders]);
+  }, [orders, productionOrders]);
 
   const toggleOrder = (id: string) => {
     setExpandedOrder(
@@ -597,6 +680,57 @@ const OrdersTable = ({
     Boolean(search) ||
     statusFilter !== "all" ||
     clientFilter !== "all";
+
+  const selectedOrders = filteredOrders.filter((order) =>
+    selectedOrderIds.includes(String(order?._id))
+  );
+
+  const allFilteredSelected =
+    filteredOrders.length > 0 &&
+    filteredOrders.every((order) =>
+      selectedOrderIds.includes(String(order?._id))
+    );
+
+  const toggleOrderSelection = (id: string) => {
+    setSelectedOrderIds((current) =>
+      current.includes(id)
+        ? current.filter((value) => value !== id)
+        : [...current, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedOrderIds((current) =>
+        current.filter(
+          (id) => !filteredOrders.some((order) => String(order?._id) === id)
+        )
+      );
+      return;
+    }
+
+    setSelectedOrderIds((current) =>
+      Array.from(
+        new Set([
+          ...current,
+          ...filteredOrders.map((order) => String(order?._id)),
+        ])
+      )
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedOrders.length || !onBulkDelete) return;
+
+    const confirmed = window.confirm(
+      `Delete ${selectedOrders.length} selected order${selectedOrders.length === 1 ? "" : "s"}? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    await onBulkDelete(selectedOrders);
+    setSelectedOrderIds([]);
+  };
 
   return (
     <section
@@ -953,20 +1087,36 @@ const OrdersTable = ({
                   All Statuses
                 </option>
 
-                <option value="draft">
-                  Draft
+                <option value="pending">
+                  Pending
                 </option>
 
-                <option value="started">
-                  Started
+                <option value="confirmed">
+                  Confirmed
                 </option>
 
-                <option value="in progress">
-                  In Progress
+                <option value="in production">
+                  In Production
                 </option>
 
-                <option value="completed">
-                  Completed
+                <option value="partially produced">
+                  Partially Produced
+                </option>
+
+                <option value="ready for dispatch">
+                  Ready for Dispatch
+                </option>
+
+                <option value="partially dispatched">
+                  Partially Dispatched
+                </option>
+
+                <option value="dispatched">
+                  Dispatched
+                </option>
+
+                <option value="delivered">
+                  Delivered
                 </option>
 
                 <option value="cancelled">
@@ -1045,8 +1195,42 @@ const OrdersTable = ({
         </div>
       )}
 
+      {selectedOrders.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-[#172B6B]/[0.035] px-5 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-[#172B6B] px-2.5 py-1 text-[10px] font-bold text-white">
+              {selectedOrders.length} selected
+            </span>
+            <span className="text-xs text-slate-500">
+              Select orders to perform a bulk action.
+            </span>
+          </div>
+
+          {onBulkDelete && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-600 transition hover:bg-red-100"
+            >
+              <FiTrash2 size={13} />
+              Delete Selected
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="overflow-x-auto">
-        <table className="min-w-[1050px] w-full">
+        <table className="min-w-[1303px] w-full table-fixed">
+          <colgroup>
+            <col style={{ width: "48px" }} />
+            <col style={{ width: "140px" }} />
+            <col style={{ width: "165px" }} />
+            <col style={{ width: "180px" }} />
+            <col style={{ width: "170px" }} />
+            <col style={{ width: "150px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "330px" }} />
+          </colgroup>
           <thead>
             <tr
               className="
@@ -1054,7 +1238,15 @@ const OrdersTable = ({
                 bg-slate-50/70
               "
             >
-              <th className="w-12 px-4 py-3" />
+              <th className="w-12 px-3 py-3 text-center">
+                <input
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleSelectAll}
+                  aria-label="Select all orders"
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[#172B6B]"
+                />
+              </th>
 
               <th
                 className="
@@ -1231,11 +1423,15 @@ const OrdersTable = ({
                     orderId;
 
                   const products =
-                    getProducts(order);
+                    getTrackingProducts(
+                      order,
+                      productionOrders
+                    );
 
                   const progress =
                     getOrderProgress(
-                      order
+                      order,
+                      productionOrders
                     );
 
                   const status =
@@ -1261,48 +1457,28 @@ const OrdersTable = ({
                         <div
                           className="
                             grid
-                            grid-cols-[48px_1.1fr_1.2fr_1.5fr_1.4fr_1.25fr_1fr_150px]
+                            grid-cols-[48px_140px_165px_180px_170px_150px_120px_330px]
                             items-center
-                            min-w-[1050px]
+                            min-w-[1303px]
                             transition
                             hover:bg-slate-50/60
                           "
                         >
-                          <div className="flex justify-center">
+                          <div className="flex items-center justify-center gap-2 px-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedOrderIds.includes(String(orderId))}
+                              onChange={() => toggleOrderSelection(String(orderId))}
+                              aria-label={`Select ${order?.orderNumber || "order"}`}
+                              className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-[#172B6B]"
+                            />
                             <button
                               type="button"
-                              title={
-                                expanded
-                                  ? "Collapse order"
-                                  : "View order tracking"
-                              }
-                              onClick={() =>
-                                toggleOrder(
-                                  orderId
-                                )
-                              }
-                              className="
-                                flex h-8 w-8
-                                items-center justify-center
-                                rounded-lg
-                                border border-slate-200
-                                bg-white
-                                text-slate-500
-                                transition
-                                hover:border-[#172B6B]/20
-                                hover:bg-[#172B6B]/5
-                                hover:text-[#172B6B]
-                              "
+                              title={expanded ? "Collapse order" : "View order tracking"}
+                              onClick={() => toggleOrder(orderId)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-[#172B6B]/20 hover:bg-[#172B6B]/5 hover:text-[#172B6B]"
                             >
-                              {expanded ? (
-                                <FiChevronUp
-                                  size={15}
-                                />
-                              ) : (
-                                <FiChevronDown
-                                  size={15}
-                                />
-                              )}
+                              {expanded ? <FiChevronUp size={15} /> : <FiChevronDown size={15} />}
                             </button>
                           </div>
 
@@ -1495,32 +1671,12 @@ const OrdersTable = ({
                           </div>
 
                           <div className="px-4 py-5">
-                            <div className="flex items-center justify-between">
-                              <span
-                                className="
-                                  text-xs font-bold
-                                  text-slate-700
-                                "
-                              >
-                                {
-                                  progress.percentage
-                                }
-                                %
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-bold text-slate-700">
+                                {progress.available} / {progress.total} available
                               </span>
-
-                              <span
-                                className="
-                                  text-[10px]
-                                  text-slate-400
-                                "
-                              >
-                                {
-                                  progress.completed
-                                }
-                                /
-                                {
-                                  progress.total
-                                }
+                              <span className="text-[10px] font-semibold text-amber-600">
+                                {progress.remaining} remaining
                               </span>
                             </div>
 
@@ -1545,18 +1701,17 @@ const OrdersTable = ({
                               />
                             </div>
 
-                            <p
-                              className="
-                                mt-1.5
-                                text-[9px]
-                                text-slate-400
-                              "
-                            >
-                              {
-                                progress.remaining
-                              }{" "}
-                              remaining
-                            </p>
+                            <div className="mt-2 grid grid-cols-3 gap-1 text-[9px]">
+                              <span className="rounded-md bg-slate-50 px-1.5 py-1 text-slate-500">
+                                Produced <strong className="text-slate-700">{progress.produced}</strong>
+                              </span>
+                              <span className="rounded-md bg-blue-50 px-1.5 py-1 text-blue-600">
+                                Stock <strong>{progress.existingStock}</strong>
+                              </span>
+                              <span className="rounded-md bg-emerald-50 px-1.5 py-1 text-emerald-600">
+                                Ready <strong>{progress.ready}</strong>
+                              </span>
+                            </div>
                           </div>
 
                           <div className="px-4 py-5">
@@ -1632,6 +1787,32 @@ const OrdersTable = ({
                               px-4 py-5
                             "
                           >
+                            {String(order?.status || "").toLowerCase() === "pending" && onConfirm && (
+                              <button
+                                type="button"
+                                title="Confirm order"
+                                onClick={() => onConfirm(order)}
+                                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-[10px] font-bold text-emerald-700 transition hover:bg-emerald-100 hover:text-emerald-800"
+                              >
+                                <FiCheck size={13} />
+                                <span>Confirm</span>
+                              </button>
+                            )}
+
+                            {String(order?.status || "").toLowerCase() === "confirmed" &&
+                              !order?.production &&
+                              onSendToProduction && (
+                                <button
+                                  type="button"
+                                  title="Send to Production"
+                                  onClick={() => onSendToProduction(order)}
+                                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-[10px] font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-800"
+                                >
+                                  <FiTruck size={13} />
+                                  <span>Send to Production</span>
+                                </button>
+                              )}
+
                             <button
                               type="button"
                               title="Edit order"
@@ -2453,7 +2634,8 @@ const OrdersTable = ({
                                 >
                                   <div className="relative">
                                     {getTimeline(
-                                      order
+                                      order,
+                                      productionOrders
                                     ).map(
                                       (
                                         event,
@@ -2639,7 +2821,7 @@ const OrdersTable = ({
                                     >
                                       <div>
                                         <p className="text-[9px] text-slate-400">
-                                          Completed
+                                          Available
                                         </p>
 
                                         <p
@@ -2651,7 +2833,7 @@ const OrdersTable = ({
                                           "
                                         >
                                           {
-                                            progress.completed
+                                            progress.available
                                           }
                                         </p>
                                       </div>
@@ -2698,6 +2880,44 @@ const OrdersTable = ({
                                     />
                                   </div>
 
+                                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Ordered</p>
+                                      <p className="mt-0.5 text-xs font-bold text-slate-700">{progress.total}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Produced</p>
+                                      <p className="mt-0.5 text-xs font-bold text-slate-700">{progress.produced}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-blue-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-blue-500">Existing Stock</p>
+                                      <p className="mt-0.5 text-xs font-bold text-blue-700">{progress.existingStock}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-amber-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-amber-600">Remaining</p>
+                                      <p className="mt-0.5 text-xs font-bold text-amber-700">{progress.remaining}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Ordered</p>
+                                      <p className="mt-0.5 text-xs font-bold text-slate-700">{progress.total}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Produced</p>
+                                      <p className="mt-0.5 text-xs font-bold text-slate-700">{progress.produced}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-blue-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-blue-500">Existing Stock</p>
+                                      <p className="mt-0.5 text-xs font-bold text-blue-700">{progress.existingStock}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-amber-50 px-2.5 py-2">
+                                      <p className="text-[8px] font-bold uppercase tracking-wider text-amber-600">Remaining</p>
+                                      <p className="mt-0.5 text-xs font-bold text-amber-700">{progress.remaining}</p>
+                                    </div>
+                                  </div>
+
                                   <div
                                     className="
                                       mt-2
@@ -2708,9 +2928,9 @@ const OrdersTable = ({
                                   >
                                     <span className="text-[9px] text-slate-400">
                                       {
-                                        progress.completed
+                                        progress.available
                                       }{" "}
-                                      completed
+                                      available
                                     </span>
 
                                     <span className="text-[9px] text-slate-400">
@@ -2841,7 +3061,7 @@ const OrdersTable = ({
             </span>
 
             <span className="text-emerald-500">
-              Done{" "}
+              Available{" "}
               <strong>
                 {summary.completedQuantity}
               </strong>

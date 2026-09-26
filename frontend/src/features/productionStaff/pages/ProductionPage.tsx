@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getBOMs } from "../../bom/services/bom.service";
 
@@ -8,7 +8,6 @@ import {
   getMaterialConsumption,
 } from "../../production/services/production.services";
 
-import api from "../../../services/api/axios";
 
 import ProductionProgressModal from "../../production/components/ProductionProgressModal";
 import ProductionCompletionModal from "../../production/components/ProductionCompletionModal";
@@ -61,18 +60,13 @@ const ProductionStaffProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
-      const [
-        productionData,
-        bomData,
-        accountCustomerResponse,
-      ] = await Promise.all([
+      const [productionData, bomData] = await Promise.all([
         getProductions(),
         getBOMs(),
-        api.get("/accounts/party"),
       ]);
 
       setProductions(
@@ -82,17 +76,6 @@ const ProductionStaffProductionPage = () => {
       setBoms(
         bomData || []
       );
-
-      /*
-       * Account customers are loaded only
-       * because existing production records
-       * may reference AccountParty customers.
-       *
-       * They are not used to create or edit
-       * production orders from this page.
-       */
-
-      void accountCustomerResponse;
 
       if (
         productionData?.length > 0
@@ -130,11 +113,11 @@ const ProductionStaffProductionPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+  }, [loadData]);
 
   /*
   |--------------------------------------------------------------------------
@@ -142,7 +125,7 @@ const ProductionStaffProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const loadConsumption = async (
+  const loadConsumption = useCallback(async (
     productionId: string
   ) => {
     try {
@@ -159,7 +142,7 @@ const ProductionStaffProductionPage = () => {
 
       setMaterialConsumption([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (
@@ -170,12 +153,8 @@ const ProductionStaffProductionPage = () => {
       return;
     }
 
-    loadConsumption(
-      selectedProduction._id
-    );
-  }, [
-    selectedProduction?._id,
-  ]);
+    void loadConsumption(selectedProduction._id);
+  }, [loadConsumption, selectedProduction?._id]);
 
   /*
   |--------------------------------------------------------------------------
@@ -236,7 +215,7 @@ const ProductionStaffProductionPage = () => {
       }
     };
 
-    calculate();
+    void calculate();
   }, [
     selectedProduction?._id,
     selectedItemIndex,
@@ -251,10 +230,9 @@ const ProductionStaffProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const refreshSelectedProduction =
-    async () => {
-      await loadData();
-    };
+  const refreshSelectedProduction = useCallback(async () => {
+    await loadData();
+  }, [loadData]);
 
   /*
   |--------------------------------------------------------------------------

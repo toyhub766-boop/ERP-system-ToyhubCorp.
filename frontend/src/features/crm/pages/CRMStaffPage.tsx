@@ -4,8 +4,6 @@ import {
   useState,
 } from "react";
 
-import CRMStaffLayout from "../components/CRMStaffLayout";
-
 import {
   getCustomers,
   deleteCustomer,
@@ -16,15 +14,16 @@ import {
 } from "../../accounts/services/accountParty.service";
 
 import {
-  getProductions,
-  createProduction,
-  updateProduction,
-  deleteProduction,
-} from "../../production/services/production.services";
+  getOrders,
+  updateOrder,
+  sendOrderToProduction,
+  deleteOrder,
+  deleteOrdersBulk,
+} from "../services/order.service";
 
 import {
-  getBOMs,
-} from "../../bom/services/bom.service";
+  getProductions,
+} from "../../production/services/production.services";
 
 import CRMHeader from "../components/CRMHeader";
 import CRMStats from "../components/CRMStats";
@@ -33,6 +32,7 @@ import CRMTabs from "../components/CRMTabs";
 import CustomerList from "../components/CustomerList";
 import CustomerProfile from "../components/CustomerProfile";
 import OrdersTable from "../components/OrdersTable";
+import OrderCreateModal from "../components/OrderCreateModal";
 import Catalogue from "../components/Catalogue";
 
 import CustomerModal from "../components/CustomerModal";
@@ -41,8 +41,6 @@ import AddNoteModal from "../components/AddNoteModal";
 import SalesPipeline from "../components/SalesPipeline";
 import CRMDueDates from "../components/CRMDueDates";
 
-import ProductionCreateModal from "../../production/components/ProductionCreateModal";
-import ProductionEditModal from "../../production/components/ProductionEditModal";
 
 import {
   FiAlertCircle,
@@ -54,6 +52,7 @@ import {
 } from "react-icons/fi";
 
 import type { Customer } from "../types/customer.types";
+import CRMStaffLayout from "../components/CRMStaffLayout";
 
 type CRMTab =
   | "customers"
@@ -118,11 +117,14 @@ const CRMStaffPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | PRODUCTION ORDERS
+  | PRODUCTION TRACKING
   |--------------------------------------------------------------------------
   */
 
   const [orders, setOrders] =
+    useState<any[]>([]);
+
+  const [crmOrders, setCrmOrders] =
     useState<any[]>([]);
 
   /*
@@ -130,9 +132,6 @@ const CRMStaffPage = () => {
   | PRODUCTION FORM DATA
   |--------------------------------------------------------------------------
   */
-
-  const [productionBOMs, setProductionBOMs] =
-    useState<any[]>([]);
 
   /*
   |--------------------------------------------------------------------------
@@ -148,15 +147,12 @@ const CRMStaffPage = () => {
 
   /*
   |--------------------------------------------------------------------------
-  | PRODUCTION ORDER MODALS
+  | CRM ORDER MODAL
   |--------------------------------------------------------------------------
   */
 
   const [showOrderModal, setShowOrderModal] =
     useState(false);
-
-  const [editingOrder, setEditingOrder] =
-    useState<any>(null);
 
   /*
   |--------------------------------------------------------------------------
@@ -314,34 +310,24 @@ const CRMStaffPage = () => {
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD PRODUCTION FORM DATA
-  |--------------------------------------------------------------------------
-  |
-  | Only BOM data is required by the CRM
-  | production-order modal.
-  |
-  */
-
-  const loadProductionFormData =
+  const loadCRMOrders =
     async () => {
       try {
-        const bomData =
-          await getBOMs();
+        const data =
+          await getOrders();
 
-        setProductionBOMs(
-          Array.isArray(bomData)
-            ? bomData
+        setCrmOrders(
+          Array.isArray(data)
+            ? data
             : []
         );
       } catch (error) {
         console.error(
-          "Failed to load production form data:",
+          "Failed to load CRM orders:",
           error
         );
 
-        setProductionBOMs([]);
+        setCrmOrders([]);
       }
     };
 
@@ -355,7 +341,7 @@ const CRMStaffPage = () => {
     loadCustomers();
     loadAccountParties();
     loadProductionOrders();
-    loadProductionFormData();
+    loadCRMOrders();
   }, []);
 
   /*
@@ -469,22 +455,20 @@ const CRMStaffPage = () => {
           selectedCustomer._id
         );
 
-      return orders.filter(
+      return crmOrders.filter(
         (order: any) => {
-          const clientId =
-            order?.client?._id ||
-            order?.client;
+          const customerId =
+            order?.customer?._id ||
+            order?.customer;
 
           return (
-            clientId &&
-            String(
-              clientId
-            ) === selectedId
+            customerId &&
+            String(customerId) === selectedId
           );
         }
       );
     }, [
-      orders,
+      crmOrders,
       selectedCustomer?._id,
     ]);
 
@@ -615,122 +599,119 @@ const CRMStaffPage = () => {
   |
   */
 
-  const handleCreateOrder =
-    () => {
-      if (!selectedCustomer?._id) {
-        window.alert(
-          "Open a customer profile before creating an order."
-        );
+  const handleCreateOrder = () => {
+    if (!selectedCustomer?._id) {
+      window.alert(
+        "Open a customer profile before creating an order."
+      );
+      return;
+    }
 
-        return;
-      }
+    if (selectedCustomer.source !== "ACCOUNTS") {
+      window.alert(
+        "Convert this CRM lead into an Account customer before creating an order."
+      );
+      return;
+    }
 
-      if (
-        selectedCustomer.source !==
-        "ACCOUNTS"
-      ) {
-        window.alert(
-          "Convert this CRM lead into an Account customer before creating a production order."
-        );
+    setShowOrderModal(true);
+  };
 
-        return;
-      }
+  const handleSendOrderToProduction = async (order: any) => {
+    if (!order?._id) return;
 
-      setEditingOrder(null);
-      setShowOrderModal(true);
-    };
+    if (order?.production) {
+      window.alert(
+        `${order?.orderNumber || "This order"} has already been sent to Production.`
+      );
+      return;
+    }
 
-  /*
-  |--------------------------------------------------------------------------
-  | CREATE PRODUCTION ORDER
-  |--------------------------------------------------------------------------
-  */
+    if (order?.status !== "Confirmed") {
+      window.alert(
+        "Only confirmed CRM orders can be sent to Production."
+      );
+      return;
+    }
 
-  const handleCreateProductionOrder =
-    async (
-      data: any
-    ) => {
-      if (!selectedCustomer?._id) {
-        throw new Error(
-          "Customer context is missing."
-        );
-      }
+    try {
+      await sendOrderToProduction(order._id);
 
-      /*
-       * Production orders can only belong to
-       * real AccountParty customers.
-       *
-       * CRM leads/customers must first be
-       * converted into an Account Party.
-       */
-
-      if (
-        selectedCustomer.source !==
-        "ACCOUNTS"
-      ) {
-        window.alert(
-          "This CRM record must be converted to an Account customer before a production order can be created."
-        );
-
-        throw new Error(
-          "Production order requires an AccountParty customer."
-        );
-      }
-
-      try {
-        await createProduction({
-          ...data,
-
-          client:
-            selectedCustomer._id,
-
-          clientModel:
-            "AccountParty",
-        });
-
-        await loadProductionOrders();
-
-        setShowOrderModal(false);
-        setEditingOrder(null);
-      } catch (error: any) {
-        console.error(
-          "Failed to create production order:",
-          error
-        );
-
-        window.alert(
-          error?.response?.data?.message ||
-            "Failed to create production order."
-        );
-
-        throw error;
-      }
-    };
-
-  /*
-  |--------------------------------------------------------------------------
-  | EDIT PRODUCTION ORDER
-  |--------------------------------------------------------------------------
-  */
-
-  const handleEditOrder =
-    (order: any) => {
-      setEditingOrder(
-        order
+      await Promise.all([
+        loadCRMOrders(),
+        loadProductionOrders(),
+      ]);
+    } catch (error: any) {
+      console.error(
+        "Failed to send CRM order to Production:",
+        error
       );
 
-      setShowOrderModal(
-        true
+      window.alert(
+        error?.response?.data?.message ||
+          "Failed to send order to Production."
       );
-    };
+    }
+  };
 
-  /*
-  |--------------------------------------------------------------------------
-  | DELETE PRODUCTION ORDER
-  |--------------------------------------------------------------------------
-  */
+  const handleConfirmCRMOrder = async (order: any) => {
+    if (!order?._id) return;
 
-  const handleDeleteOrder =
+    if (order?.status !== "Pending") {
+      window.alert(
+        "Only pending CRM orders can be confirmed."
+      );
+      return;
+    }
+
+    try {
+      await updateOrder(order._id, {
+        status: "Confirmed",
+      });
+
+      await loadCRMOrders();
+    } catch (error: any) {
+      console.error(
+        "Failed to confirm CRM order:",
+        error
+      );
+
+      window.alert(
+        error?.response?.data?.message ||
+          "Failed to confirm order."
+      );
+    }
+  };
+
+  const handleBulkDeleteCRMOrders = async (selectedOrders: any[]) => {
+    const ids = selectedOrders
+      .map((order: any) => order?._id)
+      .filter(Boolean);
+
+    if (!ids.length) return;
+
+    try {
+      await deleteOrdersBulk(ids);
+      await Promise.all([
+        loadCRMOrders(),
+        loadProductionOrders(),
+      ]);
+    } catch (error: any) {
+      console.error(
+        "Failed to bulk delete CRM orders:",
+        error
+      );
+
+      window.alert(
+        error?.response?.data?.message ||
+          "Failed to delete selected orders."
+      );
+
+      throw error;
+    }
+  };
+
+  const handleDeleteCRMOrder =
     async (
       order: any
     ) => {
@@ -740,7 +721,7 @@ const CRMStaffPage = () => {
 
       const orderNumber =
         order.orderNumber ||
-        "this production order";
+        "this order";
 
       if (
         !window.confirm(
@@ -751,69 +732,23 @@ const CRMStaffPage = () => {
       }
 
       try {
-        await deleteProduction(
+        await deleteOrder(
           order._id
         );
 
-        await loadProductionOrders();
-      } catch (error) {
+        await loadCRMOrders();
+      } catch (error: any) {
         console.error(
-          "Failed to delete production order:",
+          "Failed to delete CRM order:",
           error
         );
 
         window.alert(
-          "Failed to delete production order."
+          error?.response?.data?.message ||
+            "Failed to delete order."
         );
       }
     };
-
-  /*
-  |--------------------------------------------------------------------------
-  | RAW PRODUCTS
-  |--------------------------------------------------------------------------
-  */
-
-  const rawProducts =
-    useMemo(() => {
-      const products =
-        productionBOMs.flatMap(
-          (bom: any) =>
-            (
-              bom.materials ||
-              []
-            )
-              .map(
-                (material: any) =>
-                  material.product
-              )
-              .filter(Boolean)
-        );
-
-      const unique =
-        new Map();
-
-      products.forEach(
-        (product: any) => {
-          if (
-            product?._id
-          ) {
-            unique.set(
-              String(
-                product._id
-              ),
-              product
-            );
-          }
-        }
-      );
-
-      return Array.from(
-        unique.values()
-      );
-    }, [
-      productionBOMs,
-    ]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1374,17 +1309,33 @@ const CRMStaffPage = () => {
 
             {activeTab ===
               "orders" && (
-              <OrdersTable
-                orders={
-                  orders
-                }
-                onEdit={
-                  handleEditOrder
-                }
-                onDelete={
-                  handleDeleteOrder
-                }
-              />
+              <div className="space-y-5">
+                <div className="flex justify-end">
+                  <OrderCreateModal
+                    onCreated={
+                      loadCRMOrders
+                    }
+                  />
+                </div>
+
+                <OrdersTable
+                  orders={crmOrders}
+                  productionOrders={orders}
+                  onConfirm={handleConfirmCRMOrder}
+                  onSendToProduction={
+                    handleSendOrderToProduction
+                  }
+                  onEdit={() => {
+                    window.alert(
+                      "CRM order editing is handled through order status and notes."
+                    );
+                  }}
+                  onDelete={handleDeleteCRMOrder}
+                  onBulkDelete={
+                    handleBulkDeleteCRMOrders
+                  }
+                />
+              </div>
             )}
           </div>
         </section>
@@ -1420,94 +1371,16 @@ const CRMStaffPage = () => {
           }}
         />
 
-        {/* CREATE ORDER */}
-
-        <ProductionCreateModal
-          open={
-            showOrderModal &&
-            !editingOrder
-          }
-          customer={
-            selectedCustomer
-          }
-          boms={
-            productionBOMs
-          }
-          rawProducts={
-            rawProducts
-          }
+        {/* CREATE CRM ORDER FROM CUSTOMER PROFILE */}
+        <OrderCreateModal
+          open={showOrderModal}
+          initialCustomerId={selectedCustomer?.source === "ACCOUNTS" ? selectedCustomer?._id : undefined}
           onClose={() => {
-            setShowOrderModal(
-              false
-            );
-
-            setEditingOrder(
-              null
-            );
+            setShowOrderModal(false);
           }}
-          onCreate={
-            handleCreateProductionOrder
-          }
-        />
-
-        {/* EDIT ORDER */}
-
-        <ProductionEditModal
-          open={
-            showOrderModal &&
-            !!editingOrder
-          }
-          production={
-            editingOrder
-          }
-          customer={
-            editingOrder?.client
-          }
-          boms={
-            productionBOMs
-          }
-          rawProducts={
-            rawProducts
-          }
-          onClose={() => {
-            setShowOrderModal(
-              false
-            );
-
-            setEditingOrder(
-              null
-            );
-          }}
-          onSave={async (
-            data
-          ) => {
-            if (
-              !editingOrder?._id
-            ) {
-              return;
-            }
-
-            /*
-             * IMPORTANT:
-             * Do not send a new customer.
-             * Editing does not transfer
-             * ownership of the order.
-             */
-
-            await updateProduction(
-              editingOrder._id,
-              data
-            );
-
-            await loadProductionOrders();
-
-            setShowOrderModal(
-              false
-            );
-
-            setEditingOrder(
-              null
-            );
+          onCreated={async () => {
+            await loadCRMOrders();
+            setShowOrderModal(false);
           }}
         />
 

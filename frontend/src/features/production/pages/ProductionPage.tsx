@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -10,8 +11,10 @@ import { getBOMs } from "../../bom/services/bom.service";
 
 import {
   getProductions,
+  getCRMOrders,
   calculateProduction,
   getMaterialConsumption,
+  updateProductionItem,
 } from "../services/production.services";
 
 import ProductionProgressModal from "../components/ProductionProgressModal";
@@ -26,6 +29,8 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiChevronRight,
+  FiChevronDown,
+  FiChevronUp,
   FiClock,
   FiImage,
   FiInfo,
@@ -36,8 +41,16 @@ import {
   FiX,
 } from "react-icons/fi";
 
+const PRODUCTION_CHECKLIST = [
+  "Assembly",
+  "Packaging",
+];
+
 const ProductionPage = () => {
   const [productions, setProductions] =
+    useState<any[]>([]);
+
+  const [crmOrders, setCrmOrders] =
     useState<any[]>([]);
 
   const [boms, setBoms] =
@@ -72,11 +85,28 @@ const ProductionPage = () => {
   const [calculatorResult, setCalculatorResult] =
     useState<any>(null);
 
+  const [actualQuantityDraft, setActualQuantityDraft] = useState(0);
+  const [existingStockDraft, setExistingStockDraft] = useState(0);
+  const [readyQuantityDraft, setReadyQuantityDraft] = useState(0);
+
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    overview: false,
+    fulfilment: false,
+    productInformation: false,
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections((current) => ({ ...current, [section]: !current[section] }));
+  };
+
   const [, setMaterialConsumption] =
     useState<any[]>([]);
 
   const [previewImage, setPreviewImage] =
     useState<string | null>(null);
+
+  const [savingItem, setSavingItem] =
+    useState(false);
 
   /*
   |--------------------------------------------------------------------------
@@ -84,16 +114,18 @@ const ProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
       const [
         productionData,
         bomData,
+        crmOrderData,
       ] = await Promise.all([
         getProductions(),
         getBOMs(),
+        getCRMOrders(),
       ]);
 
       const safeProductions =
@@ -106,12 +138,21 @@ const ProductionPage = () => {
           ? bomData
           : [];
 
+      const safeCRMOrders =
+        Array.isArray(crmOrderData)
+          ? crmOrderData
+          : [];
+
       setProductions(
         safeProductions
       );
 
       setBoms(
         safeBOMs
+      );
+
+      setCrmOrders(
+        safeCRMOrders
       );
 
       if (
@@ -147,11 +188,11 @@ const ProductionPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    void loadData();
+  }, [loadData]);
 
   /*
   |--------------------------------------------------------------------------
@@ -159,7 +200,7 @@ const ProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const loadConsumption = async (
+  const loadConsumption = useCallback(async (
     productionId: string
   ) => {
     try {
@@ -178,7 +219,7 @@ const ProductionPage = () => {
 
       setMaterialConsumption([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (
@@ -189,12 +230,8 @@ const ProductionPage = () => {
       return;
     }
 
-    loadConsumption(
-      selectedProduction._id
-    );
-  }, [
-    selectedProduction?._id,
-  ]);
+    void loadConsumption(selectedProduction._id);
+  }, [loadConsumption, selectedProduction?._id]);
 
   /*
   |--------------------------------------------------------------------------
@@ -206,6 +243,19 @@ const ProductionPage = () => {
     selectedProduction?.items?.[
       selectedItemIndex
     ] || null;
+
+  useEffect(() => {
+    if (!selectedItem) {
+      setActualQuantityDraft(0);
+      setExistingStockDraft(0);
+      setReadyQuantityDraft(0);
+      return;
+    }
+
+    setActualQuantityDraft(Math.max(0, Number(selectedItem.actualQuantity) || 0));
+    setExistingStockDraft(Math.max(0, Number(selectedItem.existingStockQuantity) || 0));
+    setReadyQuantityDraft(Math.max(0, Number(selectedItem.readyForDispatchQuantity) || 0));
+  }, [selectedItem?._id]);
 
   /*
   |--------------------------------------------------------------------------
@@ -222,6 +272,7 @@ const ProductionPage = () => {
   ) => {
     return (
       item?.image ||
+      item?.catalogueProduct?.image ||
       item?.product?.image ||
       ""
     );
@@ -232,6 +283,7 @@ const ProductionPage = () => {
     index = 0
   ) => {
     return (
+      item?.catalogueProduct?.name ||
       item?.product?.name ||
       item?.productName ||
       `Product ${index + 1}`
@@ -243,6 +295,7 @@ const ProductionPage = () => {
   ) => {
     return (
       item?.marka ||
+      item?.catalogueProduct?.marka ||
       item?.product?.marka ||
       item?.product?.brand ||
       ""
@@ -253,6 +306,7 @@ const ProductionPage = () => {
     item: any
   ) => {
     return (
+      item?.catalogueProduct?.modelNumber ||
       item?.product?.sku ||
       item?.sku ||
       ""
@@ -264,6 +318,7 @@ const ProductionPage = () => {
   ) => {
     const category =
       item?.category ||
+      item?.catalogueProduct?.category ||
       item?.product?.category;
 
     if (
@@ -293,6 +348,7 @@ const ProductionPage = () => {
   useEffect(() => {
     const calculate = async () => {
       if (
+        isTradingItem(selectedItem) ||
         !selectedItem?.bom ||
         !selectedItem?.quantity
       ) {
@@ -332,7 +388,7 @@ const ProductionPage = () => {
       }
     };
 
-    calculate();
+    void calculate();
   }, [
     selectedProduction?._id,
     selectedItemIndex,
@@ -347,10 +403,9 @@ const ProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const refreshSelectedProduction =
-    async () => {
-      await loadData();
-    };
+  const refreshSelectedProduction = useCallback(async () => {
+    await loadData();
+  }, [loadData]);
 
   /*
   |--------------------------------------------------------------------------
@@ -523,6 +578,18 @@ const ProductionPage = () => {
             production.status ===
             "Draft"
         ).length,
+
+      ready:
+        productions.filter((production) =>
+          production.items?.some(
+            (item: any) =>
+              Boolean(item?.readyForDispatch) ||
+              Math.max(
+                0,
+                Number(item?.readyForDispatchQuantity) || 0
+              ) > 0
+          )
+        ).length,
     }),
     [productions]
   );
@@ -562,45 +629,328 @@ const ProductionPage = () => {
   |--------------------------------------------------------------------------
   */
 
-  const getItemProgress = (
-    item: any
-  ) => {
-    const quantity =
-      Number(
-        item?.quantity
-      ) || 0;
+  const getOrderedQuantity = (item: any) =>
+    Math.max(0, Number(item?.quantity) || 0);
 
-    const actual =
-      Number(
-        item?.actualQuantity
-      ) || 0;
+  const getActualQuantity = (item: any) =>
+    Math.max(0, Number(item?.actualQuantity) || 0);
 
-    if (
-      item?.completed
-    ) {
+  const getExistingStockQuantity = (item: any) =>
+    Math.max(
+      0,
+      Number(item?.existingStockQuantity) || 0
+    );
+
+  const getTotalAvailableQuantity = (item: any) => {
+    return (
+      getActualQuantity(item) +
+      getExistingStockQuantity(item)
+    );
+  };
+
+  const getFulfilledQuantity = (item: any) => {
+    return Math.min(
+      getOrderedQuantity(item),
+      getTotalAvailableQuantity(item)
+    );
+  };
+
+  const getRemainingQuantity = (item: any) => {
+    return Math.max(
+      0,
+      getOrderedQuantity(item) -
+        getFulfilledQuantity(item)
+    );
+  };
+
+  const getReadyForDispatchQuantity = (item: any) =>
+    Math.max(
+      0,
+      Number(item?.readyForDispatchQuantity) || 0
+    );
+
+  const getItemProgress = (item: any) => {
+    const quantity = getOrderedQuantity(item);
+    const fulfilled = getFulfilledQuantity(item);
+
+    if (item?.completed && quantity > 0) {
       return 100;
     }
 
-    if (
-      quantity <= 0
-    ) {
+    if (quantity <= 0) {
       return 0;
     }
 
     return Math.min(
       100,
-      Math.round(
-        (actual /
-          quantity) *
-          100
-      )
+      Math.round((fulfilled / quantity) * 100)
     );
   };
 
-  const selectedProgress =
-    getItemProgress(
-      selectedItem
+  const getProductType = (item: any) => {
+    const type =
+      item?.catalogueProduct?.productType;
+
+    if (type === "TRADING") {
+      return "TRADING";
+    }
+
+    if (type === "MANUFACTURING") {
+      return "MANUFACTURING";
+    }
+
+    return item?.bom ? "MANUFACTURING" : "TRADING";
+  };
+
+  const isTradingItem = (item: any) =>
+    getProductType(item) === "TRADING";
+
+  const getBomName = (item: any) => {
+    if (!item?.bom) {
+      return isTradingItem(item)
+        ? "No BOM — Trading Product"
+        : "No BOM assigned";
+    }
+
+    return (
+      item.bom?.name ||
+      item.bom?.finishedProduct?.name ||
+      item.bom?.finishedProduct?.modelNumber ||
+      "Assigned BOM"
     );
+  };
+
+  const getBomMaterials = (item: any) => {
+    if (!item?.bom) {
+      return [];
+    }
+
+    return Array.isArray(item.bom?.materials)
+      ? item.bom.materials
+      : [];
+  };
+
+  /*
+   * CRM ORDER RESOLUTION
+   *
+   * Do not rely only on production.crmOrder being populated.
+   * Production records are linked in both directions:
+   *
+   *   Production.crmOrder -> Order._id
+   *   Order.production   -> Production._id
+   *
+   * The Production page therefore resolves the complete CRM Order
+   * from the separately fetched /orders response as a fallback.
+   */
+  const getCrmOrder = (production: any) => {
+    if (!production) {
+      return null;
+    }
+
+    const linkedCrmOrder =
+      production.crmOrder;
+
+    // Best case: backend already populated crmOrder.
+    if (
+      linkedCrmOrder &&
+      typeof linkedCrmOrder === "object"
+    ) {
+      return linkedCrmOrder;
+    }
+
+    const crmOrderId =
+      typeof linkedCrmOrder === "string"
+        ? linkedCrmOrder
+        : linkedCrmOrder?._id;
+
+    // Match through Production.crmOrder -> Order._id.
+    if (crmOrderId) {
+      const byId = crmOrders.find(
+        (order: any) =>
+          String(order?._id) ===
+          String(crmOrderId)
+      );
+
+      if (byId) {
+        return byId;
+      }
+    }
+
+    // Match through Order.production -> Production._id.
+    const byProduction = crmOrders.find(
+      (order: any) => {
+        const productionId =
+          typeof order?.production === "object"
+            ? order.production?._id
+            : order?.production;
+
+        return (
+          productionId &&
+          String(productionId) ===
+            String(production._id)
+        );
+      }
+    );
+
+    return byProduction || null;
+  };
+
+  const getCrmOrderNumber = (production: any) => {
+    const order = getCrmOrder(production);
+
+    return (
+      order?.orderNumber ||
+      production?.orderNumber ||
+      "-"
+    );
+  };
+
+  const getCrmOrderValue = (production: any) => {
+    const value = Number(
+      getCrmOrder(production)?.totalAmount
+    );
+
+    return Number.isFinite(value) ? value : null;
+  };
+
+  const formatCurrency = (value: number | null) => {
+    if (value === null) {
+      return "-";
+    }
+
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const handleSaveItemQuantities = async (
+    item: any,
+    patch: {
+      actualQuantity?: number;
+      existingStockQuantity?: number;
+      readyForDispatchQuantity?: number;
+      readyForDispatch?: boolean;
+    }
+  ) => {
+    if (!selectedProduction?._id || !item?._id) {
+      return;
+    }
+
+    try {
+      setSavingItem(true);
+
+      await updateProductionItem(
+        selectedProduction._id,
+        item._id,
+        patch
+      );
+
+      await refreshSelectedProduction();
+    } catch (error: any) {
+      console.error(error);
+
+      alert(
+        error?.response?.data?.message ||
+          "Failed to update production item."
+      );
+    } finally {
+      setSavingItem(false);
+    }
+  };
+
+  const handleChecklistToggle = async (
+    item: any,
+    step: string
+  ) => {
+    if (
+      !selectedProduction?._id ||
+      !item?._id
+    ) {
+      return;
+    }
+
+    const currentPreparing =
+      Array.isArray(
+        item?.checklist?.preparing
+      )
+        ? item.checklist.preparing
+        : [];
+
+    const completed =
+      currentPreparing.includes(step);
+
+    const nextPreparing = completed
+      ? currentPreparing.filter(
+          (value: string) =>
+            value !== step
+        )
+      : [
+          ...currentPreparing,
+          step,
+        ];
+
+    try {
+      setSavingItem(true);
+
+      await updateProductionItem(
+        selectedProduction._id,
+        item._id,
+        {
+          checklist: {
+            preparing:
+              nextPreparing,
+            leaving:
+              Array.isArray(
+                item?.checklist?.leaving
+              )
+                ? item.checklist.leaving
+                : [],
+            reason:
+              item?.checklist?.reason ||
+              "",
+          },
+        }
+      );
+
+      await refreshSelectedProduction();
+    } catch (error: any) {
+      console.error(error);
+
+      alert(
+        error?.response?.data?.message ||
+          "Failed to update checklist."
+      );
+    } finally {
+      setSavingItem(false);
+    }
+  };
+
+
+  const selectedOrdered =
+    getOrderedQuantity(selectedItem);
+
+  const selectedActual =
+    getActualQuantity(selectedItem);
+
+  const selectedExistingStock =
+    getExistingStockQuantity(selectedItem);
+
+  const selectedAvailable =
+    getTotalAvailableQuantity(selectedItem);
+
+  const selectedFulfilled =
+    getFulfilledQuantity(selectedItem);
+
+  const selectedRemaining =
+    getRemainingQuantity(selectedItem);
+
+  const selectedReady =
+    getReadyForDispatchQuantity(selectedItem);
+
+  const selectedBomMaterials =
+    getBomMaterials(selectedItem);
 
   /*
   |--------------------------------------------------------------------------
@@ -683,78 +1033,34 @@ const ProductionPage = () => {
 
         </div>
 
-        {/* STATS */}
+        {/* PRODUCTION OVERVIEW — COLLAPSED BY DEFAULT */}
 
-        <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Total Orders
-              </p>
-
-              <FiLayers
-                size={16}
-                className="text-slate-400"
-              />
+        <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => toggleSection("overview")}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
+            aria-expanded={expandedSections.overview}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#17357A]"><FiLayers size={15} /></div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900">Production Overview</p>
+                <p className="truncate text-[10px] text-slate-400">{stats.total} orders · {stats.active} active · {stats.completed} completed · {stats.ready} ready</p>
+              </div>
             </div>
+            {expandedSections.overview ? <FiChevronUp size={16} className="shrink-0 text-slate-400" /> : <FiChevronDown size={16} className="shrink-0 text-slate-400" />}
+          </button>
 
-            <p className="mt-2 text-3xl font-bold text-slate-900">
-              {stats.total}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Active
-              </p>
-
-              <FiClock
-                size={16}
-                className="text-blue-600"
-              />
+          {expandedSections.overview && (
+            <div className="grid grid-cols-2 gap-3 border-t border-slate-100 p-4 xl:grid-cols-5">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-wide text-slate-400">Total Orders</p><FiLayers size={16} className="text-slate-400" /></div><p className="mt-2 text-3xl font-bold text-slate-900">{stats.total}</p></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-wide text-slate-400">Active</p><FiClock size={16} className="text-blue-600" /></div><p className="mt-2 text-3xl font-bold text-blue-700">{stats.active}</p></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-wide text-slate-400">Completed</p><FiCheckCircle size={16} className="text-emerald-600" /></div><p className="mt-2 text-3xl font-bold text-emerald-600">{stats.completed}</p></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-wide text-slate-400">Draft Orders</p><FiClock size={16} className="text-orange-500" /></div><p className="mt-2 text-3xl font-bold text-orange-600">{stats.drafts}</p></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-medium uppercase tracking-wide text-slate-400">Ready</p><FiTruck size={16} className="text-emerald-600" /></div><p className="mt-2 text-3xl font-bold text-emerald-600">{stats.ready}</p></div>
             </div>
-
-            <p className="mt-2 text-3xl font-bold text-blue-700">
-              {stats.active}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Completed
-              </p>
-
-              <FiCheckCircle
-                size={16}
-                className="text-emerald-600"
-              />
-            </div>
-
-            <p className="mt-2 text-3xl font-bold text-emerald-600">
-              {stats.completed}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Draft Orders
-              </p>
-
-              <FiClock
-                size={16}
-                className="text-orange-500"
-              />
-            </div>
-
-            <p className="mt-2 text-3xl font-bold text-orange-600">
-              {stats.drafts}
-            </p>
-          </div>
-
+          )}
         </div>
 
         {/* ORDERS */}
@@ -1114,6 +1420,82 @@ const ProductionPage = () => {
 
                   </div>
 
+                  {/* SOURCE CRM ORDER */}
+
+                  <div className="border-b border-slate-100 p-5">
+                    <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-500">
+                            Source CRM Order
+                          </p>
+
+                          <p className="mt-1 text-lg font-bold text-slate-900">
+                            {getCrmOrderNumber(
+                              selectedProduction
+                            )}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-500">
+                            Complete originating CRM order loaded from CRM.
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-white px-3 py-2 text-right shadow-sm">
+                          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+                            Order Value
+                          </p>
+
+                          <p className="mt-1 text-sm font-bold text-slate-900">
+                            {formatCurrency(
+                              getCrmOrderValue(
+                                selectedProduction
+                              )
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+                        <span className="rounded-full border border-blue-100 bg-white px-2.5 py-1 font-semibold text-slate-600">
+                          {selectedProduction.items?.length || 0} items
+                        </span>
+
+                        {getCrmOrder(
+                          selectedProduction
+                        )?.status && (
+                          <span className="rounded-full border border-blue-100 bg-white px-2.5 py-1 font-semibold text-slate-600">
+                            CRM:{" "}
+                            {
+                              getCrmOrder(
+                                selectedProduction
+                              ).status
+                            }
+                          </span>
+                        )}
+
+                        {getCrmOrder(
+                          selectedProduction
+                        )?.customer && (
+                          <span className="rounded-full border border-blue-100 bg-white px-2.5 py-1 font-semibold text-slate-600">
+                            Customer:{" "}
+                            {typeof getCrmOrder(
+                              selectedProduction
+                            ).customer === "object"
+                              ? getCrmOrder(
+                                  selectedProduction
+                                ).customer?.name ||
+                                getCrmOrder(
+                                  selectedProduction
+                                ).customer?.companyName ||
+                                "-"
+                              : "-"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* ORDER PRODUCTS */}
 
                   <div className="p-5">
@@ -1236,12 +1618,16 @@ const ProductionPage = () => {
 
                                   </div>
 
-                                  <span className="shrink-0 text-xs font-semibold text-slate-600">
-                                    Qty{" "}
-                                    {
-                                      item.quantity
-                                    }
-                                  </span>
+                                  <div className="shrink-0 text-right">
+                                    <p className="text-xs font-semibold text-slate-700">
+                                      {getFulfilledQuantity(item)} /{" "}
+                                      {getOrderedQuantity(item)}
+                                    </p>
+
+                                    <p className="text-[9px] text-slate-400">
+                                      fulfilled
+                                    </p>
+                                  </div>
 
                                 </div>
 
@@ -1336,835 +1722,320 @@ const ProductionPage = () => {
 
             </div>
 
-            {/* PRODUCT DETAILS */}
+            {/* WORK AREA — WORKING SCREEN FIRST */}
 
             <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
               {!selectedItem ? (
                 <div className="flex min-h-[550px] items-center justify-center p-6 text-sm text-slate-500">
                   Select a product.
                 </div>
               ) : (
-                <>
-
-                  {/* PRODUCT HERO */}
-
-                  <div className="border-b border-slate-100">
-
-                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-
-                      {getItemImage(
-                        selectedItem
-                      ) ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPreviewImage(
-                              getItemImage(
-                                selectedItem
-                              )
-                            )
-                          }
-                          className="group relative h-full w-full"
-                        >
-
-                          <img
-                            src={getItemImage(
-                              selectedItem
-                            )}
-                            alt={getItemName(
-                              selectedItem
-                            )}
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
-                          />
-
-                          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent p-4 pt-12">
-
-                            <div className="text-left text-white">
-
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                                Selected Product
-                              </p>
-
-                              <p className="mt-1 text-lg font-bold">
-                                {
-                                  getItemName(
-                                    selectedItem
-                                  )
-                                }
-                              </p>
-
-                            </div>
-
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-sm backdrop-blur">
-                              <FiMaximize2
-                                size={16}
-                              />
-                            </span>
-
-                          </div>
-
-                        </button>
-                      ) : (
-                        <div className="flex h-full flex-col items-center justify-center text-slate-300">
-
-                          <FiImage
-                            size={42}
-                          />
-
-                          <p className="mt-3 text-xs font-medium text-slate-400">
-                            No product photo available
-                          </p>
-
-                        </div>
-                      )}
-
-                    </div>
-
-                    {/* PRODUCT INFO */}
-
-                    <div className="p-5">
-
-                      <div className="flex items-start justify-between gap-4">
-
-                        <div className="min-w-0">
-
-                          <p className="text-xs font-semibold uppercase tracking-wide text-[#17357A]">
-                            Product
-                          </p>
-
-                          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
-                            {
-                              getItemName(
-                                selectedItem
-                              )
-                            }
-                          </h2>
-
-                          {getItemMarka(
-                            selectedItem
-                          ) && (
-                            <p className="mt-1 text-sm text-slate-500">
-                              Marka:{" "}
-                              <span className="font-medium text-slate-700">
-                                {
-                                  getItemMarka(
-                                    selectedItem
-                                  )
-                                }
-                              </span>
-                            </p>
-                          )}
-
-                        </div>
-
-                        <div className="shrink-0 rounded-xl bg-blue-50 px-3 py-2 text-right">
-
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-500">
-                            Quantity
-                          </p>
-
-                          <p className="text-xl font-bold text-[#17357A]">
-                            {
-                              selectedItem.quantity
-                            }
-                          </p>
-
-                        </div>
-
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-
-                        {getItemSku(
-                          selectedItem
-                        ) && (
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-
-                            <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                              SKU
-                            </p>
-
-                            <p className="mt-1 truncate text-xs font-semibold text-slate-700">
-                              {
-                                getItemSku(
-                                  selectedItem
-                                )
-                              }
-                            </p>
-
-                          </div>
+                <div className="flex flex-col">
+                  <div className="border-b border-slate-100 bg-white p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                        {getItemImage(selectedItem) ? (
+                          <img src={getItemImage(selectedItem)} alt={getItemName(selectedItem)} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-300"><FiImage size={18} /></div>
                         )}
-
-                        {getItemCategory(
-                          selectedItem
-                        ) && (
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-
-                            <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                              Category
-                            </p>
-
-                            <p className="mt-1 truncate text-xs font-semibold text-slate-700">
-                              {
-                                getItemCategory(
-                                  selectedItem
-                                )
-                              }
-                            </p>
-
-                          </div>
-                        )}
-
                       </div>
-
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#17357A]">Working on</p>
+                        <p className="truncate text-base font-bold text-slate-900">{getItemName(selectedItem)}</p>
+                        <p className="truncate text-[10px] text-slate-400">
+                          {getItemMarka(selectedItem) ? `Marka: ${getItemMarka(selectedItem)}` : getItemSku(selectedItem) ? `Model: ${getItemSku(selectedItem)}` : "Production item"}
+                        </p>
+                      </div>
+                      <div className="shrink-0 rounded-xl bg-blue-50 px-3 py-2 text-right">
+                        <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-500">Ordered</p>
+                        <p className="text-lg font-bold text-[#17357A]">{selectedOrdered}</p>
+                      </div>
                     </div>
-
                   </div>
 
-                  {/* PROGRESS */}
-
-                  <div className="border-b border-slate-100 p-5">
-
-                    <div className="flex items-center justify-between">
-
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                          Production Progress
-                        </p>
-
-                        <p className="mt-1 text-sm font-semibold text-slate-800">
-                          {
-                            selectedItem.actualQuantity ??
-                            0
-                          }{" "}
-                          of{" "}
-                          {
-                            selectedItem.quantity
-                          }{" "}
-                          completed
-                        </p>
-                      </div>
-
-                      <p className="text-2xl font-bold text-[#17357A]">
-                        {
-                          selectedProgress
-                        }%
-                      </p>
-
-                    </div>
-
-                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100">
-
-                      <div
-                        className="h-full rounded-full bg-[#17357A] transition-all duration-500"
-                        style={{
-                          width: `${selectedProgress}%`,
-                        }}
-                      />
-
-                    </div>
-
-                    <div className="mt-2 flex justify-between text-[10px] text-slate-400">
-
-                      <span>
-                        Started
-                      </span>
-
-                      <span>
-                        {selectedItem.completed
-                          ? "Completed"
-                          : selectedItem.readyForDispatch
-                            ? "Ready for dispatch"
-                            : "In production"}
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                  {/* BOM */}
-
-                  <div className="space-y-4 p-5">
-
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-
-                      <div className="flex items-center gap-2">
-
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#17357A] shadow-sm">
-                          <FiLayers
-                            size={15}
-                          />
-                        </div>
-
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                            Bill of Materials
-                          </p>
-
-                          <p className="mt-0.5 text-sm font-semibold text-slate-800">
-                            {selectedItem.bom
-                              ?.finishedProduct
-                              ?.name ||
-                              "Assigned BOM"}
-                          </p>
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                    {/* CAPACITY */}
-
-                    <div className="rounded-xl border border-slate-200 p-4">
-
-                      <div className="flex items-start justify-between">
-
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                            Production Capacity
-                          </p>
-
-                          <p className="mt-1 text-3xl font-bold text-slate-900">
-                            {selectedAvailability
-                              ?.maximumProducible ??
-                              "-"}
-                          </p>
-
-                          <p className="text-[10px] text-slate-400">
-                            maximum producible
-                          </p>
-                        </div>
-
-                        <FiBox
-                          size={20}
-                          className="text-slate-300"
-                        />
-
-                      </div>
-
-                      {selectedAvailability
-                        ?.bottleneck && (
-                        <div className="mt-4 rounded-xl border border-orange-100 bg-orange-50 p-3">
-
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
-                            Bottleneck
-                          </p>
-
-                          <p className="mt-1 text-sm font-bold text-orange-800">
-                            {
-                              selectedAvailability.bottleneck
-                            }
-                          </p>
-
-                        </div>
-                      )}
-
-                    </div>
-
-                    {/* MATERIALS */}
-
-                    <div>
-
-                      <div className="mb-2 flex items-center justify-between">
-
-                        <p className="font-semibold text-slate-900">
-                          Material Availability
-                        </p>
-
-                        <FiInfo
-                          size={14}
-                          className="text-slate-300"
-                        />
-
-                      </div>
-
-                      <div className="space-y-2">
-
-                        {selectedAvailability
-                          ?.materials
-                          ?.map(
-                            (
-                              material: any,
-                              index: number
-                            ) => (
-                              <div
-                                key={
-                                  index
-                                }
-                                className="rounded-xl border border-slate-200 p-3"
-                              >
-
-                                <div className="flex items-center justify-between gap-3">
-
-                                  <span className="min-w-0 truncate text-sm font-medium text-slate-800">
-                                    {
-                                      material.product
-                                    }
-                                  </span>
-
-                                  <span
-                                    className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${
-                                      material.sufficient
-                                        ? "bg-emerald-50 text-emerald-700"
-                                        : "bg-red-50 text-red-700"
-                                    }`}
-                                  >
-                                    {material.sufficient
-                                      ? "Available"
-                                      : "Short"}
-                                  </span>
-
-                                </div>
-
-                                <div className="mt-3 grid grid-cols-3 gap-2">
-
-                                  <div>
-                                    <p className="text-[9px] uppercase tracking-wide text-slate-400">
-                                      Required
-                                    </p>
-
-                                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
-                                      {
-                                        material.required
-                                      }
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-[9px] uppercase tracking-wide text-slate-400">
-                                      Available
-                                    </p>
-
-                                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
-                                      {
-                                        material.available
-                                      }
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-[9px] uppercase tracking-wide text-slate-400">
-                                      Short
-                                    </p>
-
-                                    <p className="mt-0.5 text-xs font-semibold text-red-600">
-                                      {
-                                        material.shortage
-                                      }
-                                    </p>
-                                  </div>
-
-                                </div>
-
-                              </div>
-                            )
-                          ) || (
-                          <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
-                            No material calculation available.
-                          </div>
-                        )}
-
-                      </div>
-
-                    </div>
-
+                  <div className="space-y-4 p-4">
                     {/* CHECKLIST */}
-
-                    <div>
-
-                      <p className="mb-2 font-semibold text-slate-900">
-                        Production Checklist
-                      </p>
-
-                      <div className="rounded-xl border border-slate-200 p-4">
-
-                        <div className="flex gap-3">
-
-                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#17357A]">
-                            <FiCheckCircle
-                              size={14}
-                            />
-                          </div>
-
-                          <div className="min-w-0">
-
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              Preparing
-                            </p>
-
-                            <p className="mt-1 text-xs leading-5 text-slate-600">
-                              {selectedItem
-                                .checklist
-                                ?.preparing
-                                ?.join(
-                                  ", "
-                                ) ||
-                                "Nothing recorded"}
-                            </p>
-
-                          </div>
-
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Step 1</p>
+                          <h3 className="mt-1 text-base font-bold text-slate-900">Production Checklist</h3>
+                          <p className="mt-1 text-xs text-slate-500">Tick each step when it is finished. Changes save automatically.</p>
                         </div>
-
-                        <div className="my-4 border-t border-slate-100" />
-
-                        <div className="flex gap-3">
-
-                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                            <FiTruck
-                              size={14}
-                            />
-                          </div>
-
-                          <div className="min-w-0">
-
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                              Leaving
-                            </p>
-
-                            <p className="mt-1 text-xs leading-5 text-slate-600">
-                              {selectedItem
-                                .checklist
-                                ?.leaving
-                                ?.join(
-                                  ", "
-                                ) ||
-                                "Nothing recorded"}
-                            </p>
-
-                          </div>
-
+                        <div className="shrink-0 rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-700">
+                          {PRODUCTION_CHECKLIST.filter((step) => selectedItem?.checklist?.preparing?.includes(step)).length} / {PRODUCTION_CHECKLIST.length} done
                         </div>
-
-                        {selectedItem
-                          .checklist
-                          ?.reason && (
-                          <>
-                            <div className="my-4 border-t border-slate-100" />
-
-                            <div className="rounded-lg bg-orange-50 p-3">
-
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">
-                                Reason
-                              </p>
-
-                              <p className="mt-1 text-xs leading-5 text-orange-800">
-                                {
-                                  selectedItem
-                                    .checklist
-                                    .reason
-                                }
-                              </p>
-
-                            </div>
-                          </>
-                        )}
-
                       </div>
-
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        {PRODUCTION_CHECKLIST.map((step) => {
+                          const checked = selectedItem?.checklist?.preparing?.includes(step);
+                          return (
+                            <label key={step} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${checked ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50 hover:bg-white"}`}>
+                              <input type="checkbox" checked={Boolean(checked)} disabled={savingItem} onChange={() => handleChecklistToggle(selectedItem, step)} className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                              <div className="min-w-0">
+                                <p className={`text-sm font-semibold ${checked ? "text-emerald-800" : "text-slate-800"}`}>{step}</p>
+                                <p className="text-[10px] text-slate-400">{checked ? "Completed" : "Not completed yet"}</p>
+                              </div>
+                              {checked && <FiCheckCircle size={18} className="ml-auto shrink-0 text-emerald-600" />}
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {selectedItem?.checklist?.leaving?.length > 0 && (
+                        <div className="mt-4 rounded-xl border border-orange-100 bg-orange-50 p-3">
+                          <p className="text-[9px] font-semibold uppercase tracking-wide text-orange-500">Issues / Left Behind</p>
+                          <p className="mt-1 text-xs text-orange-800">{selectedItem.checklist.leaving.join(", ")}</p>
+                          {selectedItem?.checklist?.reason && <p className="mt-1 text-[10px] text-orange-700">Reason: {selectedItem.checklist.reason}</p>}
+                        </div>
+                      )}
                     </div>
 
-                    {/* COMPLETION */}
-
-                    <div className="rounded-xl bg-slate-50 p-4">
-
-                      <div className="flex items-center justify-between text-sm">
-
-                        <span className="text-slate-500">
-                          Actual Quantity
-                        </span>
-
-                        <strong className="text-slate-900">
-                          {selectedItem
-                            .actualQuantity ??
-                            0}
-                        </strong>
-
+                    {/* QUANTITY UPDATE */}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">Production Quantity Update</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-400">Enter actual production and existing finished stock. The original CRM ordered quantity never changes.</p>
+                        </div>
+                        {savingItem && <span className="text-[10px] font-semibold text-[#17357A]">Saving...</span>}
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between text-sm">
-
-                        <span className="text-slate-500">
-                          Ready for Dispatch
-                        </span>
-
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                            selectedItem.readyForDispatch
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-slate-200 text-slate-600"
-                          }`}
-                        >
-                          {selectedItem
-                            .readyForDispatch
-                            ? "Ready"
-                            : "Not Ready"}
-                        </span>
-
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Actual Produced</span>
+                          <input type="number" min="0" max={selectedOrdered} value={actualQuantityDraft} disabled={savingItem} onChange={(event) => {
+                            const raw = event.target.value;
+                            const value = raw === "" ? 0 : Math.max(0, Math.min(selectedOrdered, Number(raw) || 0));
+                            setActualQuantityDraft(value);
+                            const available = Math.min(selectedOrdered, value + existingStockDraft);
+                            if (readyQuantityDraft > available) setReadyQuantityDraft(available);
+                          }} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#17357A]" />
+                        </label>
+                        <label className="block">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Existing Finished Stock</span>
+                          <input type="number" min="0" max={Math.max(0, selectedOrdered - actualQuantityDraft)} value={existingStockDraft} disabled={savingItem} onChange={(event) => {
+                            const raw = event.target.value;
+                            const maxStock = Math.max(0, selectedOrdered - actualQuantityDraft);
+                            const value = raw === "" ? 0 : Math.max(0, Math.min(maxStock, Number(raw) || 0));
+                            setExistingStockDraft(value);
+                            const available = Math.min(selectedOrdered, actualQuantityDraft + value);
+                            if (readyQuantityDraft > available) setReadyQuantityDraft(available);
+                          }} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#17357A]" />
+                        </label>
                       </div>
 
+                      <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                        <div className="flex items-center justify-between"><span>Total available</span><strong>{Math.min(selectedOrdered, actualQuantityDraft + existingStockDraft)}</strong></div>
+                        <div className="mt-1 flex items-center justify-between"><span>Remaining to fulfil</span><strong>{Math.max(0, selectedOrdered - Math.min(selectedOrdered, actualQuantityDraft + existingStockDraft))}</strong></div>
+                      </div>
+
+                      <div className="mt-4 border-t border-slate-100 pt-4">
+                        <label className="block">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ready Quantity for Dispatch</span>
+                          <input type="number" min="0" max={Math.min(selectedOrdered, actualQuantityDraft + existingStockDraft)} value={readyQuantityDraft} disabled={savingItem} onChange={(event) => {
+                            const available = Math.min(selectedOrdered, actualQuantityDraft + existingStockDraft);
+                            const raw = event.target.value;
+                            const value = raw === "" ? 0 : Math.max(0, Math.min(available, Number(raw) || 0));
+                            setReadyQuantityDraft(value);
+                          }} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#17357A]" />
+                        </label>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button type="button" disabled={savingItem} onClick={() => setReadyQuantityDraft(Math.min(selectedOrdered, actualQuantityDraft + existingStockDraft))} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 disabled:opacity-50">Mark All Available Ready</button>
+                          <button type="button" disabled={savingItem} onClick={() => {
+                            const available = Math.min(selectedOrdered, actualQuantityDraft + existingStockDraft);
+                            const ready = Math.min(Math.max(0, readyQuantityDraft), available);
+                            void handleSaveItemQuantities(selectedItem, { actualQuantity: actualQuantityDraft, existingStockQuantity: existingStockDraft, readyForDispatchQuantity: ready, readyForDispatch: ready > 0 });
+                          }} className="rounded-xl bg-[#17357A] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{savingItem ? "Saving..." : "Save Quantity"}</button>
+                        </div>
+                        <p className="mt-2 text-[10px] leading-4 text-slate-400">Ready quantity is the amount Production hands to Dispatch. It may be less than the total available quantity.</p>
+                      </div>
                     </div>
-
                   </div>
 
-                </>
-              )}
+                  {/* COLLAPSIBLE FULFILMENT */}
+                  <div className="border-t border-slate-100">
+                    <button type="button" onClick={() => toggleSection("fulfilment")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-slate-50" aria-expanded={expandedSections.fulfilment}>
+                      <div className="flex min-w-0 items-center gap-3"><FiTruck size={15} className="shrink-0 text-emerald-600" /><div className="min-w-0"><p className="text-xs font-bold text-slate-800">Fulfilment & Dispatch</p><p className="truncate text-[10px] text-slate-400">Ordered {selectedOrdered} · Available {selectedAvailable} · Remaining {selectedRemaining} · Ready {selectedReady}</p></div></div>
+                      <div className="flex shrink-0 items-center gap-2"><span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${selectedReady > 0 ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{selectedReady > 0 ? "Ready" : "Not Ready"}</span>{expandedSections.fulfilment ? <FiChevronUp size={15} className="text-slate-400" /> : <FiChevronDown size={15} className="text-slate-400" />}</div>
+                    </button>
+                    {expandedSections.fulfilment && <div className="grid grid-cols-2 gap-3 border-t border-slate-100 bg-slate-50 p-4"><div><p className="text-[9px] uppercase tracking-wide text-slate-400">Ordered</p><p className="mt-1 text-sm font-bold">{selectedOrdered}</p></div><div><p className="text-[9px] uppercase tracking-wide text-slate-400">Fulfilled</p><p className="mt-1 text-sm font-bold">{selectedFulfilled}</p></div><div><p className="text-[9px] uppercase tracking-wide text-slate-400">Remaining</p><p className="mt-1 text-sm font-bold text-orange-700">{selectedRemaining}</p></div><div><p className="text-[9px] uppercase tracking-wide text-slate-400">Ready for Dispatch</p><p className="mt-1 text-sm font-bold text-emerald-700">{selectedReady}</p></div></div>}
+                  </div>
 
+                  {/* COLLAPSIBLE PRODUCT INFORMATION */}
+                  <div className="border-t border-slate-100">
+                    <button type="button" onClick={() => toggleSection("productInformation")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-slate-50" aria-expanded={expandedSections.productInformation}>
+                      <div className="flex min-w-0 items-center gap-3"><FiInfo size={15} className="shrink-0 text-slate-500" /><div className="min-w-0"><p className="text-xs font-bold text-slate-800">Product Information</p><p className="truncate text-[10px] text-slate-400">Photo, model, category, BOM, capacity and material availability</p></div></div>
+                      {expandedSections.productInformation ? <FiChevronUp size={15} className="text-slate-400" /> : <FiChevronDown size={15} className="text-slate-400" />}
+                    </button>
+                    {expandedSections.productInformation && (
+                      <div className="space-y-4 border-t border-slate-100 p-4">
+                        <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
+                          {getItemImage(selectedItem) ? <button type="button" onClick={() => setPreviewImage(getItemImage(selectedItem))} className="group relative h-full w-full"><img src={getItemImage(selectedItem)} alt={getItemName(selectedItem)} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]" /><div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-slate-950/70 to-transparent p-4 pt-12"><div className="text-left text-white"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">Selected Product</p><p className="mt-1 text-lg font-bold">{getItemName(selectedItem)}</p></div><span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-sm"><FiMaximize2 size={16} /></span></div></button> : <div className="flex h-full flex-col items-center justify-center text-slate-300"><FiImage size={42} /><p className="mt-3 text-xs font-medium text-slate-400">No product photo available</p></div>}
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-wide text-[#17357A]">Product</p><h3 className="mt-1 text-lg font-bold text-slate-900">{getItemName(selectedItem)}</h3>{getItemMarka(selectedItem) && <p className="mt-1 text-xs text-slate-500">Marka: <span className="font-semibold text-slate-700">{getItemMarka(selectedItem)}</span></p>}</div><div className="shrink-0 rounded-xl bg-blue-50 px-3 py-2 text-right"><p className="text-[9px] uppercase tracking-wide text-blue-500">Quantity</p><p className="text-xl font-bold text-[#17357A]">{selectedOrdered}</p></div></div>
+                          <div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-lg bg-white p-3"><p className="text-[9px] uppercase tracking-wide text-slate-400">Actual Produced</p><p className="mt-1 text-sm font-bold">{selectedActual}</p></div><div className="rounded-lg bg-white p-3"><p className="text-[9px] uppercase tracking-wide text-slate-400">Existing Stock</p><p className="mt-1 text-sm font-bold text-emerald-700">{selectedExistingStock}</p></div><div className="rounded-lg bg-white p-3"><p className="text-[9px] uppercase tracking-wide text-slate-400">Available</p><p className="mt-1 text-sm font-bold text-purple-700">{selectedAvailable}</p></div><div className="rounded-lg bg-white p-3"><p className="text-[9px] uppercase tracking-wide text-slate-400">Remaining</p><p className="mt-1 text-sm font-bold text-orange-700">{selectedRemaining}</p></div>{getItemSku(selectedItem) && <div className="rounded-lg bg-white p-3"><p className="text-[9px] uppercase tracking-wide text-slate-400">Model / SKU</p><p className="mt-1 truncate text-xs font-semibold">{getItemSku(selectedItem)}</p></div>}{getItemCategory(selectedItem) && <div className="rounded-lg bg-white p-3"><p className="text-[9px] uppercase tracking-wide text-slate-400">Category</p><p className="mt-1 truncate text-xs font-semibold">{getItemCategory(selectedItem)}</p></div>}</div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                          <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-[#17357A]"><FiLayers size={15} /></div><div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Product Type</p><p className="text-sm font-semibold text-slate-800">{isTradingItem(selectedItem) ? "Trading Product" : "Manufactured Product"}</p></div></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${isTradingItem(selectedItem) ? "bg-slate-200 text-slate-700" : "bg-blue-100 text-blue-700"}`}>{isTradingItem(selectedItem) ? "TRADING" : "MANUFACTURING"}</span></div>
+                          <div className="mt-4 border-t border-slate-100 pt-4"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Bill of Materials</p><p className="mt-1 text-sm font-semibold text-slate-800">{getBomName(selectedItem)}</p>{!isTradingItem(selectedItem) && selectedBomMaterials.length > 0 && <div className="mt-3 space-y-2">{selectedBomMaterials.map((material: any, index: number) => <div key={material?._id || material?.product?._id || index} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><span className="truncate text-xs font-semibold text-slate-700">{material?.product?.name || material?.product?.sku || material?.productName || "Material"}</span><span className="text-xs font-bold text-slate-600">{material?.quantity ?? "-"}</span></div>)}</div>}</div>
+                          <div className="mt-4 border-t border-slate-100 pt-4"><div className="flex items-start justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Production Capacity</p>{!selectedItem.bom ? <p className="mt-2 text-xs text-slate-500">Not applicable without a BOM.</p> : <><p className="mt-1 text-2xl font-bold">{selectedAvailability?.maximumProducible ?? "-"}</p><p className="text-[10px] text-slate-400">maximum producible</p></>}</div><FiBox size={18} className="text-slate-300" /></div>{selectedAvailability?.bottleneck && <div className="mt-3 rounded-xl border border-orange-100 bg-orange-50 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">Bottleneck</p><p className="mt-1 text-sm font-bold text-orange-800">{selectedAvailability.bottleneck}</p></div>}</div>
+                          <div className="mt-4 border-t border-slate-100 pt-4"><div className="mb-2 flex items-center justify-between"><p className="text-sm font-semibold text-slate-900">Material Availability</p><FiInfo size={14} className="text-slate-300" /></div>{!selectedItem.bom ? <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">No material requirements for this Trading product.</div> : selectedAvailability?.materials?.length ? <div className="space-y-2">{selectedAvailability.materials.map((material: any, index: number) => <div key={index} className="rounded-xl border border-slate-200 p-3"><div className="flex items-center justify-between gap-3"><span className="truncate text-sm font-medium text-slate-800">{material.product}</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${material.sufficient ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{material.sufficient ? "Available" : "Short"}</span></div><div className="mt-3 grid grid-cols-3 gap-2"><div><p className="text-[9px] uppercase tracking-wide text-slate-400">Required</p><p className="mt-0.5 text-xs font-semibold">{material.required}</p></div><div><p className="text-[9px] uppercase tracking-wide text-slate-400">Available</p><p className="mt-0.5 text-xs font-semibold">{material.available}</p></div><div><p className="text-[9px] uppercase tracking-wide text-slate-400">Short</p><p className="mt-0.5 text-xs font-semibold text-red-600">{material.shortage}</p></div></div></div>)}</div> : <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">No material calculation available.</div>}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
         )}
 
-        {/* CALCULATOR */}
+        {/* CAPACITY CALCULATOR */}
 
-        {activeTab ===
-          "calculator" && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-
-            <div className="flex items-start gap-3">
-
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#17357A]">
-                <FiLayers
-                  size={18}
-                />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Material Capacity Calculator
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Calculate how much can actually be produced from current stock.
-                </p>
-              </div>
-
+        {activeTab === "calculator" && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">
+                Material Capacity Calculator
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Calculate production feasibility using current material availability.
+              </p>
             </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-[1fr_180px_auto]">
-
+            <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
               <select
-                value={
-                  calculatorBOM
-                }
-                onChange={(e) =>
-                  setCalculatorBOM(
-                    e.target.value
-                  )
-                }
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#17357A]"
+                value={calculatorBOM}
+                onChange={(event) => setCalculatorBOM(event.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#17357A]"
               >
-                <option value="">
-                  Select BOM
-                </option>
-
-                {boms.map(
-                  (bom: any) => (
-                    <option
-                      key={
-                        bom._id
-                      }
-                      value={
-                        bom._id
-                      }
-                    >
-                      {bom.finishedProduct
-                        ?.name ||
-                        "BOM"}
-                    </option>
-                  )
-                )}
-
+                <option value="">Select BOM</option>
+                {boms.map((bom: any) => (
+                  <option key={bom._id} value={bom._id}>
+                    {bom.finishedProduct?.name || bom.name || "BOM"}
+                  </option>
+                ))}
               </select>
 
               <input
                 type="number"
                 min="1"
-                value={
-                  calculatorQuantity
-                }
-                onChange={(e) =>
+                value={calculatorQuantity}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
                   setCalculatorQuantity(
-                    Number(
-                      e.target.value
-                    )
-                  )
-                }
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#17357A]"
+                    Number.isFinite(value) && value > 0 ? value : 1,
+                  );
+                }}
+                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#17357A]"
+                aria-label="Production quantity"
               />
 
               <button
                 type="button"
-                onClick={
-                  handleCalculate
-                }
-                className="rounded-xl bg-[#17357A] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#23458f]"
+                onClick={() => void handleCalculate()}
+                className="rounded-xl bg-[#17357A] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#10295f]"
               >
                 Calculate
               </button>
-
             </div>
 
             {calculatorResult && (
-              <div className="mt-6">
-
+              <div className="mt-5">
                 <div className="grid gap-3 md:grid-cols-2">
-
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                       Maximum Producible
                     </p>
-
-                    <p className="mt-1 text-3xl font-bold text-slate-900">
-                      {
-                        calculatorResult.maximumProducible
-                      }
+                    <p className="mt-2 text-3xl font-bold text-slate-900">
+                      {calculatorResult.maximumProducible ?? "-"}
                     </p>
-
                   </div>
 
-                  <div className="rounded-xl border border-orange-100 bg-orange-50 p-5">
-
-                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-500">
+                  <div className="rounded-xl bg-orange-50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-orange-600">
                       Bottleneck
                     </p>
-
-                    <p className="mt-1 text-xl font-bold text-orange-800">
-                      {
-                        calculatorResult.bottleneck ||
-                        "None"
-                      }
+                    <p className="mt-2 text-lg font-bold text-orange-800">
+                      {calculatorResult.bottleneck || "None"}
                     </p>
-
                   </div>
-
                 </div>
 
-                <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
-
-                  <table className="w-full text-sm">
-
-                    <thead className="bg-slate-50">
-
-                      <tr>
-
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">
-                          Material
-                        </th>
-
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">
-                          Required
-                        </th>
-
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">
-                          Available
-                        </th>
-
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">
-                          Shortage
-                        </th>
-
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">
-                          Status
-                        </th>
-
-                      </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                      {calculatorResult.materials?.map(
-                        (
-                          material: any,
-                          index: number
-                        ) => (
-                          <tr
-                            key={
-                              index
-                            }
-                            className="border-t border-slate-100"
-                          >
-
-                            <td className="px-4 py-3 font-medium text-slate-700">
-                              {
-                                material.product
-                              }
-                            </td>
-
-                            <td className="px-4 py-3 text-right text-slate-600">
-                              {
-                                material.required
-                              }
-                            </td>
-
-                            <td className="px-4 py-3 text-right text-slate-600">
-                              {
-                                material.available
-                              }
-                            </td>
-
-                            <td className="px-4 py-3 text-right font-medium text-red-600">
-                              {
-                                material.shortage
-                              }
-                            </td>
-
-                            <td className="px-4 py-3 text-center">
-
-                              <span
-                                className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-                                  material.sufficient
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "bg-red-50 text-red-700"
-                                }`}
-                              >
-                                {material.sufficient
-                                  ? "Sufficient"
-                                  : "Shortage"}
-                              </span>
-
-                            </td>
-
+                {Array.isArray(calculatorResult.materials) &&
+                  calculatorResult.materials.length > 0 && (
+                    <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left">Material</th>
+                            <th className="px-4 py-3 text-right">Required</th>
+                            <th className="px-4 py-3 text-right">Available</th>
+                            <th className="px-4 py-3 text-right">Shortage</th>
+                            <th className="px-4 py-3 text-center">Status</th>
                           </tr>
-                        )
-                      )}
+                        </thead>
+                        <tbody>
+                          {calculatorResult.materials.map(
+                            (material: any, index: number) => (
+                              <tr
+                                key={material?._id || material?.product || index}
+                                className="border-t border-slate-100"
+                              >
+                                <td className="px-4 py-3">
+                                  {material?.product || "Material"}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {material?.required ?? "-"}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {material?.available ?? "-"}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {material?.shortage ?? "-"}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span
+                                    className={`rounded-full px-2 py-1 text-xs ${
+                                      material?.sufficient
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                    }`}
+                                  >
+                                    {material?.sufficient
+                                      ? "Sufficient"
+                                      : "Shortage"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ),
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
-                    </tbody>
-
-                  </table>
-
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={
-                      handleExportExcel
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    onClick={handleExportExcel}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Export Excel
                   </button>
-
                   <button
                     type="button"
-                    onClick={
-                      handleExportPdf
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    onClick={handleExportPdf}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Export PDF
                   </button>
-
                 </div>
-
               </div>
             )}
-
           </div>
         )}
 

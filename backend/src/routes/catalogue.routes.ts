@@ -1,4 +1,9 @@
-import { Router } from "express";
+import {
+  Router,
+  Request,
+  Response,
+  NextFunction,
+} from "express";
 
 import {
   getCatalogues,
@@ -6,45 +11,150 @@ import {
   createCatalogue,
   updateCatalogue,
   deleteCatalogue,
+  increaseCataloguePrice,
 } from "../controllers/catalogue.controller";
 
 import catalogueUpload from "../middlewares/catalogueUpload";
-
 import authMiddleware from "../middlewares/auth.middleware";
 
 const router = Router();
 
-// Get all catalogue products
+// ============================================================
+// GET ALL
+// ============================================================
+
 router.get(
   "/",
   authMiddleware,
   getCatalogues
 );
 
-// Get one catalogue product
+// ============================================================
+// GET ONE
+// ============================================================
+
 router.get(
   "/:id",
   authMiddleware,
   getCatalogueById
 );
 
-// Create catalogue product
+// ============================================================
+// CREATE
+// ============================================================
+
 router.post(
   "/",
   authMiddleware,
-  catalogueUpload.single("image"),
+
+  // Upload middleware
+  (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    catalogueUpload.single("image")(
+      req,
+      res,
+      (error: any) => {
+        if (error) {
+          console.error(
+            "================================="
+          );
+          console.error(
+            "CATALOGUE UPLOAD ERROR"
+          );
+          console.error(
+            "================================="
+          );
+          console.error(
+            "NAME:",
+            error?.name
+          );
+          console.error(
+            "MESSAGE:",
+            error?.message
+          );
+          console.error(
+            "CODE:",
+            error?.code
+          );
+          console.error(
+            "FULL ERROR:",
+            JSON.stringify(
+              error,
+              Object.getOwnPropertyNames(error),
+              2
+            )
+          );
+
+          return res.status(500).json({
+            message:
+              error?.message ||
+              "Catalogue image upload failed.",
+          });
+        }
+
+        next();
+      }
+    );
+  },
+
   createCatalogue
 );
 
-// Update catalogue product
+// ============================================================
+// UPDATE
+// ============================================================
+
 router.put(
   "/:id",
   authMiddleware,
-  catalogueUpload.single("image"),
+
+  (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    catalogueUpload.single("image")(
+      req,
+      res,
+      (error: any) => {
+        if (error) {
+          console.error(
+            "CATALOGUE UPDATE UPLOAD ERROR:",
+            error
+          );
+
+          return res.status(500).json({
+            message:
+              error?.message ||
+              "Catalogue image upload failed.",
+          });
+        }
+
+        next();
+      }
+    );
+  },
+
   updateCatalogue
 );
 
-// Delete catalogue product
+// ============================================================
+// INCREASE PRICE
+// ============================================================
+
+router.patch(
+  "/:id/increase-price",
+  authMiddleware,
+  increaseCataloguePrice
+);
+
+// ============================================================
+// DELETE
+// ============================================================
+
 router.delete(
   "/:id",
   authMiddleware,

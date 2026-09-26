@@ -54,3 +54,15 @@ export const deleteCatalogue = async (
 
   return response.data;
 };
+
+export const increaseCataloguePrice = async (
+  id: string,
+  percentage: number
+) => {
+  const response = await api.patch(
+    `/catalogue/${id}/increase-price`,
+    { percentage }
+  );
+
+  return response.data;
+};

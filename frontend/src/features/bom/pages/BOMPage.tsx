@@ -22,6 +22,7 @@ import {
 } from "../services/bom.service";
 
 import { getProducts } from "../../inventory/services/product.service";
+import { getCatalogues } from "../../crm/services/catalogue.service";
 
 import { exportBOMExcel } from "../../../utils/exportBOMExcel";
 import { exportBOMPdf } from "../../../utils/exportBOMPdf";
@@ -30,6 +31,7 @@ import { exportBOMPdf } from "../../../utils/exportBOMPdf";
 const BOMPage = () => {
   const [boms, setBoms] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [catalogues, setCatalogues] = useState<any[]>([]);
 
   const [selectedBOM, setSelectedBOM] =
     useState<any>(null);
@@ -54,14 +56,16 @@ const BOMPage = () => {
 
   const loadData = async () => {
     try {
-      const [bomData, productData] =
+      const [bomData, productData, catalogueData] =
         await Promise.all([
           getBOMs(),
           getProducts(),
+          getCatalogues(),
         ]);
 
-      setBoms(bomData);
-      setProducts(productData);
+      setBoms(Array.isArray(bomData) ? bomData : []);
+      setProducts(Array.isArray(productData) ? productData : []);
+      setCatalogues(Array.isArray(catalogueData) ? catalogueData : []);
 
       if (bomData.length > 0) {
         setSelectedBOM(bomData[0]);
@@ -554,6 +558,10 @@ const BOMPage = () => {
                 Finished Product
               </label>
 
+              <p className="mb-2 text-xs text-slate-500">
+                Select a manufacturing product from the independent Catalogue.
+              </p>
+
               <select
                 value={finishedProduct}
                 onChange={(e) =>
@@ -584,45 +592,35 @@ const BOMPage = () => {
                   Select Finished Product
                 </option>
 
-                {products
-                  .filter(
-                    (product) => {
-                      if (
-                        product.type !==
-                        "FINISHED"
-                      ) {
-                        return false;
-                      }
-
-                      const alreadyHasBOM =
-                        boms.some(
-                          (bom) =>
-                            bom
-                              .finishedProduct
-                              ?._id ===
-                            product._id
-                        );
-
-                      return (
-                        isEditing ||
-                        !alreadyHasBOM
-                      );
+                {catalogues
+                  .filter((catalogue) => {
+                    // Only manufactured Catalogue products can have a BOM.
+                    if (catalogue.productType !== "MANUFACTURING") {
+                      return false;
                     }
-                  )
-                  .map(
-                    (product) => (
-                      <option
-                        key={
-                          product._id
-                        }
-                        value={
-                          product._id
-                        }
-                      >
-                        {product.name}
-                      </option>
-                    )
-                  )}
+
+                    const alreadyHasBOM = boms.some(
+                      (bom) =>
+                        bom.finishedProduct?._id === catalogue._id
+                    );
+
+                    // While editing, keep the current finished product selectable.
+                    return (
+                      (isEditing && catalogue._id === finishedProduct) ||
+                      !alreadyHasBOM
+                    );
+                  })
+                  .map((catalogue) => (
+                    <option
+                      key={catalogue._id}
+                      value={catalogue._id}
+                    >
+                      {catalogue.name}
+                      {catalogue.modelNumber
+                        ? ` · ${catalogue.modelNumber}`
+                        : ""}
+                    </option>
+                  ))}
 
               </select>
 
@@ -664,8 +662,7 @@ const BOMPage = () => {
                       text-slate-500
                     "
                   >
-                    Define the quantity of each
-                    material required per unit.
+                    Select raw materials from Inventory and define the quantity required per unit. The finished good is maintained in Catalogue; materials remain Inventory items.
                   </p>
 
                 </div>
@@ -1512,7 +1509,7 @@ const BOMPage = () => {
                           1
                             ? "s"
                             : ""}{" "}
-                          required per unit.
+                          required per unit. The finished good is maintained in Catalogue; materials remain Inventory items.
                         </p>
 
                       </div>

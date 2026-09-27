@@ -805,26 +805,6 @@ const ProductionPage = () => {
     );
   };
 
-  const getCrmOrderValue = (production: any) => {
-    const value = Number(
-      getCrmOrder(production)?.totalAmount
-    );
-
-    return Number.isFinite(value) ? value : null;
-  };
-
-  const formatCurrency = (value: number | null) => {
-    if (value === null) {
-      return "-";
-    }
-
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   const handleSaveItemQuantities = async (
     item: any,
     patch: {
@@ -1442,17 +1422,7 @@ const ProductionPage = () => {
                         </div>
 
                         <div className="rounded-lg bg-white px-3 py-2 text-right shadow-sm">
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-                            Order Value
-                          </p>
-
-                          <p className="mt-1 text-sm font-bold text-slate-900">
-                            {formatCurrency(
-                              getCrmOrderValue(
-                                selectedProduction
-                              )
-                            )}
-                          </p>
+                          
                         </div>
                       </div>
 
